@@ -67,6 +67,18 @@ export default function ApplicantLayout() {
                 Logout
               </button>
               <button
+                className="relative inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
+                onClick={() => { setMenuOpen(false); navigate('/applicant/notifications') }}
+                aria-label="Notifications"
+              >
+                <BellIcon className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button
                 className="inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label="Toggle menu"
