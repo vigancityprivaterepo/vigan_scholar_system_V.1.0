@@ -75,27 +75,27 @@ export default function AdminDashboard() {
         <p className="portal-page-subtitle">Scholarship management summary and current workload.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {statCards.map(({ label, value, Icon, accent, link }) => (
-          <div key={label} className={`portal-surface p-5 ${link ? 'transition-shadow hover:shadow-md' : ''}`}>
+          <div key={label} className={`portal-surface p-4 ${link ? 'transition-shadow hover:shadow-md' : ''}`}>
             {link ? (
               <Link to={link} className="block">
                 <div className="flex items-start justify-between gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-md border ${accent}`}>
-                    <Icon className="h-5 w-5" />
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-md border sm:h-12 sm:w-12 ${accent}`}>
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <ArrowRightIcon className="h-4 w-4 text-slate-400" />
                 </div>
-                <p className="mt-5 font-display text-3xl font-bold text-brand-primary">{loading ? '-' : value}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                <p className="mt-3 font-display text-2xl font-bold text-brand-primary sm:mt-5 sm:text-3xl">{loading ? '-' : value}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">{label}</p>
               </Link>
             ) : (
               <>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-md border ${accent}`}>
-                  <Icon className="h-5 w-5" />
+                <div className={`flex h-9 w-9 items-center justify-center rounded-md border sm:h-12 sm:w-12 ${accent}`}>
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <p className="mt-5 font-display text-3xl font-bold text-brand-primary">{loading ? '-' : value}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                <p className="mt-3 font-display text-2xl font-bold text-brand-primary sm:mt-5 sm:text-3xl">{loading ? '-' : value}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-500 sm:text-xs sm:tracking-[0.14em]">{label}</p>
               </>
             )}
           </div>
@@ -109,11 +109,11 @@ export default function AdminDashboard() {
             <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[420px]">
+              <div className="min-w-[300px]">
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={120} />
                     <Tooltip formatter={(val) => [val, 'Count']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                       {chartData.map((entry) => (
@@ -157,8 +157,8 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-2">
               {quickLinks.map(({ to, label, Icon }) => (
                 <Link key={to} to={to} className="portal-panel flex items-center gap-2 px-3 py-2 text-xs font-medium text-brand-primary transition-colors hover:bg-slate-100">
-                  <Icon className="h-4 w-4" />
-                  {label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{label}</span>
                 </Link>
               ))}
             </div>
