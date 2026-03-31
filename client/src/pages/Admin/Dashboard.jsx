@@ -103,27 +103,23 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="portal-surface p-6">
+        <div className="portal-surface overflow-hidden p-4 sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-brand-primary">Applications by Status</h2>
           {loading ? (
             <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
           ) : (
-            <div className="overflow-x-auto">
-              <div className="min-w-[300px]">
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={120} />
-                    <Tooltip formatter={(val) => [val, 'Count']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {chartData.map((entry) => (
-                        <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#6B7280'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={Math.max(chartData.length * 40, 80)}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 0, right: 12, top: 2, bottom: 2 }}>
+                <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 8 }} width={100} />
+                <Tooltip formatter={(val) => [val, 'Count']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {chartData.map((entry) => (
+                    <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#6B7280'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
 
@@ -156,7 +152,7 @@ export default function AdminDashboard() {
             <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Quick Links</p>
             <div className="grid grid-cols-2 gap-2">
               {quickLinks.map(({ to, label, Icon }) => (
-                <Link key={to} to={to} className="portal-panel flex items-center gap-2 px-3 py-2 text-xs font-medium text-brand-primary transition-colors hover:bg-slate-100">
+                <Link key={to} to={to} className="portal-panel flex min-w-0 items-center gap-2 overflow-hidden px-3 py-2 text-xs font-medium text-brand-primary transition-colors hover:bg-slate-100">
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{label}</span>
                 </Link>
