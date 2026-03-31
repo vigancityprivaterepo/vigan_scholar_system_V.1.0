@@ -17,6 +17,11 @@ export const adminService = {
   deleteAllPostedScholars: () => api.delete('/admin/scholars/posts'),
   deletePostedScholar: (applicationId) => api.delete(`/admin/scholars/posts/${applicationId}`),
 
+  // Admin notifications
+  getNotifications: () => api.get('/admin/notifications'),
+  markNotificationRead: (id) => api.patch(`/admin/notifications/${id}/read`),
+  markAllNotificationsRead: () => api.patch('/admin/notifications/read-all'),
+
   // Carousel CMS
   getCarouselSlides: () => api.get('/carousel/admin'),
   createCarouselSlide: (formData) => api.post('/carousel/admin', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),

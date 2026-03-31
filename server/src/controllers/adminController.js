@@ -417,6 +417,44 @@ const getActivityLogs = async (req, res, next) => {
   }
 };
 
+const getAdminNotifications = async (req, res, next) => {
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+    res.json({ success: true, notifications });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markAdminNotificationRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.updateMany({
+      where: { id, userId: req.user.id },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const markAllAdminNotificationsRead = async (req, res, next) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user.id, isRead: false },
+      data: { isRead: true },
+    });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listApplications,
   getApplication,
@@ -426,4 +464,7 @@ module.exports = {
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,
+  getAdminNotifications,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead,
 };

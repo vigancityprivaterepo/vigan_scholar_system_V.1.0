@@ -65,6 +65,18 @@ const submitApplication = async (req, res, next) => {
       data: { name: user.fullName, refId: application.id.slice(0, 8).toUpperCase() },
     });
 
+    // Notify all admin users
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        applicationId: application.id,
+        title: 'New Application Received',
+        message: `${user.fullName} submitted a new scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+        type: 'INFO',
+      });
+    }
+
     res.status(201).json({ success: true, message: 'Application submitted', application });
   } catch (err) {
     next(err);
@@ -186,6 +198,19 @@ const submitCOR = async (req, res, next) => {
       message: 'Your Certificate of Registration has been submitted for review.',
       type: 'INFO',
     });
+
+    // Notify all admin users
+    const corUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        applicationId: application.id,
+        title: 'COR Submitted for Review',
+        message: `${corUser.fullName} submitted a Certificate of Registration. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+        type: 'INFO',
+      });
+    }
 
     res.json({ success: true, message: 'COR submitted successfully' });
   } catch (err) {

@@ -9,6 +9,9 @@ const {
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,
+  getAdminNotifications,
+  markAdminNotificationRead,
+  markAllAdminNotificationsRead,
 } = require('../controllers/adminController');
 const { getAdminSiteSettings, updateAdminSiteSettings } = require('../controllers/siteSettingsController');
 const {
@@ -31,6 +34,9 @@ router.post('/applications/:id/schedule', scheduleExam);
 router.patch('/applications/:id/cor', reviewCOR);
 router.post('/notify/:id', sendManualNotification);
 router.get('/logs/:id', getActivityLogs);
+router.get('/notifications', getAdminNotifications);
+router.patch('/notifications/read-all', markAllAdminNotificationsRead);
+router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.get('/settings', getAdminSiteSettings);
 router.patch('/settings', updateAdminSiteSettings);
 router.get('/scholars/posts', getAdminScholarPosts);
