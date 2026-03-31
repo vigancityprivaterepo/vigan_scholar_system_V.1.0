@@ -59,8 +59,8 @@ async function main() {
   `);
 
   await prisma.$executeRawUnsafe(`
-    INSERT INTO "site_settings" ("id")
-    VALUES ('default')
+    INSERT INTO "site_settings" ("id", "updated_at")
+    VALUES ('default', CURRENT_TIMESTAMP)
     ON CONFLICT ("id") DO NOTHING
   `);
 
