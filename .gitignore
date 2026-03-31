@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 *.env.local
+.env.docker
 uploads/
 .DS_Store
 Thumbs.db

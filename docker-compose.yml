@@ -3,13 +3,11 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: scholarship
-      POSTGRES_USER: scholarship_user
+      POSTGRES_DB: scholarship_db
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
 
   server:
     build:
@@ -17,20 +15,12 @@ services:
     restart: unless-stopped
     depends_on:
       - db
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://scholarship_user:${DB_PASSWORD}@db:5432/scholarship
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/scholarship_db
       NODE_ENV: production
       PORT: 5000
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_EXPIRES_IN: 15m
-      JWT_REFRESH_EXPIRES_IN: 7d
-      CLIENT_URL: ${CLIENT_URL}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      EMAIL_FROM: ${EMAIL_FROM}
     ports:
       - "5000:5000"
     volumes:
