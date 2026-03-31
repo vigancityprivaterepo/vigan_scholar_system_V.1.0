@@ -308,7 +308,7 @@ function ScholarCarousel() {
               <div className="mt-3 flex flex-wrap gap-2 sm:mt-5 sm:gap-3">
                 <Link
                   to="/register"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white bg-white px-4 py-2 text-xs font-semibold text-brand-primary transition-colors hover:bg-slate-100 sm:gap-2 sm:px-5 sm:py-3 sm:text-sm"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-white bg-white px-4 py-2 text-xs font-semibold text-brand-primary transition-colors hover:bg-[#0f3d6d] hover:border-[#0f3d6d] hover:text-white sm:gap-2 sm:px-5 sm:py-3 sm:text-sm"
                 >
                   Apply Now <ArrowRightIcon />
                 </Link>
@@ -774,13 +774,13 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-brand-primary hover:text-brand-primary sm:px-4 sm:py-2 sm:text-sm"
+                className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-[#0f3d6d] hover:border-[#0f3d6d] hover:text-white sm:px-4 sm:py-2 sm:text-sm"
               >
                 Login
               </Link>
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center rounded-md border border-brand-primary bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-900 sm:px-4 sm:py-2 sm:text-sm"
+                className="inline-flex items-center justify-center rounded-md border border-brand-primary bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0f3d6d] sm:px-4 sm:py-2 sm:text-sm"
               >
                 Apply for Scholarship
               </Link>
@@ -936,13 +936,13 @@ export default function LandingPage() {
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 to="/register"
-                className="inline-flex items-center justify-center rounded-md border border-brand-primary bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-900"
+                className="inline-flex items-center justify-center rounded-md border border-brand-primary bg-brand-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0f3d6d]"
               >
                 Create Applicant Account
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center justify-center rounded-md border border-slate-400 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-brand-primary hover:text-brand-primary"
+                className="inline-flex items-center justify-center rounded-md border border-slate-400 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-[#0f3d6d] hover:border-[#0f3d6d] hover:text-white"
               >
                 Sign In to Existing Account
               </Link>
