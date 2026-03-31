@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  role         Role     @default(APPLICANT)
+  fullName     String   @map("full_name")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  applications    Application[]
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  refreshTokens   RefreshToken[]
+
+  @@map("users")
+}
+
+enum Role {
+  APPLICANT
+  ADMIN
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  applicantId String            @map("applicant_id")
+  applicant   User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  status      ApplicationStatus @default(PENDING_REVIEW)
+
+  // Personal Info
+  age       Int?
+  address   String?
+  contact   String?
+  school    String?
+  course    String?
+  yearLevel Int?    @map("year_level")
+
+  // Academic
+  gwa             Decimal?  @db.Decimal(4, 2)
+  achievements    String?
+
+  // Admin
+  adminRemarks   String?   @map("admin_remarks")
+  examScore      Decimal?  @db.Decimal(5, 2) @map("exam_score")
+  interviewDate  DateTime? @map("interview_date")
+  interviewNotes String?   @map("interview_notes")
+  rejectionReason String?  @map("rejection_reason")
+
+  submittedAt DateTime  @default(now()) @map("submitted_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  requirementFiles RequirementFile[]
+  corFiles         CorFile[]
+  notifications    Notification[]
+  activityLogs     ActivityLog[]
+  examSchedules    ExamSchedule[]
+
+  @@map("applications")
+}
+
+enum ApplicationStatus {
+  PENDING_REVIEW
+  INCOMPLETE
+  ELIGIBILITY_SCREENING
+  NOT_QUALIFIED
+  EXAM_INTERVIEW
+  FAILED_EXAM
+  APPROVED
+  COR_SUBMITTED
+  COR_REJECTED
+  ACCEPTED
+  REJECTED
+}
+
+model RequirementFile {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fileName      String   @map("file_name")
+  fileUrl       String   @map("file_url")
+  fileType      String?  @map("file_type")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+
+  @@map("requirement_files")
+}
+
+model CorFile {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fileName      String   @map("file_name")
+  fileUrl       String   @map("file_url")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+  reviewedAt    DateTime? @map("reviewed_at")
+  isApproved    Boolean?  @map("is_approved")
+
+  @@map("cor_files")
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId String?          @map("application_id")
+  application   Application?     @relation(fields: [applicationId], references: [id])
+  title         String
+  message       String
+  type          NotificationType @default(INFO)
+  isRead        Boolean          @default(false) @map("is_read")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  applicationId String?  @map("application_id")
+  application   Application? @relation(fields: [applicationId], references: [id])
+  performedById String?  @map("performed_by")
+  performedBy   User?    @relation(fields: [performedById], references: [id])
+  action        String
+  fromStatus    String?  @map("from_status")
+  toStatus      String?  @map("to_status")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+}
+
+model ExamSchedule {
+  id            String         @id @default(uuid())
+  applicationId String         @map("application_id")
+  application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheduledAt   DateTime       @map("scheduled_at")
+  location      String?
+  type          ScheduleType   @default(BOTH)
+  status        ScheduleStatus @default(SCHEDULED)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  @@map("exam_schedules")
+}
+
+enum ScheduleType {
+  EXAM
+  INTERVIEW
+  BOTH
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model CarouselSlide {
+  id        String   @id @default(uuid())
+  imageUrl  String   @map("image_url")
+  label     String
+  caption   String
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("carousel_slides")
+}
+
+model SiteSetting {
+  id                      String   @id @default("default")
+  facebookPageName        String?  @map("facebook_page_name")
+  facebookPageUrl         String?  @map("facebook_page_url")
+  facebookPageDescription String?  @map("facebook_page_description")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+}

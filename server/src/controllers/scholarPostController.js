@@ -1,0 +1,198 @@
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+
+const ensureScholarPostsTable = async () => {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "scholar_posts" (
+      "application_id" TEXT NOT NULL,
+      "applicant_name" TEXT NOT NULL,
+      "school" TEXT,
+      "course" TEXT,
+      "posted_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "created_by_id" TEXT,
+      CONSTRAINT "scholar_posts_pkey" PRIMARY KEY ("application_id")
+    )
+  `);
+};
+
+const getPublicScholarPosts = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+    const posts = await prisma.$queryRaw`
+      SELECT
+        "application_id",
+        "applicant_name",
+        "school",
+        "course",
+        "posted_at"
+      FROM "scholar_posts"
+      ORDER BY "posted_at" DESC, "applicant_name" ASC
+    `;
+
+    res.json({ success: true, posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAdminScholarPosts = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+    const posts = await prisma.$queryRaw`
+      SELECT
+        "application_id",
+        "applicant_name",
+        "school",
+        "course",
+        "posted_at",
+        "created_by_id"
+      FROM "scholar_posts"
+      ORDER BY "posted_at" DESC, "applicant_name" ASC
+    `;
+
+    res.json({ success: true, posts });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const publishAcceptedScholars = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+
+    const acceptedApplications = await prisma.application.findMany({
+      where: { status: 'ACCEPTED' },
+      select: {
+        id: true,
+        school: true,
+        course: true,
+        applicant: { select: { fullName: true } },
+      },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    let insertedCount = 0;
+
+    for (const application of acceptedApplications) {
+      const rows = await prisma.$queryRaw`
+        INSERT INTO "scholar_posts" (
+          "application_id",
+          "applicant_name",
+          "school",
+          "course",
+          "created_by_id"
+        )
+        VALUES (
+          ${application.id},
+          ${application.applicant.fullName},
+          ${application.school || null},
+          ${application.course || null},
+          ${req.user?.id || null}
+        )
+        ON CONFLICT ("application_id") DO NOTHING
+        RETURNING "application_id"
+      `;
+
+      if (rows.length > 0) insertedCount += 1;
+    }
+
+    const totalPosts = await prisma.$queryRaw`
+      SELECT COUNT(*)::int AS "count" FROM "scholar_posts"
+    `;
+
+    res.json({
+      success: true,
+      message: insertedCount > 0
+        ? `${insertedCount} accepted scholar${insertedCount === 1 ? '' : 's'} posted to the landing page.`
+        : 'No new accepted scholars were available to post.',
+      insertedCount,
+      totalPosts: totalPosts[0]?.count || 0,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteScholarPost = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+
+    const applicationId = String(req.params.applicationId || '').trim();
+    if (!applicationId) {
+      return res.status(400).json({ success: false, message: 'Application ID is required.' });
+    }
+
+    const deletedRows = await prisma.$queryRaw`
+      DELETE FROM "scholar_posts"
+      WHERE "application_id" = ${applicationId}
+      RETURNING "application_id"
+    `;
+
+    if (!deletedRows.length) {
+      return res.status(404).json({ success: false, message: 'Posted scholar entry not found.' });
+    }
+
+    res.json({ success: true, message: 'Posted scholar removed from the landing page.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteManyScholarPosts = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+
+    const applicationIds = Array.isArray(req.body?.applicationIds)
+      ? req.body.applicationIds.map((value) => String(value).trim()).filter(Boolean)
+      : [];
+
+    if (!applicationIds.length) {
+      return res.status(400).json({ success: false, message: 'At least one posted scholar must be selected.' });
+    }
+
+    const deletedRows = await prisma.$queryRaw`
+      DELETE FROM "scholar_posts"
+      WHERE "application_id" = ANY (${applicationIds})
+      RETURNING "application_id"
+    `;
+
+    res.json({
+      success: true,
+      message: `${deletedRows.length} posted scholar${deletedRows.length === 1 ? '' : 's'} removed from the landing page.`,
+      deletedCount: deletedRows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteAllScholarPosts = async (req, res, next) => {
+  try {
+    await ensureScholarPostsTable();
+
+    const deletedRows = await prisma.$queryRaw`
+      DELETE FROM "scholar_posts"
+      RETURNING "application_id"
+    `;
+
+    res.json({
+      success: true,
+      message: deletedRows.length
+        ? `All posted scholars were removed from the landing page.`
+        : 'There were no posted scholars to remove.',
+      deletedCount: deletedRows.length,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getPublicScholarPosts,
+  getAdminScholarPosts,
+  publishAcceptedScholars,
+  deleteScholarPost,
+  deleteManyScholarPosts,
+  deleteAllScholarPosts,
+};

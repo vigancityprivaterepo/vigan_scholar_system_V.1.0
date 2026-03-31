@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #F8F7FF;
+    color: #1E1B4B;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-primary text-brand-gold font-semibold px-6 py-3 rounded-xl hover:bg-indigo-800 transition-all duration-200 font-body;
+  }
+  .btn-gold {
+    @apply bg-brand-gold text-brand-primary font-bold px-6 py-3 rounded-xl hover:bg-yellow-400 transition-all duration-200 shadow-lg font-body;
+  }
+  .btn-outline {
+    @apply border-2 border-brand-primary text-brand-primary font-semibold px-6 py-3 rounded-xl hover:bg-brand-primary hover:text-white transition-all duration-200 font-body;
+  }
+  .auth-back-link {
+    @apply mb-8 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-brand-primary hover:text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-teal focus:ring-offset-2;
+  }
+  .auth-page-shell {
+    @apply min-h-screen bg-[#f4f2ea] text-slate-800;
+  }
+  .auth-masthead {
+    @apply border-b border-[#c5a84a]/25 bg-[#1e2c50] text-white;
+  }
+  .auth-card {
+    @apply overflow-hidden border border-slate-300 bg-white shadow-sm;
+  }
+  .auth-card-header {
+    @apply border-b-2 border-[#c5a84a] bg-[#1e2c50] text-white;
+  }
+  .auth-footer-panel {
+    @apply border-t-2 border-[#c5a84a]/70 bg-[#f8f6ef];
+  }
+  .portal-surface {
+    @apply border border-slate-300 bg-white shadow-sm;
+  }
+  .portal-panel {
+    @apply border border-slate-200 bg-slate-50;
+  }
+  .portal-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-brand-primary bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-900;
+  }
+  .portal-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-brand-primary hover:text-brand-primary;
+  }
+  .portal-kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+  }
+  .portal-page-title {
+    @apply font-display text-3xl font-bold text-brand-primary;
+  }
+  .portal-page-subtitle {
+    @apply mt-1 text-sm text-slate-500;
+  }
+  .portal-input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent;
+  }
+  .portal-tab {
+    @apply rounded-md px-4 py-2 text-sm font-medium transition-colors;
+  }
+  .portal-empty {
+    @apply portal-surface p-10 text-center;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-md border border-gray-100 p-6;
+  }
+  .input-field {
+    @apply w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all duration-200 font-body bg-white;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold font-mono;
+  }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F8F7FF; }
+::-webkit-scrollbar-thumb { background: #1E1B4B; border-radius: 3px; }
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  33% { transform: translate(30px, -30px) scale(1.05); opacity: 0.8; }
+  66% { transform: translate(-20px, 20px) scale(0.95); opacity: 0.5; }
+}
+
+.orb {
+  animation: orbFloat var(--duration, 8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
