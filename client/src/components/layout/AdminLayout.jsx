@@ -110,7 +110,7 @@ export default function AdminLayout() {
                 </button>
 
                 {notifOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl">
+                  <div className="fixed inset-x-3 top-[100px] z-50 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80">
                     <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                       <p className="text-sm font-semibold text-brand-primary">Notifications</p>
                       {unreadCount > 0 && (
