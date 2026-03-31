@@ -151,6 +151,19 @@ const resubmit = async (req, res, next) => {
       },
     });
 
+    // Notify all admin users
+    const resubmitUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin.id,
+        applicationId: application.id,
+        title: 'Application Resubmitted',
+        message: `${resubmitUser.fullName} resubmitted their scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+        type: 'INFO',
+      });
+    }
+
     res.json({ success: true, message: 'Application resubmitted', application: updated });
   } catch (err) {
     next(err);
