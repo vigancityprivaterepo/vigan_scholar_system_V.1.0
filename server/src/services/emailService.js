@@ -1,21 +1,9 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-let transporter;
-
-const getTransporter = () => {
-  if (!transporter) {
-    const port = parseInt(process.env.SMTP_PORT || '587', 10);
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port,
-      secure: port === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return transporter;
+let resendClient;
+const getResend = () => {
+  if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
+  return resendClient;
 };
 
 const escapeHtml = (value = '') =>
@@ -372,16 +360,16 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
 
     const rendered = templateFn(data);
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Scholarship System" <noreply@scholarship.edu.ph>',
+    const from = process.env.EMAIL_FROM || 'Scholarship System <onboarding@resend.dev>';
+    const { error } = await getResend().emails.send({
+      from,
       to,
       subject: subject || rendered.subject,
       html: rendered.html,
-    };
+    });
 
-    const transport = getTransporter();
-    await transport.sendMail(mailOptions);
-    console.log(`Email sent to ${to}: ${mailOptions.subject}`);
+    if (error) throw new Error(error.message);
+    console.log(`Email sent to ${to}: ${rendered.subject}`);
   } catch (err) {
     console.error(`Failed to send email to ${to}:`, err.message);
     if (throwOnError) throw err;
