@@ -14,7 +14,7 @@ export default function ExamInterview() {
   const fetchData = () => {
     adminService.listApplications({ status: 'EXAM_INTERVIEW', limit: 50 })
       .then(r => setApps(r.data.applications))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
   }
 
@@ -23,6 +23,7 @@ export default function ExamInterview() {
   const scheduleExam = async (id) => {
     const form = scheduleForm[id] || {}
     if (!form.scheduledAt) { toast.error('Please select a date/time'); return }
+    if (new Date(form.scheduledAt) <= new Date()) { toast.error('Scheduled date must be in the future'); return }
     setActing(a => ({ ...a, [`sched_${id}`]: true }))
     try {
       await adminService.scheduleExam(id, {

@@ -44,7 +44,7 @@ export default function ApplicantLayout() {
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="sticky top-0 z-40 border-b border-slate-300 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-[#0f3d6d] via-[#164f8c] to-[#0f3d6d] text-white">
+        <div className="bg-gradient-to-r from-[#0c2340] via-[#0f3460] to-[#0c4a3a] text-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
             <NavLink to="/applicant/dashboard" className="flex min-w-0 items-center gap-3">
               <img src={logo} alt="Vigan City Seal" className="h-10 w-10 shrink-0 object-contain" />

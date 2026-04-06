@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
 
@@ -29,6 +29,9 @@ import CORReview from './pages/Admin/CORReview'
 import ScholarPostsManagement from './pages/Admin/ScholarPostsManagement'
 import AdminSettings from './pages/Admin/Settings'
 import CarouselManagement from './pages/Admin/CarouselManagement'
+
+import NotFoundPage from './pages/NotFoundPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 
 // Guards
 import ProtectedRoute from './components/shared/ProtectedRoute'
@@ -83,7 +86,12 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Change password (protected, any role) */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+        </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

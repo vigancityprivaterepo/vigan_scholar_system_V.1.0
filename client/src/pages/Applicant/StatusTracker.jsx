@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import Stepper from '../../components/ui/Stepper'
@@ -13,7 +14,7 @@ export default function StatusTracker() {
   useEffect(() => {
     applicationService.getMine()
       .then(r => setApplication(r.data.application))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load status data.'))
       .finally(() => setLoading(false))
   }, [])
 

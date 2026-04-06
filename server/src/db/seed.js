@@ -11,24 +11,24 @@ async function main() {
   `);
 
   // Create admin user
-  const adminExists = await prisma.user.findUnique({ where: { email: 'admin@scholarship.edu.ph' } });
+  const adminExists = await prisma.user.findUnique({ where: { email: 'data@vigancity.gov.ph' } });
   if (!adminExists) {
-    const passwordHash = await bcrypt.hash('Admin@2024', 12);
+    const passwordHash = await bcrypt.hash('4gR7B5gmJ<Z36rG<12345', 12);
     await prisma.user.create({
       data: {
-        email: 'admin@scholarship.edu.ph',
+        email: 'data@vigancity.gov.ph',
         passwordHash,
         fullName: 'System Administrator',
         role: 'ADMIN',
       },
     });
-    console.log('Admin user created: admin@scholarship.edu.ph / Admin@2024');
+    console.log('Admin user created: data@vigancity.gov.ph');
   }
 
   await prisma.$executeRawUnsafe(`
     UPDATE "users"
     SET "is_email_verified" = true
-    WHERE "email" = 'admin@scholarship.edu.ph'
+    WHERE "email" = 'data@vigancity.gov.ph'
   `);
 
   // Create sample applicant

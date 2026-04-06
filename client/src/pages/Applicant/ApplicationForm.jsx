@@ -62,7 +62,7 @@ export default function ApplicationForm() {
 
         navigate('/applicant/status')
       })
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load application data.'))
       .finally(() => setCheckingApplication(false))
   }, [navigate])
 
@@ -93,6 +93,7 @@ export default function ApplicationForm() {
       if (!form.age || form.age < 15 || form.age > 40) e.age = 'Enter a valid age (15-40)'
       if (!form.address.trim()) e.address = 'Required'
       if (!form.contact.trim()) e.contact = 'Required'
+      else if (!/^(09|\+639)\d{9}$/.test(form.contact.trim().replace(/\s/g, ''))) e.contact = 'Enter a valid Philippine number (e.g. 09XX XXX XXXX)'
       if (!form.school.trim()) e.school = 'Required'
       if (!form.course.trim()) e.course = 'Required'
       if (!form.yearLevel || form.yearLevel < 1 || form.yearLevel > 6) e.yearLevel = 'Enter year level (1-6)'

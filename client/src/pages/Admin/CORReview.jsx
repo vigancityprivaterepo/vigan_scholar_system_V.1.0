@@ -14,7 +14,7 @@ export default function CORReview() {
   const fetchData = () => {
     adminService.listApplications({ status: 'COR_SUBMITTED', limit: 50 })
       .then(r => setApps(r.data.applications))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load COR submissions.'))
       .finally(() => setLoading(false))
   }
 

@@ -15,7 +15,7 @@ export default function CORSubmission() {
   useEffect(() => {
     applicationService.getMine()
       .then(r => setApplication(r.data.application))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load application data.'))
       .finally(() => setLoading(false))
   }, [])
 

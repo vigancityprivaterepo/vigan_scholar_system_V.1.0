@@ -11,6 +11,11 @@ const submitApplication = async (req, res, next) => {
   try {
     const applicantId = req.user.id;
 
+    // Check if applications are open
+    const settingsRows = await prisma.$queryRaw`SELECT "application_open" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
+    const applicationOpen = settingsRows[0] ? Boolean(settingsRows[0].application_open) : true;
+    if (!applicationOpen) throw new AppError('Applications are currently closed. Please check back later.', 403);
+
     // Check if already has application
     const existing = await prisma.application.findFirst({ where: { applicantId } });
     if (existing) throw new AppError('You already have a submitted application', 409);
@@ -65,15 +70,17 @@ const submitApplication = async (req, res, next) => {
       data: { name: user.fullName, refId: application.id.slice(0, 8).toUpperCase() },
     });
 
-    // Notify all admin users
-    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-    for (const admin of admins) {
-      await createNotification({
-        userId: admin.id,
-        applicationId: application.id,
-        title: 'New Application Received',
-        message: `${user.fullName} submitted a new scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
-        type: 'INFO',
+    // Notify all admin users (batch)
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map(admin => ({
+          userId: admin.id,
+          applicationId: application.id,
+          title: 'New Application Received',
+          message: `${user.fullName} submitted a new scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+          type: 'INFO',
+        })),
       });
     }
 
@@ -151,16 +158,18 @@ const resubmit = async (req, res, next) => {
       },
     });
 
-    // Notify all admin users
+    // Notify all admin users (batch)
     const resubmitUser = await prisma.user.findUnique({ where: { id: req.user.id } });
-    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-    for (const admin of admins) {
-      await createNotification({
-        userId: admin.id,
-        applicationId: application.id,
-        title: 'Application Resubmitted',
-        message: `${resubmitUser.fullName} resubmitted their scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
-        type: 'INFO',
+    const resubmitAdmins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    if (resubmitAdmins.length > 0) {
+      await prisma.notification.createMany({
+        data: resubmitAdmins.map(admin => ({
+          userId: admin.id,
+          applicationId: application.id,
+          title: 'Application Resubmitted',
+          message: `${resubmitUser.fullName} resubmitted their scholarship application. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+          type: 'INFO',
+        })),
       });
     }
 
@@ -212,16 +221,18 @@ const submitCOR = async (req, res, next) => {
       type: 'INFO',
     });
 
-    // Notify all admin users
+    // Notify all admin users (batch)
     const corUser = await prisma.user.findUnique({ where: { id: req.user.id } });
-    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
-    for (const admin of admins) {
-      await createNotification({
-        userId: admin.id,
-        applicationId: application.id,
-        title: 'COR Submitted for Review',
-        message: `${corUser.fullName} submitted a Certificate of Registration. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
-        type: 'INFO',
+    const corAdmins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } });
+    if (corAdmins.length > 0) {
+      await prisma.notification.createMany({
+        data: corAdmins.map(admin => ({
+          userId: admin.id,
+          applicationId: application.id,
+          title: 'COR Submitted for Review',
+          message: `${corUser.fullName} submitted a Certificate of Registration. Ref: ${application.id.slice(0, 8).toUpperCase()}`,
+          type: 'INFO',
+        })),
       });
     }
 

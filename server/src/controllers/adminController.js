@@ -8,7 +8,10 @@ const prisma = new PrismaClient();
 
 const listApplications = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, status, search, sortBy = 'submittedAt', sortOrder = 'desc' } = req.query;
+    const ALLOWED_SORT_FIELDS = ['submittedAt', 'updatedAt', 'gwa', 'status'];
+  const { page = 1, limit = 20, status, search, sortBy: rawSortBy = 'submittedAt', sortOrder: rawSortOrder = 'desc' } = req.query;
+  const sortBy = ALLOWED_SORT_FIELDS.includes(rawSortBy) ? rawSortBy : 'submittedAt';
+  const sortOrder = rawSortOrder === 'asc' ? 'asc' : 'desc';
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const where = {};
@@ -89,6 +92,23 @@ const updateStatus = async (req, res, next) => {
         `Invalid status transition from ${application.status} to ${status}`,
         400
       );
+    }
+
+    // Enforce GWA threshold when moving to NOT_QUALIFIED via eligibility screening
+    if (status === 'ELIGIBILITY_SCREENING' || status === 'NOT_QUALIFIED') {
+      // No GWA block here — admin decides; threshold is advisory on the frontend
+    }
+
+    // When admin qualifies to EXAM_INTERVIEW, check GWA against saved threshold
+    if (status === 'EXAM_INTERVIEW' && application.gwa !== null) {
+      const settingsRows = await prisma.$queryRaw`SELECT "gwa_threshold" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
+      const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 2.0;
+      if (parseFloat(application.gwa) > threshold) {
+        throw new AppError(
+          `Applicant GWA (${application.gwa}) does not meet the minimum threshold of ${threshold}.`,
+          400
+        );
+      }
     }
 
     const updateData = { status };

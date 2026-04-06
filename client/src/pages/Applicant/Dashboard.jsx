@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
 import { useAppStore } from '../../store/appStore'
 import { applicationService } from '../../services/applicationService'
@@ -40,7 +41,7 @@ export default function ApplicantDashboard() {
   useEffect(() => {
     applicationService.getMine()
       .then(r => setApplication(r.data.application))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load application data.'))
       .finally(() => setLoading(false))
   }, [])
 

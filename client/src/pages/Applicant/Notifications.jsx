@@ -14,7 +14,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     applicationService.getNotifications()
       .then(r => setNotifications(r.data.notifications))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load notifications.'))
       .finally(() => setLoading(false))
   }, [])
 

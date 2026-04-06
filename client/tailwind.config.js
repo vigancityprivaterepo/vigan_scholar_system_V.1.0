@@ -5,14 +5,14 @@ export default {
     extend: {
       colors: {
         indigo: {
-          950: '#1E1B4B',
+          950: '#0c2340',
         },
         brand: {
-          primary: '#1E1B4B',
-          gold: '#F59E0B',
-          teal: '#0D9488',
-          bg: '#F8F7FF',
-          dark: '#0F0E1A',
+          primary: '#0c2340',
+          green: '#10b981',
+          teal: '#059669',
+          bg: '#f0fdf4',
+          dark: '#064e3b',
         },
       },
       fontFamily: {

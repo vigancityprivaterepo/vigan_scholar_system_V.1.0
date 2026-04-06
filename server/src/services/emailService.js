@@ -61,19 +61,32 @@ const renderEmailLayout = ({
   footerNote,
   accent = '#0f3d6d',
   accentSoft = '#164f8c',
+  ctaColor,
+  logoUrl,
 }) => `
   <div style="margin:0;padding:24px;background:#eef2f7;">
     <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dbe3ef;border-radius:18px;overflow:hidden;font-family:Arial,sans-serif;color:#334155;">
-      <div style="background:linear-gradient(135deg, ${accent} 0%, ${accentSoft} 100%);padding:32px 32px 28px;text-align:center;">
-        <div style="font-size:11px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#dbeafe;">
-          ${escapeHtml(eyebrow)}
+      <div style="background:linear-gradient(135deg, ${accent} 0%, ${accentSoft} 100%);padding:28px 32px 24px;">
+        ${logoUrl ? `
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+          <img src="${logoUrl}" alt="Vigan City Seal" width="52" height="52" style="display:block;width:52px;height:52px;object-fit:contain;border-radius:50%;background:rgba(255,255,255,0.12);padding:4px;" />
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#a7f3d0;">Heritage City Scholarship Portal</div>
+            <div style="font-size:15px;font-weight:700;color:#ffffff;margin-top:2px;">City Government of Vigan</div>
+            <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;margin-top:1px;">Province of Ilocos Sur</div>
+          </div>
         </div>
-        <h1 style="margin:14px 0 0;font-size:30px;line-height:1.15;color:#ffffff;font-family:Georgia,serif;">
-          ${escapeHtml(title)}
-        </h1>
-        <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#dbeafe;">
-          ${escapeHtml(subtitle)}
-        </p>
+        <div style="height:1px;background:rgba(255,255,255,0.15);margin-bottom:20px;"></div>
+        ` : ''}
+        <div style="text-align:center;">
+          ${logoUrl ? '' : `<div style="font-size:11px;font-weight:700;letter-spacing:0.24em;text-transform:uppercase;color:#a7f3d0;">${escapeHtml(eyebrow)}</div>`}
+          <h1 style="margin:${logoUrl ? '0' : '14px'} 0 0;font-size:28px;line-height:1.15;color:#ffffff;font-family:Georgia,serif;">
+            ${escapeHtml(title)}
+          </h1>
+          <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#cbd5e1;">
+            ${escapeHtml(subtitle)}
+          </p>
+        </div>
       </div>
 
       <div style="padding:32px;">
@@ -88,7 +101,7 @@ const renderEmailLayout = ({
 
         ${ctaLabel && ctaUrl ? `
           <div style="margin:28px 0 20px;text-align:center;">
-            <a href="${ctaUrl}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;padding:14px 26px;border-radius:12px;font-weight:700;font-size:14px;">
+            <a href="${ctaUrl}" style="display:inline-block;background:${ctaColor || accent};color:#ffffff;text-decoration:none;padding:14px 26px;border-radius:12px;font-weight:700;font-size:14px;">
               ${escapeHtml(ctaLabel)}
             </a>
           </div>
@@ -257,8 +270,10 @@ const emailTemplates = {
       ctaLabel: 'Confirm Email Address',
       ctaUrl: data.verificationUrl,
       footerNote: 'If you did not register for the scholarship portal, you may ignore this message.',
-      accent: '#0f3d6d',
-      accentSoft: '#164f8c',
+      accent: '#0c2340',
+      accentSoft: '#064e3b',
+      ctaColor: '#10b981',
+      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 
@@ -339,8 +354,10 @@ const emailTemplates = {
       ctaLabel: 'Reset Password',
       ctaUrl: data.resetUrl,
       footerNote: 'For account safety, do not share your reset link with anyone.',
-      accent: '#0f3d6d',
-      accentSoft: '#164f8c',
+      accent: '#0c2340',
+      accentSoft: '#064e3b',
+      ctaColor: '#10b981',
+      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 };

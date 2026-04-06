@@ -72,29 +72,29 @@ const publishAcceptedScholars = async (req, res, next) => {
       orderBy: { submittedAt: 'desc' },
     });
 
+    // Batch upsert using a single query with unnest
+    const ids = acceptedApplications.map(a => a.id);
+    const names = acceptedApplications.map(a => a.applicant.fullName);
+    const schools = acceptedApplications.map(a => a.school || null);
+    const courses = acceptedApplications.map(a => a.course || null);
+    const createdByIds = acceptedApplications.map(() => req.user?.id || null);
+
     let insertedCount = 0;
 
-    for (const application of acceptedApplications) {
-      const rows = await prisma.$queryRaw`
-        INSERT INTO "scholar_posts" (
-          "application_id",
-          "applicant_name",
-          "school",
-          "course",
-          "created_by_id"
-        )
-        VALUES (
-          ${application.id},
-          ${application.applicant.fullName},
-          ${application.school || null},
-          ${application.course || null},
-          ${req.user?.id || null}
-        )
+    if (acceptedApplications.length > 0) {
+      const inserted = await prisma.$queryRaw`
+        INSERT INTO "scholar_posts" ("application_id", "applicant_name", "school", "course", "created_by_id")
+        SELECT * FROM UNNEST(
+          ${ids}::text[],
+          ${names}::text[],
+          ${schools}::text[],
+          ${courses}::text[],
+          ${createdByIds}::text[]
+        ) AS t("application_id", "applicant_name", "school", "course", "created_by_id")
         ON CONFLICT ("application_id") DO NOTHING
         RETURNING "application_id"
       `;
-
-      if (rows.length > 0) insertedCount += 1;
+      insertedCount = inserted.length;
     }
 
     const totalPosts = await prisma.$queryRaw`

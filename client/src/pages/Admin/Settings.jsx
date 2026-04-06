@@ -6,10 +6,11 @@ const initialForm = {
   facebookPageName: '',
   facebookPageUrl: '',
   facebookPageDescription: '',
+  gwaThreshold: '2.0',
+  applicationOpen: true,
 }
 
 export default function AdminSettings() {
-  const [gwaThreshold, setGwaThreshold] = useState('2.0')
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -22,6 +23,8 @@ export default function AdminSettings() {
           facebookPageName: data.settings?.facebookPageName || '',
           facebookPageUrl: data.settings?.facebookPageUrl || '',
           facebookPageDescription: data.settings?.facebookPageDescription || '',
+          gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '2.0',
+          applicationOpen: data.settings?.applicationOpen !== false,
         })
       } catch (err) {
         toast.error(err.response?.data?.message || 'Unable to load settings.')
@@ -29,22 +32,29 @@ export default function AdminSettings() {
         setLoading(false)
       }
     }
-
     loadSettings()
   }, [])
 
-  const setField = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }))
-  }
+  const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }))
 
   const handleSave = async () => {
+    const threshold = parseFloat(form.gwaThreshold)
+    if (isNaN(threshold) || threshold < 1.0 || threshold > 5.0) {
+      toast.error('GWA threshold must be between 1.0 and 5.0.')
+      return
+    }
     setSaving(true)
     try {
-      const { data } = await adminService.updateSiteSettings(form)
+      const { data } = await adminService.updateSiteSettings({
+        ...form,
+        gwaThreshold: threshold,
+      })
       setForm({
         facebookPageName: data.settings?.facebookPageName || '',
         facebookPageUrl: data.settings?.facebookPageUrl || '',
         facebookPageDescription: data.settings?.facebookPageDescription || '',
+        gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '2.0',
+        applicationOpen: data.settings?.applicationOpen !== false,
       })
       toast.success(data.message || 'Settings saved.')
     } catch (err) {
@@ -64,12 +74,37 @@ export default function AdminSettings() {
       <div className="portal-surface p-6">
         <h2 className="mb-4 text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
         <div className="flex flex-col gap-4">
+
+          {/* GWA Threshold */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Minimum GWA Threshold</label>
-            <p className="mb-2 text-xs text-slate-500">Applicants must have a GWA equal to or below this value (1.0 scale, lower is better)</p>
-            <input type="number" className="portal-input max-w-xs" value={gwaThreshold} onChange={e => setGwaThreshold(e.target.value)} step="0.1" min="1.0" max="5.0" />
+            <p className="mb-2 text-xs text-slate-500">Applicants must have a GWA equal to or below this value (1.0 scale, lower is better). Used when qualifying applicants to the Exam/Interview stage.</p>
+            <input
+              type="number"
+              className="portal-input max-w-xs"
+              value={form.gwaThreshold}
+              onChange={e => setField('gwaThreshold', e.target.value)}
+              step="0.1"
+              min="1.0"
+              max="5.0"
+            />
           </div>
 
+          {/* Application Open/Close */}
+          <div className="border-t border-slate-200 pt-4">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</label>
+            <p className="mb-3 text-xs text-slate-500">When turned off, the application form will be closed and new submissions will be blocked.</p>
+            <button
+              type="button"
+              onClick={() => setField('applicationOpen', !form.applicationOpen)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.applicationOpen ? 'bg-[#10b981]' : 'bg-slate-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.applicationOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+            <span className="ml-3 text-sm text-slate-600">{form.applicationOpen ? 'Open — accepting submissions' : 'Closed — submissions blocked'}</span>
+          </div>
+
+          {/* Facebook */}
           <div className="border-t border-slate-200 pt-4">
             <h3 className="mb-3 font-medium text-brand-primary">Landing Page Socials</h3>
             <p className="mb-4 text-sm text-slate-500">
@@ -90,7 +125,6 @@ export default function AdminSettings() {
                     onChange={e => setField('facebookPageName', e.target.value)}
                   />
                 </div>
-
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page URL</label>
                   <input
@@ -100,11 +134,8 @@ export default function AdminSettings() {
                     value={form.facebookPageUrl}
                     onChange={e => setField('facebookPageUrl', e.target.value)}
                   />
-                  <p className="mt-2 text-xs text-slate-500">
-                    Required if you want the landing page to show the Facebook follow section.
-                  </p>
+                  <p className="mt-2 text-xs text-slate-500">Required if you want the landing page to show the Facebook follow section.</p>
                 </div>
-
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Short Description</label>
                   <textarea
@@ -118,6 +149,7 @@ export default function AdminSettings() {
             )}
           </div>
 
+          {/* System Info */}
           <div className="border-t border-slate-200 pt-4">
             <h3 className="mb-3 font-medium text-brand-primary">System Info</h3>
             <div className="grid gap-3 text-sm sm:grid-cols-2">

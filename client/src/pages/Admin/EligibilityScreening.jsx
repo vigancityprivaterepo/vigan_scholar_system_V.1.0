@@ -16,7 +16,7 @@ export default function EligibilityScreening() {
   const fetchData = () => {
     adminService.listApplications({ status: 'ELIGIBILITY_SCREENING', limit: 50 })
       .then(r => setApps(r.data.applications))
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
   }
 

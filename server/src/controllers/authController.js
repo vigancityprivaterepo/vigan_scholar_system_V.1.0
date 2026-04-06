@@ -217,6 +217,11 @@ const resetPassword = async (req, res, next) => {
       throw new AppError('Invalid or expired reset link', 400);
     }
 
+    const isSamePassword = await bcrypt.compare(password, user.passwordHash);
+    if (isSamePassword) {
+      throw new AppError('New password must be different from your current password', 400);
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
 
     await prisma.user.update({
@@ -277,4 +282,33 @@ const me = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, verifyEmail, forgotPassword, resetPassword, refresh, logout, me };
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      throw new AppError('Current and new password are required', 400);
+    }
+    if (newPassword.length < 8) {
+      throw new AppError('New password must be at least 8 characters', 400);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) throw new AppError('User not found', 404);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) throw new AppError('Current password is incorrect', 400);
+
+    const isSame = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSame) throw new AppError('New password must be different from your current password', 400);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword };

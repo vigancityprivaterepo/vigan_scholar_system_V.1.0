@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
@@ -41,7 +42,7 @@ export default function AdminDashboard() {
         setStats(r.data.stats)
         setActivity(r.data.recentActivity || [])
       })
-      .catch(() => {})
+      .catch(err => toast.error(err.response?.data?.message || 'Failed to load dashboard data.'))
       .finally(() => setLoading(false))
   }, [])
 

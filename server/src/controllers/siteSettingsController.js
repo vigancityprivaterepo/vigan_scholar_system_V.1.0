@@ -31,6 +31,8 @@ const serializeSettings = (settings) => ({
   facebookPageName: settings?.facebook_page_name || '',
   facebookPageUrl: settings?.facebook_page_url || '',
   facebookPageDescription: settings?.facebook_page_description || '',
+  gwaThreshold: settings?.gwa_threshold != null ? parseFloat(settings.gwa_threshold) : 2.0,
+  applicationOpen: settings?.application_open != null ? Boolean(settings.application_open) : true,
 });
 
 const ensureSiteSettingsTable = async () => {
@@ -40,10 +42,18 @@ const ensureSiteSettingsTable = async () => {
       "facebook_page_name" TEXT,
       "facebook_page_url" TEXT,
       "facebook_page_description" TEXT,
+      "gwa_threshold" DECIMAL(4,2) NOT NULL DEFAULT 2.0,
+      "application_open" BOOLEAN NOT NULL DEFAULT true,
       "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "site_settings_pkey" PRIMARY KEY ("id")
     )
+  `);
+  // Add columns if they don't exist yet (for existing DBs)
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "site_settings"
+      ADD COLUMN IF NOT EXISTS "gwa_threshold" DECIMAL(4,2) NOT NULL DEFAULT 2.0,
+      ADD COLUMN IF NOT EXISTS "application_open" BOOLEAN NOT NULL DEFAULT true
   `);
 };
 
@@ -53,7 +63,9 @@ const getSettingsRow = async () => {
     SELECT
       "facebook_page_name",
       "facebook_page_url",
-      "facebook_page_description"
+      "facebook_page_description",
+      "gwa_threshold",
+      "application_open"
     FROM "site_settings"
     WHERE "id" = ${SETTINGS_ID}
     LIMIT 1
@@ -90,6 +102,21 @@ const updateAdminSiteSettings = async (req, res, next) => {
       throw new AppError('Facebook page URL is required when a page name is provided.', 400);
     }
 
+    // GWA threshold
+    let gwaThreshold = 2.0;
+    if (req.body.gwaThreshold !== undefined) {
+      gwaThreshold = parseFloat(req.body.gwaThreshold);
+      if (isNaN(gwaThreshold) || gwaThreshold < 1.0 || gwaThreshold > 5.0) {
+        throw new AppError('GWA threshold must be a number between 1.0 and 5.0.', 400);
+      }
+    }
+
+    // Application open/close
+    let applicationOpen = true;
+    if (req.body.applicationOpen !== undefined) {
+      applicationOpen = Boolean(req.body.applicationOpen);
+    }
+
     await ensureSiteSettingsTable();
 
     const rows = await prisma.$queryRaw`
@@ -98,6 +125,8 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "facebook_page_name",
         "facebook_page_url",
         "facebook_page_description",
+        "gwa_threshold",
+        "application_open",
         "updated_at"
       )
       VALUES (
@@ -105,17 +134,23 @@ const updateAdminSiteSettings = async (req, res, next) => {
         ${facebookPageName},
         ${facebookPageUrl},
         ${facebookPageDescription},
+        ${gwaThreshold},
+        ${applicationOpen},
         CURRENT_TIMESTAMP
       )
       ON CONFLICT ("id") DO UPDATE SET
         "facebook_page_name" = EXCLUDED."facebook_page_name",
         "facebook_page_url" = EXCLUDED."facebook_page_url",
         "facebook_page_description" = EXCLUDED."facebook_page_description",
+        "gwa_threshold" = EXCLUDED."gwa_threshold",
+        "application_open" = EXCLUDED."application_open",
         "updated_at" = CURRENT_TIMESTAMP
       RETURNING
         "facebook_page_name",
         "facebook_page_url",
-        "facebook_page_description"
+        "facebook_page_description",
+        "gwa_threshold",
+        "application_open"
     `;
 
     res.json({

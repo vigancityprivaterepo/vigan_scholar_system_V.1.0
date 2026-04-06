@@ -64,6 +64,9 @@ model Application {
   activityLogs     ActivityLog[]
   examSchedules    ExamSchedule[]
 
+  @@index([status])
+  @@index([applicantId])
+  @@index([submittedAt])
   @@map("applications")
 }
 
@@ -118,6 +121,8 @@ model Notification {
   isRead        Boolean          @default(false) @map("is_read")
   createdAt     DateTime         @default(now()) @map("created_at")
 
+  @@index([userId, isRead])
+  @@index([applicationId])
   @@map("notifications")
 }
 
@@ -140,6 +145,7 @@ model ActivityLog {
   notes         String?
   createdAt     DateTime @default(now()) @map("created_at")
 
+  @@index([applicationId])
   @@map("activity_logs")
 }
 
@@ -186,6 +192,8 @@ model SiteSetting {
   facebookPageName        String?  @map("facebook_page_name")
   facebookPageUrl         String?  @map("facebook_page_url")
   facebookPageDescription String?  @map("facebook_page_description")
+  gwaThreshold            Decimal  @default(2.0) @db.Decimal(4, 2) @map("gwa_threshold")
+  applicationOpen         Boolean  @default(true) @map("application_open")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 
