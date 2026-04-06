@@ -24,18 +24,7 @@ const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, stan
 // Security & parsing middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    const allowed = [
-      process.env.CLIENT_URL,
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ].filter(Boolean);
-    const isAllowed =
-      allowed.some(o => origin === o || origin.startsWith(o)) ||
-      /\.vercel\.app$/.test(origin);
-    callback(null, isAllowed ? true : false);
-  },
+  origin: true,
   credentials: true,
 }));
 app.use(morgan('dev'));
