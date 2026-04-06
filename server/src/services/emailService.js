@@ -1,9 +1,26 @@
-const { Resend } = require('resend');
+const sendBrevo = async ({ from, to, subject, html }) => {
+  const [name, ...emailParts] = from.includes('<')
+    ? [from.split('<')[0].trim(), from.split('<')[1].replace('>', '').trim()]
+    : ['Scholarship Portal', from];
+  const senderEmail = from.includes('<') ? emailParts[0] : from;
 
-let resendClient;
-const getResend = () => {
-  if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
-  return resendClient;
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: name || 'Scholarship Portal', email: senderEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Brevo error ${res.status}`);
+  }
 };
 
 const escapeHtml = (value = '') =>
@@ -360,15 +377,8 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
 
     const rendered = templateFn(data);
 
-    const from = process.env.EMAIL_FROM || 'Scholarship System <onboarding@resend.dev>';
-    const { error } = await getResend().emails.send({
-      from,
-      to,
-      subject: subject || rendered.subject,
-      html: rendered.html,
-    });
-
-    if (error) throw new Error(error.message);
+    const from = process.env.EMAIL_FROM || 'noreply@vigancity.gov.ph';
+    await sendBrevo({ from, to, subject: subject || rendered.subject, html: rendered.html });
     console.log(`Email sent to ${to}: ${rendered.subject}`);
   } catch (err) {
     console.error(`Failed to send email to ${to}:`, err.message);
