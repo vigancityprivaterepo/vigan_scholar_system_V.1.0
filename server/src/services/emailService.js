@@ -1,26 +1,20 @@
-const sendBrevo = async ({ from, to, subject, html }) => {
-  const [name, ...emailParts] = from.includes('<')
-    ? [from.split('<')[0].trim(), from.split('<')[1].replace('>', '').trim()]
-    : ['Scholarship Portal', from];
-  const senderEmail = from.includes('<') ? emailParts[0] : from;
+const nodemailer = require('nodemailer');
 
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key': process.env.BREVO_API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: name || 'Scholarship Portal', email: senderEmail },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Brevo error ${res.status}`);
+let transporter;
+const getTransporter = () => {
+  if (!transporter) {
+    const port = parseInt(process.env.SMTP_PORT || '587', 10);
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port,
+      secure: port === 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
   }
+  return transporter;
 };
 
 const escapeHtml = (value = '') =>
@@ -377,8 +371,8 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
 
     const rendered = templateFn(data);
 
-    const from = process.env.EMAIL_FROM || 'noreply@vigancity.gov.ph';
-    await sendBrevo({ from, to, subject: subject || rendered.subject, html: rendered.html });
+    const from = process.env.EMAIL_FROM || '"Scholarship Portal" <noreply@vigancity.gov.ph>';
+    await getTransporter().sendMail({ from, to, subject: subject || rendered.subject, html: rendered.html });
     console.log(`Email sent to ${to}: ${rendered.subject}`);
   } catch (err) {
     console.error(`Failed to send email to ${to}:`, err.message);
