@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
 })
 
 api.interceptors.request.use((config) => {
