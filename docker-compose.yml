@@ -26,6 +26,16 @@ services:
     volumes:
       - uploads:/app/uploads
 
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+
 volumes:
   pgdata:
   uploads:
