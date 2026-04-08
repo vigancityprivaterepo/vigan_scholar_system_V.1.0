@@ -27,6 +27,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+    if (!originalRequest) return Promise.reject(error)
+
     const requestUrl = originalRequest?.url || ''
     const skipRefresh = Boolean(
       originalRequest?._skipAuthRefresh ||
@@ -53,6 +55,8 @@ api.interceptors.response.use(
 
       const { refreshToken, setTokens, logout } = useAuthStore.getState()
       if (!refreshToken) {
+        processQueue(error, null)
+        isRefreshing = false
         await logout()
         return Promise.reject(error)
       }
