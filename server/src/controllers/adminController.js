@@ -92,6 +92,17 @@ const listApplications = async (req, res, next) => {
         include: {
           applicant: { select: { fullName: true, email: true } },
           requirementFiles: { select: { id: true } },
+          corFiles: {
+            orderBy: { uploadedAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              fileName: true,
+              fileUrl: true,
+              uploadedAt: true,
+              isApproved: true,
+            },
+          },
           _count: { select: { requirementFiles: true } },
         },
       }),
@@ -240,7 +251,7 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       message: 'Unfortunately, your application did not meet the eligibility requirements.',
       type: 'ERROR',
       email: {
-        subject: 'Scholarship Application â€” Eligibility Result',
+        subject: 'Scholarship Application - Eligibility Result',
         template: 'notQualified',
       },
     },
@@ -254,12 +265,12 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       message: 'We regret to inform you that you did not pass the exam/interview.',
       type: 'ERROR',
       email: {
-        subject: 'Scholarship Application â€” Exam/Interview Result',
+        subject: 'Scholarship Application - Exam/Interview Result',
         template: 'failedExam',
       },
     },
     APPROVED: {
-      title: 'ðŸŽ‰ Application Approved!',
+      title: 'Application Approved!',
       message: 'Congratulations! Your application has been approved. Please submit your Certificate of Registration (COR).',
       type: 'SUCCESS',
       email: {
@@ -268,7 +279,7 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       },
     },
     COR_REJECTED: {
-      title: 'COR Rejected â€” Resubmission Required',
+      title: 'COR Rejected - Resubmission Required',
       message: `Your COR was rejected. Reason: ${rejectionReason || 'Please review and resubmit.'}`,
       type: 'ERROR',
       email: {
@@ -277,11 +288,11 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       },
     },
     ACCEPTED: {
-      title: 'ðŸŽ‰ Welcome, Scholar!',
+      title: 'Welcome, Scholar!',
       message: 'Congratulations! Your scholarship application has been fully accepted. Welcome to the program!',
       type: 'SUCCESS',
       email: {
-        subject: 'ðŸŽ‰ Welcome, Scholar! Your Application is Confirmed',
+        subject: 'Welcome, Scholar! Your Application is Confirmed',
         template: 'accepted',
       },
     },
@@ -435,7 +446,7 @@ const reviewCOR = async (req, res, next) => {
       reason
     );
 
-    res.json({ success: true, message: approved ? 'COR approved â€” applicant accepted' : 'COR rejected' });
+    res.json({ success: true, message: approved ? 'COR approved - applicant accepted' : 'COR rejected' });
   } catch (err) {
     next(err);
   }

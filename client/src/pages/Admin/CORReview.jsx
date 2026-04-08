@@ -57,7 +57,7 @@ export default function CORReview() {
       ) : (
         <div className="flex flex-col gap-6">
           {apps.map(app => {
-            const latestCOR = app.corFiles?.[app.corFiles.length - 1]
+            const latestCOR = app.corFiles?.[0] || null
             return (
               <div key={app.id} className="portal-surface p-6">
                 <div className="mb-4 flex items-start justify-between">
