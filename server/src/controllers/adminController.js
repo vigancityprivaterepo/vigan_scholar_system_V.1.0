@@ -1,10 +1,65 @@
-const { PrismaClient } = require('@prisma/client');
+﻿const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { AppError } = require('../middleware/errorHandler');
 const { isValidTransition } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 
 const prisma = new PrismaClient();
+const PRIMARY_ADMIN_EMAIL = 'data@vigancity.gov.ph';
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const applyStatusUpdate = async ({
+  application,
+  status,
+  remarks,
+  rejectionReason,
+  examScore,
+  interviewNotes,
+  performedById,
+}) => {
+  if (application.status === status) {
+    return application;
+  }
+
+  if (!isValidTransition(application.status, status)) {
+    throw new AppError(`Invalid status transition from ${application.status} to ${status}`, 400);
+  }
+
+  if (status === 'EXAM_INTERVIEW' && application.gwa !== null) {
+    const settingsRows = await prisma.$queryRaw`SELECT "gwa_threshold" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
+    const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 2.0;
+    if (parseFloat(application.gwa) > threshold) {
+      throw new AppError(
+        `Applicant GWA (${application.gwa}) does not meet the minimum threshold of ${threshold}.`,
+        400
+      );
+    }
+  }
+
+  const updateData = { status };
+  if (remarks) updateData.adminRemarks = remarks;
+  if (rejectionReason) updateData.rejectionReason = rejectionReason;
+  if (examScore !== undefined) updateData.examScore = parseFloat(examScore);
+  if (interviewNotes) updateData.interviewNotes = interviewNotes;
+
+  const updated = await prisma.application.update({ where: { id: application.id }, data: updateData });
+
+  await prisma.activityLog.create({
+    data: {
+      applicationId: application.id,
+      performedById,
+      action: `Status changed to ${status}`,
+      fromStatus: application.status,
+      toStatus: status,
+      notes: remarks || rejectionReason || null,
+    },
+  });
+
+  await handleStatusNotification(application, status, remarks, rejectionReason);
+  return updated;
+};
 
 const listApplications = async (req, res, next) => {
   try {
@@ -87,54 +142,75 @@ const updateStatus = async (req, res, next) => {
     });
     if (!application) throw new AppError('Application not found', 404);
 
-    if (!isValidTransition(application.status, status)) {
-      throw new AppError(
-        `Invalid status transition from ${application.status} to ${status}`,
-        400
-      );
-    }
+    const updated = await applyStatusUpdate({
+      application,
+      status,
+      remarks,
+      rejectionReason,
+      examScore,
+      interviewNotes,
+      performedById: req.user.id,
+    });
 
-    // Enforce GWA threshold when moving to NOT_QUALIFIED via eligibility screening
-    if (status === 'ELIGIBILITY_SCREENING' || status === 'NOT_QUALIFIED') {
-      // No GWA block here — admin decides; threshold is advisory on the frontend
-    }
+    res.json({ success: true, message: 'Status updated', application: updated });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    // When admin qualifies to EXAM_INTERVIEW, check GWA against saved threshold
-    if (status === 'EXAM_INTERVIEW' && application.gwa !== null) {
-      const settingsRows = await prisma.$queryRaw`SELECT "gwa_threshold" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
-      const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 2.0;
-      if (parseFloat(application.gwa) > threshold) {
-        throw new AppError(
-          `Applicant GWA (${application.gwa}) does not meet the minimum threshold of ${threshold}.`,
-          400
-        );
+const batchUpdateStatus = async (req, res, next) => {
+  try {
+    const { applicationIds, status, remarks, rejectionReason, examScore, interviewNotes } = req.body;
+
+    if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
+      throw new AppError('applicationIds is required and must contain at least one id.', 400);
+    }
+    if (!status) throw new AppError('Target status is required.', 400);
+
+    const uniqueIds = [...new Set(applicationIds)];
+    const applications = await prisma.application.findMany({
+      where: { id: { in: uniqueIds } },
+      include: { applicant: true },
+    });
+    const appMap = new Map(applications.map((app) => [app.id, app]));
+
+    const processed = [];
+    const skipped = [];
+
+    for (const appId of uniqueIds) {
+      const application = appMap.get(appId);
+      if (!application) {
+        skipped.push({ id: appId, reason: 'Application not found.' });
+        continue;
+      }
+
+      try {
+        const updated = await applyStatusUpdate({
+          application,
+          status,
+          remarks,
+          rejectionReason,
+          examScore,
+          interviewNotes,
+          performedById: req.user.id,
+        });
+        processed.push({ id: appId, previousStatus: application.status, newStatus: updated.status });
+      } catch (err) {
+        skipped.push({ id: appId, reason: err.message || 'Failed to update status.' });
       }
     }
 
-    const updateData = { status };
-    if (remarks) updateData.adminRemarks = remarks;
-    if (rejectionReason) updateData.rejectionReason = rejectionReason;
-    if (examScore !== undefined) updateData.examScore = parseFloat(examScore);
-    if (interviewNotes) updateData.interviewNotes = interviewNotes;
-
-    const updated = await prisma.application.update({ where: { id }, data: updateData });
-
-    // Log activity
-    await prisma.activityLog.create({
-      data: {
-        applicationId: id,
-        performedById: req.user.id,
-        action: `Status changed to ${status}`,
-        fromStatus: application.status,
-        toStatus: status,
-        notes: remarks || rejectionReason || null,
+    res.json({
+      success: true,
+      message: `Batch status update complete. Updated ${processed.length}, skipped ${skipped.length}.`,
+      summary: {
+        requested: uniqueIds.length,
+        updated: processed.length,
+        skipped: skipped.length,
       },
+      processed,
+      skipped,
     });
-
-    // Send notifications based on new status
-    await handleStatusNotification(application, status, remarks, rejectionReason);
-
-    res.json({ success: true, message: 'Status updated', application: updated });
   } catch (err) {
     next(err);
   }
@@ -164,7 +240,7 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       message: 'Unfortunately, your application did not meet the eligibility requirements.',
       type: 'ERROR',
       email: {
-        subject: 'Scholarship Application — Eligibility Result',
+        subject: 'Scholarship Application â€” Eligibility Result',
         template: 'notQualified',
       },
     },
@@ -178,12 +254,12 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       message: 'We regret to inform you that you did not pass the exam/interview.',
       type: 'ERROR',
       email: {
-        subject: 'Scholarship Application — Exam/Interview Result',
+        subject: 'Scholarship Application â€” Exam/Interview Result',
         template: 'failedExam',
       },
     },
     APPROVED: {
-      title: '🎉 Application Approved!',
+      title: 'ðŸŽ‰ Application Approved!',
       message: 'Congratulations! Your application has been approved. Please submit your Certificate of Registration (COR).',
       type: 'SUCCESS',
       email: {
@@ -192,7 +268,7 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       },
     },
     COR_REJECTED: {
-      title: 'COR Rejected — Resubmission Required',
+      title: 'COR Rejected â€” Resubmission Required',
       message: `Your COR was rejected. Reason: ${rejectionReason || 'Please review and resubmit.'}`,
       type: 'ERROR',
       email: {
@@ -201,11 +277,11 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
       },
     },
     ACCEPTED: {
-      title: '🎉 Welcome, Scholar!',
+      title: 'ðŸŽ‰ Welcome, Scholar!',
       message: 'Congratulations! Your scholarship application has been fully accepted. Welcome to the program!',
       type: 'SUCCESS',
       email: {
-        subject: '🎉 Welcome, Scholar! Your Application is Confirmed',
+        subject: 'ðŸŽ‰ Welcome, Scholar! Your Application is Confirmed',
         template: 'accepted',
       },
     },
@@ -359,7 +435,7 @@ const reviewCOR = async (req, res, next) => {
       reason
     );
 
-    res.json({ success: true, message: approved ? 'COR approved — applicant accepted' : 'COR rejected' });
+    res.json({ success: true, message: approved ? 'COR approved â€” applicant accepted' : 'COR rejected' });
   } catch (err) {
     next(err);
   }
@@ -475,10 +551,175 @@ const markAllAdminNotificationsRead = async (req, res, next) => {
   }
 };
 
+const listUsers = async (req, res, next) => {
+  try {
+    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+      throw new AppError('Only data@vigancity.gov.ph can manage admin users.', 403);
+    }
+
+    const { role, search } = req.query;
+    const where = {};
+
+    // Restrict user control to admin accounts only.
+    where.role = 'ADMIN';
+
+    if (search) {
+      where.OR = [
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: [{ role: 'asc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+      take: 200,
+    });
+
+    res.json({ success: true, users });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateUserRole = async (req, res, next) => {
+  try {
+    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+      throw new AppError('Only data@vigancity.gov.ph can manage admin users.', 403);
+    }
+
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['ADMIN', 'APPLICANT'].includes(role)) {
+      throw new AppError('Role must be ADMIN or APPLICANT.', 400);
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, email: true, role: true },
+    });
+    if (!target) throw new AppError('User not found.', 404);
+
+    if (target.id === req.user.id) {
+      throw new AppError('You cannot change your own role.', 400);
+    }
+
+    if (target.role === 'APPLICANT' && role === 'ADMIN') {
+      throw new AppError('Applicants cannot be promoted to admin from this panel.', 400);
+    }
+
+    if (target.role === role) {
+      return res.json({ success: true, message: 'Role is already set.', user: target });
+    }
+
+    if (target.role === 'ADMIN' && role === 'APPLICANT') {
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+      if (adminCount <= 1) {
+        throw new AppError('At least one admin account must remain.', 400);
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { role },
+      select: { id: true, fullName: true, email: true, role: true, createdAt: true },
+    });
+
+    res.json({
+      success: true,
+      message: `${updated.fullName} is now ${updated.role}.`,
+      user: updated,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const inviteAdminUser = async (req, res, next) => {
+  try {
+    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+      throw new AppError('Only data@vigancity.gov.ph can invite admin users.', 403);
+    }
+
+    const rawEmail = String(req.body.email || '').trim().toLowerCase();
+    const fullName = String(req.body.fullName || '').trim();
+
+    if (!rawEmail) throw new AppError('Email is required.', 400);
+    if (!emailPattern.test(rawEmail)) throw new AppError('Enter a valid email address.', 400);
+    if (!fullName) throw new AppError('Full name is required.', 400);
+
+    let user = await prisma.user.findUnique({ where: { email: rawEmail } });
+
+    if (user && user.role !== 'ADMIN') {
+      throw new AppError('This email is already registered as an applicant and cannot be invited as admin.', 400);
+    }
+
+    if (!user) {
+      const tempPassword = `invite-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const passwordHash = await bcrypt.hash(tempPassword, 12);
+      user = await prisma.user.create({
+        data: {
+          email: rawEmail,
+          fullName,
+          passwordHash,
+          role: 'ADMIN',
+          isEmailVerified: true,
+        },
+      });
+    } else if (fullName && user.fullName !== fullName) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { fullName },
+      });
+    }
+
+    const inviteToken = jwt.sign(
+      { userId: user.id, purpose: 'password-reset' },
+      `${process.env.JWT_SECRET}${user.passwordHash}`,
+      { expiresIn: '48h' }
+    );
+
+    const inviteUrl = `${process.env.CLIENT_URL}/forgot-password?token=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(user.email)}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: 'You have been invited as Scholarship Admin',
+      template: 'adminInvite',
+      data: {
+        name: user.fullName,
+        inviteUrl,
+        invitedBy: req.user.fullName || PRIMARY_ADMIN_EMAIL,
+      },
+      throwOnError: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Admin invitation sent to ${user.email}.`,
+      invitedUser: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 module.exports = {
   listApplications,
   getApplication,
   updateStatus,
+  batchUpdateStatus,
   scheduleExam,
   reviewCOR,
   getDashboardStats,
@@ -487,4 +728,12 @@ module.exports = {
   getAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
+  listUsers,
+  updateUserRole,
+  inviteAdminUser,
 };
+
+
+
+
+

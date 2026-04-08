@@ -17,6 +17,7 @@ import ApplicationForm from './pages/Applicant/ApplicationForm'
 import StatusTracker from './pages/Applicant/StatusTracker'
 import NotificationsPage from './pages/Applicant/Notifications'
 import CORSubmission from './pages/Applicant/CORSubmission'
+import HelpPage from './pages/Applicant/HelpPage'
 
 // Admin pages
 import AdminLayout from './components/layout/AdminLayout'
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/applicant/status" element={<StatusTracker />} />
             <Route path="/applicant/notifications" element={<NotificationsPage />} />
             <Route path="/applicant/cor" element={<CORSubmission />} />
+            <Route path="/applicant/help" element={<HelpPage />} />
           </Route>
         </Route>
 

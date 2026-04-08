@@ -38,6 +38,35 @@ const buildEmailVerificationUrl = (user) => {
   return `${process.env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
 };
 
+const getUserProfile = async (userId) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      role: true,
+      createdAt: true,
+      applications: {
+        select: { contact: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  if (!user) return null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    createdAt: user.createdAt,
+    contact: user.applications[0]?.contact || '',
+  };
+};
+
 const register = async (req, res, next) => {
   try {
     const { email, password, fullName } = req.body;
@@ -150,11 +179,8 @@ const login = async (req, res, next) => {
 
     const tokens = await generateTokens(user.id);
 
-    res.json({
-      success: true,
-      user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
-      ...tokens,
-    });
+    const profile = await getUserProfile(user.id);
+    res.json({ success: true, user: profile, ...tokens });
   } catch (err) {
     next(err);
   }
@@ -271,10 +297,7 @@ const logout = async (req, res, next) => {
 
 const me = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { id: true, email: true, fullName: true, role: true, createdAt: true },
-    });
+    const user = await getUserProfile(req.user.id);
     const isEmailVerified = user ? await getEmailVerificationStatus(user.id) : false;
     res.json({ success: true, user: user ? { ...user, isEmailVerified } : null });
   } catch (err) {
@@ -311,4 +334,36 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword };
+const updateProfile = async (req, res, next) => {
+  try {
+    const { fullName, contact } = req.body;
+    if (!fullName || !fullName.trim()) {
+      throw new AppError('Full name is required', 400);
+    }
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { fullName: fullName.trim() },
+    });
+
+    // Update contact in application if exists.
+    if (contact !== undefined) {
+      const normalizedContact = String(contact).trim();
+      if (normalizedContact && !/^(09|\+639)\d{9}$/.test(normalizedContact.replace(/\s/g, ''))) {
+        throw new AppError('Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX).', 400);
+      }
+
+      await prisma.application.updateMany({
+        where: { applicantId: req.user.id },
+        data: { contact: normalizedContact || null },
+      });
+    }
+
+    const profile = await getUserProfile(req.user.id);
+    res.json({ success: true, message: 'Profile updated successfully.', user: profile });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { register, login, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile };

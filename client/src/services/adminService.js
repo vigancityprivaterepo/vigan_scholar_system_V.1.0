@@ -5,6 +5,7 @@ export const adminService = {
   listApplications: (params) => api.get('/admin/applications', { params }),
   getApplication: (id) => api.get(`/admin/applications/${id}`),
   updateStatus: (id, data) => api.patch(`/admin/applications/${id}/status`, data),
+  batchUpdateStatus: (data) => api.patch('/admin/applications/batch-status', data),
   scheduleExam: (id, data) => api.post(`/admin/applications/${id}/schedule`, data),
   reviewCOR: (id, data) => api.patch(`/admin/applications/${id}/cor`, data),
   sendNotification: (id, data) => api.post(`/admin/notify/${id}`, data),
@@ -21,6 +22,9 @@ export const adminService = {
   getNotifications: () => api.get('/admin/notifications'),
   markNotificationRead: (id) => api.patch(`/admin/notifications/${id}/read`),
   markAllNotificationsRead: () => api.patch('/admin/notifications/read-all'),
+  listUsers: (params) => api.get('/admin/users', { params }),
+  updateUserRole: (id, role) => api.patch(`/admin/users/${id}/role`, { role }),
+  inviteAdminUser: (data) => api.post('/admin/users/invite', data),
 
   // Carousel CMS
   getCarouselSlides: () => api.get('/carousel/admin'),

@@ -731,7 +731,7 @@ export default function LandingPage() {
               <SealPlaceholder />
               <div>
                 <p className="text-[9px] uppercase tracking-[0.22em] text-emerald-300/90 sm:text-xs sm:tracking-[0.28em]">
-                  Heritage City Scholarship Portal
+                  Vigan Scholarship Management System
                 </p>
                 <h1 className="font-display text-base font-bold leading-tight sm:text-2xl md:text-3xl lg:text-[2.25rem]">
                   City Government of Vigan
@@ -1167,7 +1167,7 @@ export default function LandingPage() {
                 Heritage City of Vigan
               </p>
               <p className="mt-2 font-display text-2xl font-bold text-white">
-                Scholarship Portal
+                Vigan Scholarship Management System
               </p>
               <p className="mt-2 max-w-md text-sm leading-7 text-slate-400">
                 Digital services for scholarship application, document submission, and applicant status monitoring.

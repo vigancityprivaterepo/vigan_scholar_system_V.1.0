@@ -4,6 +4,7 @@ const {
   listApplications,
   getApplication,
   updateStatus,
+  batchUpdateStatus,
   scheduleExam,
   reviewCOR,
   getDashboardStats,
@@ -12,6 +13,9 @@ const {
   getAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
+  listUsers,
+  updateUserRole,
+  inviteAdminUser,
 } = require('../controllers/adminController');
 const { getAdminSiteSettings, updateAdminSiteSettings } = require('../controllers/siteSettingsController');
 const {
@@ -28,6 +32,7 @@ router.use(authenticate, requireAdmin);
 
 router.get('/stats', getDashboardStats);
 router.get('/applications', listApplications);
+router.patch('/applications/batch-status', batchUpdateStatus);
 router.get('/applications/:id', getApplication);
 router.patch('/applications/:id/status', updateStatus);
 router.post('/applications/:id/schedule', scheduleExam);
@@ -37,6 +42,9 @@ router.get('/logs/:id', getActivityLogs);
 router.get('/notifications', getAdminNotifications);
 router.patch('/notifications/read-all', markAllAdminNotificationsRead);
 router.patch('/notifications/:id/read', markAdminNotificationRead);
+router.post('/users/invite', inviteAdminUser);
+router.get('/users', listUsers);
+router.patch('/users/:id/role', updateUserRole);
 router.get('/settings', getAdminSiteSettings);
 router.patch('/settings', updateAdminSiteSettings);
 router.get('/scholars/posts', getAdminScholarPosts);

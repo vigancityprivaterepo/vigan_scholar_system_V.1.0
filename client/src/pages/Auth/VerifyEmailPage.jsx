@@ -61,7 +61,7 @@ export default function VerifyEmailPage() {
           <img src={logo} alt="Vigan City Seal" className="h-28 w-28 object-contain drop-shadow-lg" />
           <div className="mt-7">
             <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-emerald-300/80">
-              Heritage City Scholarship Portal
+             Vigan Scholarship Management System
             </p>
             <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-white">
               City Government of Vigan
@@ -91,7 +91,7 @@ export default function VerifyEmailPage() {
         <div className="flex items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-[#0c2340] to-[#064e3b] px-5 py-3 lg:hidden">
           <img src={logo} alt="Seal" className="h-9 w-9 object-contain" />
           <div>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/80">Heritage City Scholarship Portal</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/80">Vigan Scholarship Management System</p>
             <p className="text-sm font-bold text-white">City Government of Vigan</p>
           </div>
         </div>

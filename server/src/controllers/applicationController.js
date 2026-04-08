@@ -7,14 +7,49 @@ const { createNotification } = require('../services/notificationService');
 
 const prisma = new PrismaClient();
 
+const getApplicationWindow = async () => {
+  let rows = [];
+  try {
+    rows = await prisma.$queryRaw`
+      SELECT "application_open", "application_deadline"
+      FROM "site_settings"
+      WHERE "id" = 'default'
+      LIMIT 1
+    `;
+  } catch {
+    // If site_settings does not exist yet, keep defaults (open, no deadline).
+    rows = [];
+  }
+
+  const applicationOpen = rows[0] ? Boolean(rows[0].application_open) : true;
+  const deadlineRaw = rows[0]?.application_deadline;
+  const applicationDeadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  const isPastDeadline = applicationDeadline ? Date.now() > applicationDeadline.getTime() : false;
+
+  return { applicationOpen, applicationDeadline, isPastDeadline };
+};
+
+const ensureSubmissionOpen = async () => {
+  const { applicationOpen, applicationDeadline, isPastDeadline } = await getApplicationWindow();
+
+  if (!applicationOpen) {
+    throw new AppError('Applications are currently closed. Please check back later.', 403);
+  }
+
+  if (isPastDeadline) {
+    throw new AppError(
+      `The application deadline (${applicationDeadline.toISOString()}) has already passed.`,
+      403
+    );
+  }
+};
+
 const submitApplication = async (req, res, next) => {
   try {
     const applicantId = req.user.id;
 
-    // Check if applications are open
-    const settingsRows = await prisma.$queryRaw`SELECT "application_open" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
-    const applicationOpen = settingsRows[0] ? Boolean(settingsRows[0].application_open) : true;
-    if (!applicationOpen) throw new AppError('Applications are currently closed. Please check back later.', 403);
+    // Check if applications are open and deadline has not passed
+    await ensureSubmissionOpen();
 
     // Check if already has application
     const existing = await prisma.application.findFirst({ where: { applicantId } });
@@ -111,6 +146,8 @@ const getMyApplication = async (req, res, next) => {
 
 const resubmit = async (req, res, next) => {
   try {
+    await ensureSubmissionOpen();
+
     const application = await prisma.application.findFirst({
       where: { applicantId: req.user.id },
     });

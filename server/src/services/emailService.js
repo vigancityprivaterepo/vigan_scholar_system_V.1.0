@@ -70,7 +70,7 @@ const renderEmailLayout = ({
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
           <img src="${logoUrl}" alt="Vigan City Seal" width="52" height="52" style="display:block;width:52px;height:52px;object-fit:contain;border-radius:50%;background:rgba(255,255,255,0.12);padding:4px;" />
           <div>
-            <div style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#a7f3d0;">Heritage City Scholarship Portal</div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:#a7f3d0;">Vigan Scholarship Management System</div>
             <div style="font-size:15px;font-weight:700;color:#ffffff;margin-top:2px;">City Government of Vigan</div>
             <div style="font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;margin-top:1px;">Province of Ilocos Sur</div>
           </div>
@@ -328,6 +328,30 @@ const emailTemplates = {
       ctaUrl: data.portalUrl || `${process.env.CLIENT_URL}/applicant/status`,
       accent: '#1E1B4B',
       accentSoft: '#0D9488',
+    }),
+  }),
+
+  adminInvite: (data) => ({
+    subject: 'You have been invited as Scholarship Admin',
+    html: renderEmailLayout({
+      title: 'Admin Account Invitation',
+      subtitle: 'You were invited to manage scholarship applications in the admin portal.',
+      recipientName: data.name,
+      intro: `${escapeHtml(data.invitedBy || 'An administrator')} invited you to join the Scholarship Management System as an admin reviewer.`,
+      sections: [
+        renderPanel(
+          'Set Your Password',
+          'Use the secure link below to create your password and activate your admin access. This invite link expires in <strong>48 hours</strong>.',
+          'amber'
+        ),
+      ],
+      ctaLabel: 'Create Admin Password',
+      ctaUrl: data.inviteUrl,
+      footerNote: 'If you were not expecting this invitation, please ignore this email and contact the scholarship office.',
+      accent: '#0c2340',
+      accentSoft: '#064e3b',
+      ctaColor: '#10b981',
+      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 

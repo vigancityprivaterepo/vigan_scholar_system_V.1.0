@@ -194,6 +194,7 @@ model SiteSetting {
   facebookPageDescription String?  @map("facebook_page_description")
   gwaThreshold            Decimal  @default(2.0) @db.Decimal(4, 2) @map("gwa_threshold")
   applicationOpen         Boolean  @default(true) @map("application_open")
+  applicationDeadline     DateTime? @map("application_deadline")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 

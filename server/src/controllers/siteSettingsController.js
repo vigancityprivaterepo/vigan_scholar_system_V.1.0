@@ -33,6 +33,7 @@ const serializeSettings = (settings) => ({
   facebookPageDescription: settings?.facebook_page_description || '',
   gwaThreshold: settings?.gwa_threshold != null ? parseFloat(settings.gwa_threshold) : 2.0,
   applicationOpen: settings?.application_open != null ? Boolean(settings.application_open) : true,
+  applicationDeadline: settings?.application_deadline ? new Date(settings.application_deadline).toISOString() : null,
 });
 
 const ensureSiteSettingsTable = async () => {
@@ -44,6 +45,7 @@ const ensureSiteSettingsTable = async () => {
       "facebook_page_description" TEXT,
       "gwa_threshold" DECIMAL(4,2) NOT NULL DEFAULT 2.0,
       "application_open" BOOLEAN NOT NULL DEFAULT true,
+      "application_deadline" TIMESTAMP(3),
       "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT "site_settings_pkey" PRIMARY KEY ("id")
@@ -53,7 +55,8 @@ const ensureSiteSettingsTable = async () => {
   await prisma.$executeRawUnsafe(`
     ALTER TABLE "site_settings"
       ADD COLUMN IF NOT EXISTS "gwa_threshold" DECIMAL(4,2) NOT NULL DEFAULT 2.0,
-      ADD COLUMN IF NOT EXISTS "application_open" BOOLEAN NOT NULL DEFAULT true
+      ADD COLUMN IF NOT EXISTS "application_open" BOOLEAN NOT NULL DEFAULT true,
+      ADD COLUMN IF NOT EXISTS "application_deadline" TIMESTAMP(3)
   `);
 };
 
@@ -65,7 +68,8 @@ const getSettingsRow = async () => {
       "facebook_page_url",
       "facebook_page_description",
       "gwa_threshold",
-      "application_open"
+      "application_open",
+      "application_deadline"
     FROM "site_settings"
     WHERE "id" = ${SETTINGS_ID}
     LIMIT 1
@@ -117,6 +121,19 @@ const updateAdminSiteSettings = async (req, res, next) => {
       applicationOpen = Boolean(req.body.applicationOpen);
     }
 
+    let applicationDeadline = null;
+    if (req.body.applicationDeadline !== undefined) {
+      if (req.body.applicationDeadline === null || String(req.body.applicationDeadline).trim() === '') {
+        applicationDeadline = null;
+      } else {
+        const parsed = new Date(req.body.applicationDeadline);
+        if (Number.isNaN(parsed.getTime())) {
+          throw new AppError('Application deadline must be a valid date.', 400);
+        }
+        applicationDeadline = parsed;
+      }
+    }
+
     await ensureSiteSettingsTable();
 
     const rows = await prisma.$queryRaw`
@@ -127,6 +144,7 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "facebook_page_description",
         "gwa_threshold",
         "application_open",
+        "application_deadline",
         "updated_at"
       )
       VALUES (
@@ -136,6 +154,7 @@ const updateAdminSiteSettings = async (req, res, next) => {
         ${facebookPageDescription},
         ${gwaThreshold},
         ${applicationOpen},
+        ${applicationDeadline},
         CURRENT_TIMESTAMP
       )
       ON CONFLICT ("id") DO UPDATE SET
@@ -144,13 +163,15 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "facebook_page_description" = EXCLUDED."facebook_page_description",
         "gwa_threshold" = EXCLUDED."gwa_threshold",
         "application_open" = EXCLUDED."application_open",
+        "application_deadline" = EXCLUDED."application_deadline",
         "updated_at" = CURRENT_TIMESTAMP
       RETURNING
         "facebook_page_name",
         "facebook_page_url",
         "facebook_page_description",
         "gwa_threshold",
-        "application_open"
+        "application_open",
+        "application_deadline"
     `;
 
     res.json({

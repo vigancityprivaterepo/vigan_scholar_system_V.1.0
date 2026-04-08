@@ -10,6 +10,7 @@ import {
   BellIcon,
   DocumentIcon,
   HomeIcon,
+  InfoIcon,
   LogoutIcon,
   MenuIcon,
 } from '../ui/PortalIcons'
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/applicant/status', label: 'Status', Icon: ChartIcon },
   { to: '/applicant/notifications', label: 'Notifications', Icon: BellIcon },
   { to: '/applicant/cor', label: 'COR', Icon: DocumentIcon },
+  { to: '/applicant/help', label: 'Help', Icon: InfoIcon },
 ]
 
 export default function ApplicantLayout() {
@@ -49,7 +51,7 @@ export default function ApplicantLayout() {
             <NavLink to="/applicant/dashboard" className="flex min-w-0 items-center gap-3">
               <img src={logo} alt="Vigan City Seal" className="h-10 w-10 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="truncate text-[11px] uppercase tracking-[0.18em] text-slate-200">Scholarship Applicant Portal</p>
+                <p className="truncate text-[11px] uppercase tracking-[0.18em] text-slate-200">Vigan Scholarship Management System</p>
                 <p className="truncate font-display text-xl font-bold text-white">City Government of Vigan</p>
               </div>
             </NavLink>

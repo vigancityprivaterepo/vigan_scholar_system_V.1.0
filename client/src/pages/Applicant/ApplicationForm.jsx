@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
+import api from '../../services/api'
 import { UploadIcon, DocumentIcon, XIcon, ArrowRightIcon } from '../../components/ui/PortalIcons'
 
 const STEPS = ['Personal Info', 'Academic', 'Documents', 'Review']
@@ -25,6 +26,8 @@ export default function ApplicationForm() {
   const [files, setFiles] = useState([])
   const [existingApplication, setExistingApplication] = useState(null)
   const [checkingApplication, setCheckingApplication] = useState(true)
+  const [settings, setSettings] = useState({ applicationOpen: true, applicationDeadline: null })
+  const [countdownNow, setCountdownNow] = useState(Date.now())
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(SAVED_KEY)
@@ -67,6 +70,24 @@ export default function ApplicationForm() {
   }, [navigate])
 
   useEffect(() => {
+    api.get('/settings')
+      .then((response) => {
+        setSettings({
+          applicationOpen: response.data?.settings?.applicationOpen !== false,
+          applicationDeadline: response.data?.settings?.applicationDeadline || null,
+        })
+      })
+      .catch(() => {
+        setSettings({ applicationOpen: true, applicationDeadline: null })
+      })
+  }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => setCountdownNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem(SAVED_KEY, JSON.stringify(form))
   }, [form])
 
@@ -80,11 +101,29 @@ export default function ApplicationForm() {
     setFiles(prev => [...prev, ...valid])
   }, [])
 
+  const deadlineDate = settings.applicationDeadline ? new Date(settings.applicationDeadline) : null
+  const hasPassedDeadline = deadlineDate ? countdownNow > deadlineDate.getTime() : false
+  const submissionsBlocked = !settings.applicationOpen || hasPassedDeadline
+  const canEditForm = !submissionsBlocked
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/pdf': ['.pdf'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
     multiple: true,
+    disabled: !canEditForm,
   })
+
+  const formatCountdown = () => {
+    if (!deadlineDate) return null
+    const diff = deadlineDate.getTime() - countdownNow
+    if (diff <= 0) return 'Deadline passed'
+    const totalSeconds = Math.floor(diff / 1000)
+    const days = Math.floor(totalSeconds / 86400)
+    const hours = Math.floor((totalSeconds % 86400) / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`
+  }
 
   const validateStep = () => {
     const e = {}
@@ -107,10 +146,21 @@ export default function ApplicationForm() {
     return Object.keys(e).length === 0
   }
 
-  const next = () => { if (validateStep()) setStep(s => s + 1) }
+  const next = () => {
+    if (!canEditForm) {
+      toast.error('Submissions are currently closed.')
+      return
+    }
+    if (validateStep()) setStep(s => s + 1)
+  }
   const back = () => setStep(s => s - 1)
 
   const handleSubmit = async () => {
+    if (!canEditForm) {
+      toast.error('Submissions are currently closed.')
+      return
+    }
+
     setLoading(true)
     try {
       const fd = new FormData()
@@ -162,6 +212,21 @@ export default function ApplicationForm() {
             : 'Complete all steps and upload the required documents for review.'}
         </p>
       </div>
+
+      {(settings.applicationDeadline || !settings.applicationOpen) && (
+        <div className={`portal-surface mb-6 border-l-4 p-5 ${submissionsBlocked ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
+          <p className={`portal-kicker ${submissionsBlocked ? 'text-red-700' : 'text-blue-700'}`}>Application Window</p>
+          {!settings.applicationOpen ? (
+            <p className="mt-2 text-sm text-red-700">Application submissions are currently closed by the administrator.</p>
+          ) : (
+            <p className="mt-2 text-sm text-slate-700">
+              {submissionsBlocked
+                ? `Deadline has passed (${deadlineDate?.toLocaleString()}). New submissions are blocked.`
+                : `Deadline: ${deadlineDate?.toLocaleString()} (${formatCountdown()} remaining)`}
+            </p>
+          )}
+        </div>
+      )}
 
       {existingApplication?.status === 'INCOMPLETE' && existingApplication.adminRemarks && (
         <div className="portal-surface mb-6 border-l-4 border-amber-300 bg-amber-50 p-5">
@@ -339,14 +404,14 @@ export default function ApplicationForm() {
         <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4">
           <button onClick={back} disabled={step === 0} className="portal-button-secondary disabled:opacity-40">Back</button>
           {step < 3 ? (
-            <button onClick={next} className="portal-button-primary">
+            <button onClick={next} disabled={!canEditForm} className="portal-button-primary disabled:opacity-40">
               Next
               <ArrowRightIcon className="h-4 w-4" />
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={loading} className="portal-button-primary">
+            <button onClick={handleSubmit} disabled={loading || !canEditForm} className="portal-button-primary disabled:opacity-40">
               {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-              {loading ? (existingApplication?.status === 'INCOMPLETE' ? 'Resubmitting...' : 'Submitting...') : (existingApplication?.status === 'INCOMPLETE' ? 'Resubmit Application' : 'Submit Application')}
+              {loading ? (existingApplication?.status === 'INCOMPLETE' ? 'Resubmitting...' : 'Submitting...') : !canEditForm ? 'Submissions Closed' : (existingApplication?.status === 'INCOMPLETE' ? 'Resubmit Application' : 'Submit Application')}
             </button>
           )}
         </div>

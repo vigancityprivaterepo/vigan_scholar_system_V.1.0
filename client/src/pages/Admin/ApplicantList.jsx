@@ -1,12 +1,48 @@
-import React, { useEffect, useState, useCallback } from 'react'
+﻿import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
+import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate } from '../../utils/formatDate'
 import { ArrowRightIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
-const ALL_STATUSES = ['PENDING_REVIEW','INCOMPLETE','ELIGIBILITY_SCREENING','NOT_QUALIFIED','EXAM_INTERVIEW','FAILED_EXAM','APPROVED','COR_SUBMITTED','COR_REJECTED','ACCEPTED','REJECTED']
+const exportToCSV = async (search, statusFilter) => {
+  try {
+    const params = { page: 1, limit: 9999, sortBy: 'submittedAt', sortOrder: 'desc' }
+    if (search) params.search = search
+    if (statusFilter) params.status = statusFilter
+    const r = await adminService.listApplications(params)
+    const apps = r.data.applications
+
+    const headers = ['Name', 'Email', 'School', 'Course', 'Year Level', 'GWA', 'Status', 'Contact', 'Submitted']
+    const rows = apps.map(a => [
+      a.applicant?.fullName || '',
+      a.applicant?.email || '',
+      a.school || '',
+      a.course || '',
+      a.yearLevel || '',
+      a.gwa ? parseFloat(a.gwa).toFixed(2) : '',
+      a.status || '',
+      a.contact || '',
+      a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '',
+    ])
+
+    const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `applicants-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    toast.error('Failed to export CSV')
+  }
+}
+
+const ALL_STATUSES = ['PENDING_REVIEW', 'INCOMPLETE', 'ELIGIBILITY_SCREENING', 'NOT_QUALIFIED', 'EXAM_INTERVIEW', 'FAILED_EXAM', 'APPROVED', 'COR_SUBMITTED', 'COR_REJECTED', 'ACCEPTED', 'REJECTED']
+const DESTRUCTIVE_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED']
 
 export default function ApplicantList() {
   const [searchParams] = useSearchParams()
@@ -18,6 +54,13 @@ export default function ApplicantList() {
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
 
+  const [selectedIds, setSelectedIds] = useState([])
+  const [batchStatus, setBatchStatus] = useState('')
+  const [batchRemarks, setBatchRemarks] = useState('')
+  const [batchRejectionReason, setBatchRejectionReason] = useState('')
+  const [batchExamScore, setBatchExamScore] = useState('')
+  const [batchLoading, setBatchLoading] = useState(false)
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -26,24 +69,106 @@ export default function ApplicantList() {
       if (statusFilter) params.status = statusFilter
       const r = await adminService.listApplications(params)
       setData(r.data)
-    } catch {}
+    } catch {
+      toast.error('Failed to load applications')
+    }
     setLoading(false)
   }, [page, search, statusFilter, sortBy, sortOrder])
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  const visibleIds = useMemo(() => data.applications.map((app) => app.id), [data.applications])
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+  const selectedVisibleCount = useMemo(() => visibleIds.filter((id) => selectedSet.has(id)).length, [visibleIds, selectedSet])
+  const isAllVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length
+
   const toggleSort = (col) => {
     if (sortBy === col) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
     else { setSortBy(col); setSortOrder('desc') }
   }
-  const sortIcon = (col) => sortBy === col ? (sortOrder === 'asc' ? '↑' : '↓') : '↕'
+
+  const sortIcon = (col) => sortBy === col ? (sortOrder === 'asc' ? '^' : 'v') : '*'
+
+  const toggleSelect = (id) => {
+    setSelectedIds((current) => {
+      if (current.includes(id)) return current.filter((x) => x !== id)
+      return [...current, id]
+    })
+  }
+
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((current) => {
+      if (isAllVisibleSelected) return current.filter((id) => !visibleIds.includes(id))
+      const merged = new Set([...current, ...visibleIds])
+      return [...merged]
+    })
+  }
+
+  const clearBatchFields = () => {
+    setBatchStatus('')
+    setBatchRemarks('')
+    setBatchRejectionReason('')
+    setBatchExamScore('')
+  }
+
+  const runBatchStatus = async () => {
+    if (selectedIds.length === 0) {
+      toast.error('Select at least one application.')
+      return
+    }
+    if (!batchStatus) {
+      toast.error('Choose a target status first.')
+      return
+    }
+
+    if (DESTRUCTIVE_STATUSES.includes(batchStatus)) {
+      const yes = window.confirm(`Apply ${batchStatus.replaceAll('_', ' ')} to ${selectedIds.length} application(s)?`)
+      if (!yes) return
+    }
+
+    setBatchLoading(true)
+    try {
+      const payload = {
+        applicationIds: selectedIds,
+        status: batchStatus,
+        remarks: batchRemarks || undefined,
+        rejectionReason: batchRejectionReason || undefined,
+        examScore: batchExamScore ? parseFloat(batchExamScore) : undefined,
+      }
+      const { data: response } = await adminService.batchUpdateStatus(payload)
+
+      const updated = response.summary?.updated || 0
+      const skipped = response.summary?.skipped || 0
+      if (updated > 0) toast.success(`Updated ${updated} application(s).`)
+      if (skipped > 0) {
+        const preview = response.skipped?.slice(0, 2).map((item) => item.reason).join(' | ')
+        toast.error(`Skipped ${skipped} application(s). ${preview || ''}`.trim())
+      }
+
+      setSelectedIds([])
+      clearBatchFields()
+      fetchData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Batch update failed.')
+    } finally {
+      setBatchLoading(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="portal-kicker">Application Queue</p>
-        <h1 className="portal-page-title mt-2">Applicants</h1>
-        <p className="portal-page-subtitle">{data.pagination.total} total applications</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="portal-kicker">Application Queue</p>
+          <h1 className="portal-page-title mt-2">Applicants</h1>
+          <p className="portal-page-subtitle">{data.pagination.total} total applications</p>
+        </div>
+        <button
+          onClick={() => exportToCSV(search, statusFilter)}
+          className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
+        >
+          Export CSV
+        </button>
       </div>
 
       <div className="portal-surface p-5">
@@ -75,12 +200,73 @@ export default function ApplicantList() {
         </div>
       </div>
 
+      {selectedIds.length > 0 && (
+        <div className="portal-surface border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Batch Action</p>
+              <p className="mt-1 text-sm text-emerald-900">{selectedIds.length} selected application(s)</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setSelectedIds([]); clearBatchFields() }}
+              className="text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+            >
+              Clear Selection
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <select className="portal-input" value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}>
+              <option value="">Select target status</option>
+              {ALL_STATUSES.map((status) => (
+                <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              className="portal-input"
+              placeholder="Exam score (optional)"
+              value={batchExamScore}
+              onChange={(e) => setBatchExamScore(e.target.value)}
+            />
+            <textarea
+              className="portal-input"
+              rows={2}
+              placeholder="Admin remarks (optional)"
+              value={batchRemarks}
+              onChange={(e) => setBatchRemarks(e.target.value)}
+            />
+            <textarea
+              className="portal-input"
+              rows={2}
+              placeholder="Rejection reason (optional)"
+              value={batchRejectionReason}
+              onChange={(e) => setBatchRejectionReason(e.target.value)}
+            />
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={runBatchStatus}
+              disabled={batchLoading}
+              className="portal-button-primary"
+            >
+              {batchLoading ? 'Processing...' : 'Apply to Selected'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="portal-surface overflow-hidden p-0">
-        {/* Desktop table — hidden on mobile */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input type="checkbox" checked={isAllVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible" />
+                </th>
                 {[
                   { label: 'Name', col: 'applicant' },
                   { label: 'School', col: null },
@@ -103,20 +289,28 @@ export default function ApplicantList() {
               {loading ? (
                 [...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-slate-100">
-                    {[1, 2, 3, 4, 5, 6].map(j => (
+                    {[1, 2, 3, 4, 5, 6, 7].map(j => (
                       <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded bg-gray-100" /></td>
                     ))}
                   </tr>
                 ))
               ) : data.applications.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
                     <p>No applications found</p>
                   </td>
                 </tr>
               ) : (
                 data.applications.map((app) => (
                   <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedSet.has(app.id)}
+                        onChange={() => toggleSelect(app.id)}
+                        aria-label={`Select ${app.applicant?.fullName || app.id}`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-brand-primary">{app.applicant?.fullName}</p>
@@ -146,7 +340,6 @@ export default function ApplicantList() {
           </table>
         </div>
 
-        {/* Mobile card list — visible only on mobile */}
         <div className="flex flex-col divide-y divide-slate-100 md:hidden">
           {loading ? (
             [...Array(5)].map((_, i) => (
@@ -159,7 +352,14 @@ export default function ApplicantList() {
             <p className="py-10 text-center text-sm text-slate-500">No applications found</p>
           ) : (
             data.applications.map((app) => (
-              <div key={app.id} className="flex items-start justify-between gap-3 p-4">
+              <div key={app.id} className="flex items-start gap-3 p-4">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={selectedSet.has(app.id)}
+                  onChange={() => toggleSelect(app.id)}
+                  aria-label={`Select ${app.applicant?.fullName || app.id}`}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-brand-primary">{app.applicant?.fullName}</p>
                   <p className="truncate text-xs text-slate-500">{app.applicant?.email}</p>
@@ -195,3 +395,4 @@ export default function ApplicantList() {
     </div>
   )
 }
+
