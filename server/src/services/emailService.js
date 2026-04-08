@@ -1,6 +1,29 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
 let transporter;
+const LOGO_CID = 'portal-logo';
+
+const resolveLogoPath = () => {
+  const candidates = [
+    process.env.EMAIL_LOGO_PATH,
+    path.resolve(__dirname, '../../../client/public/logo.png'),
+    path.resolve(process.cwd(), 'client/public/logo.png'),
+    path.resolve(process.cwd(), 'MIS_LOGO.png'),
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+};
+
+const getDefaultLogoUrl = () => {
+  const localLogoPath = resolveLogoPath();
+  if (localLogoPath) return `cid:${LOGO_CID}`;
+
+  const baseUrl = String(process.env.CLIENT_URL || '').trim().replace(/\/+$/, '');
+  return baseUrl ? `${baseUrl}/logo.png` : '';
+};
+
 const getTransporter = () => {
   if (!transporter) {
     const port = parseInt(process.env.SMTP_PORT || '587', 10);
@@ -61,7 +84,7 @@ const renderEmailLayout = ({
   accent = '#0f3d6d',
   accentSoft = '#164f8c',
   ctaColor,
-  logoUrl,
+  logoUrl = getDefaultLogoUrl(),
 }) => `
   <div style="margin:0;padding:24px;background:#eef2f7;">
     <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #dbe3ef;border-radius:18px;overflow:hidden;font-family:Arial,sans-serif;color:#334155;">
@@ -396,7 +419,26 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
     const rendered = templateFn(data);
 
     const from = process.env.EMAIL_FROM || '"Scholarship Portal" <noreply@vigancity.gov.ph>';
-    await getTransporter().sendMail({ from, to, subject: subject || rendered.subject, html: rendered.html });
+    const attachments = [];
+
+    if (rendered.html.includes(`cid:${LOGO_CID}`)) {
+      const logoPath = resolveLogoPath();
+      if (logoPath) {
+        attachments.push({
+          filename: path.basename(logoPath),
+          path: logoPath,
+          cid: LOGO_CID,
+        });
+      }
+    }
+
+    await getTransporter().sendMail({
+      from,
+      to,
+      subject: subject || rendered.subject,
+      html: rendered.html,
+      attachments,
+    });
     console.log(`Email sent to ${to}: ${rendered.subject}`);
   } catch (err) {
     console.error(`Failed to send email to ${to}:`, err.message);
