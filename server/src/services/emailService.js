@@ -295,7 +295,6 @@ const emailTemplates = {
       accent: '#0c2340',
       accentSoft: '#064e3b',
       ctaColor: '#10b981',
-      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 
@@ -374,7 +373,6 @@ const emailTemplates = {
       accent: '#0c2340',
       accentSoft: '#064e3b',
       ctaColor: '#10b981',
-      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 
@@ -403,7 +401,6 @@ const emailTemplates = {
       accent: '#0c2340',
       accentSoft: '#064e3b',
       ctaColor: '#10b981',
-      logoUrl: `${process.env.CLIENT_URL}/logo.png`,
     }),
   }),
 };
