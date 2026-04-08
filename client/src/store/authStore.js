@@ -28,7 +28,7 @@ export const useAuthStore = create(
       },
 
       login: async (email, password) => {
-        const res = await api.post('/auth/login', { email, password })
+        const res = await api.post('/auth/login', { email, password }, { _skipAuthRefresh: true })
         set({
           user: res.data.user,
           accessToken: res.data.accessToken,

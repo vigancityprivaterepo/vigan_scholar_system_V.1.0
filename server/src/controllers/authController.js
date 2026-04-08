@@ -169,13 +169,14 @@ const login = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) throw new AppError('Invalid email or password', 401);
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) throw new AppError('Invalid email or password', 401);
+
     const isEmailVerified = await getEmailVerificationStatus(user.id);
     if (user.role !== 'ADMIN' && !isEmailVerified) {
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new AppError('Invalid email or password', 401);
 
     const tokens = await generateTokens(user.id);
 
