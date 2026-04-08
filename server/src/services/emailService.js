@@ -8,6 +8,7 @@ const LOGO_CID = 'portal-logo';
 const resolveLogoPath = () => {
   const candidates = [
     process.env.EMAIL_LOGO_PATH,
+    path.resolve(__dirname, '../assets/logo.png'),
     path.resolve(__dirname, '../../../client/public/logo.png'),
     path.resolve(process.cwd(), 'client/public/logo.png'),
     path.resolve(process.cwd(), 'MIS_LOGO.png'),
