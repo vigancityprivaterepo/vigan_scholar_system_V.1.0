@@ -59,6 +59,7 @@ model Application {
   // Admin
   adminRemarks   String?   @map("admin_remarks")
   examScore      Decimal?  @db.Decimal(5, 2) @map("exam_score")
+  /// @deprecated Use ExamSchedule.scheduledAt — this field is no longer written and will be removed in a future migration.
   interviewDate  DateTime? @map("interview_date")
   interviewNotes String?   @map("interview_notes")
   rejectionReason String?  @map("rejection_reason")

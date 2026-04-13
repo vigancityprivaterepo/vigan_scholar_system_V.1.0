@@ -867,10 +867,8 @@ const scheduleExam = async (req, res, next) => {
       },
     });
 
-    await prisma.application.update({
-      where: { id },
-      data: { interviewDate: new Date(scheduledAt) },
-    });
+    // ExamSchedule is the authoritative source for scheduling data.
+    // interviewDate on Application is a deprecated legacy field — do not write to it.
 
     await createNotification({
       userId: application.applicant.id,
