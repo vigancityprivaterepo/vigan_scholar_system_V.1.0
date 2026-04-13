@@ -21,6 +21,7 @@ services:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/scholarship_db
       NODE_ENV: production
       PORT: 5000
+      PRIMARY_ADMIN_EMAIL: ${PRIMARY_ADMIN_EMAIL:-data@vigancity.gov.ph}
     ports:
       - "5000:5000"
     volumes:
