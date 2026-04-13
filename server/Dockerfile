@@ -14,4 +14,6 @@ COPY src ./src
 
 EXPOSE 5000
 
-CMD ["node", "src/index.js"]
+# Run pending migrations then start the server.
+# prisma migrate deploy is non-interactive and safe for production containers.
+CMD ["sh", "-c", "npx prisma migrate deploy && node src/index.js"]
