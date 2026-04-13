@@ -22,8 +22,8 @@ services:
       NODE_ENV: production
       PORT: 5000
       PRIMARY_ADMIN_EMAIL: ${PRIMARY_ADMIN_EMAIL:-data@vigancity.gov.ph}
-    ports:
-      - "5000:5000"
+    # Port 5000 is intentionally NOT exposed to the host.
+    # All API traffic is routed through Nginx on port 80 via the /api/ proxy block.
     volumes:
       - uploads:/app/uploads
 
@@ -31,8 +31,10 @@ services:
     build:
       context: ./client
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        VITE_API_URL: ${VITE_API_URL}
+        # Relative URLs so the browser never sees the backend IP or port.
+        # Nginx proxies /api/* to the server container internally.
+        VITE_API_BASE_URL: /api
+        VITE_API_URL: /api
     restart: unless-stopped
     ports:
       - "80:80"

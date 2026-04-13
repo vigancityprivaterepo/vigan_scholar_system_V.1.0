@@ -43,9 +43,10 @@ JWT_SECRET=your_jwt_secret_here
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_here
 
 # URLs
+# CLIENT_URL is used in email links sent to applicants
 CLIENT_URL=http://YOUR_PUBLIC_IP
-VITE_API_BASE_URL=http://YOUR_PUBLIC_IP:5000/api
-VITE_API_URL=http://YOUR_PUBLIC_IP:5000/api
+# API calls are proxied through Nginx — do not include :5000 here
+# VITE_API_BASE_URL and VITE_API_URL are hardcoded to /api in docker-compose.yml
 
 # Email (Gmail SMTP)
 SMTP_HOST=smtp.gmail.com
