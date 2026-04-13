@@ -905,6 +905,91 @@ const scheduleExam = async (req, res, next) => {
   }
 };
 
+const bulkScheduleExam = async (req, res, next) => {
+  try {
+    const { applicationIds, scheduledAt, location, type } = req.body;
+
+    if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
+      throw new AppError('applicationIds must be a non-empty array.', 400);
+    }
+    if (!scheduledAt) throw new AppError('scheduledAt is required.', 400);
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) throw new AppError('scheduledAt must be a valid date.', 400);
+    if (scheduledDate <= new Date()) throw new AppError('Scheduled date must be in the future.', 400);
+
+    const uniqueIds = [...new Set(applicationIds)];
+    const applications = await prisma.application.findMany({
+      where: { id: { in: uniqueIds }, status: 'EXAM_INTERVIEW' },
+      include: { applicant: true },
+    });
+
+    const foundIds = new Set(applications.map((a) => a.id));
+    const skipped = uniqueIds
+      .filter((id) => !foundIds.has(id))
+      .map((id) => ({ id, reason: 'Not found or not in EXAM_INTERVIEW status.' }));
+
+    const scheduled = [];
+    const schedType = type || 'BOTH';
+    const schedLocation = location || null;
+
+    for (const application of applications) {
+      try {
+        const schedule = await prisma.examSchedule.create({
+          data: {
+            applicationId: application.id,
+            scheduledAt: scheduledDate,
+            location: schedLocation,
+            type: schedType,
+          },
+        });
+
+        await createNotification({
+          userId: application.applicant.id,
+          applicationId: application.id,
+          title: 'Exam/Interview Scheduled',
+          message: `Your exam/interview is scheduled for ${scheduledDate.toLocaleString()}${schedLocation ? ` at ${schedLocation}` : ''}.`,
+          type: 'INFO',
+        });
+
+        await sendEmail({
+          to: application.applicant.email,
+          subject: 'Your Exam/Interview is Scheduled',
+          template: 'examScheduled',
+          data: {
+            name: application.applicant.fullName,
+            scheduledAt: scheduledDate.toLocaleString(),
+            location: schedLocation,
+            type: schedType,
+            portalUrl: `${process.env.CLIENT_URL}/applicant/status`,
+          },
+        });
+
+        await prisma.activityLog.create({
+          data: {
+            applicationId: application.id,
+            performedById: req.user.id,
+            action: `Bulk scheduled ${schedType} for ${scheduledDate.toLocaleDateString()}`,
+          },
+        });
+
+        scheduled.push({ id: application.id, scheduleId: schedule.id });
+      } catch (err) {
+        skipped.push({ id: application.id, reason: err.message || 'Failed to schedule.' });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Bulk schedule complete. Scheduled: ${scheduled.length}, skipped: ${skipped.length}.`,
+      summary: { requested: uniqueIds.length, scheduled: scheduled.length, skipped: skipped.length },
+      scheduled,
+      skipped,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const reviewCOR = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -1564,6 +1649,7 @@ module.exports = {
   scheduleBulkEmailApplicants,
   listEmailJobs,
   scheduleExam,
+  bulkScheduleExam,
   reviewCOR,
   getDashboardStats,
   sendManualNotification,

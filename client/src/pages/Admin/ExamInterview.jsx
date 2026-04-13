@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
-import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon, UsersIcon } from '../../components/ui/PortalIcons'
 
 export default function ExamInterview() {
   const [apps, setApps] = useState([])
@@ -11,14 +11,54 @@ export default function ExamInterview() {
   const [scoreForm, setScoreForm] = useState({})
   const [acting, setActing] = useState({})
 
+  // Bulk scheduling state
+  const [selected, setSelected] = useState(new Set())
+  const [bulkForm, setBulkForm] = useState({ scheduledAt: '', location: '', type: 'BOTH' })
+  const [bulkActing, setBulkActing] = useState(false)
+
   const fetchData = () => {
     adminService.listApplications({ status: 'EXAM_INTERVIEW', limit: 50 })
-      .then(r => setApps(r.data.applications))
+      .then(r => { setApps(r.data.applications); setSelected(new Set()) })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => { fetchData() }, [])
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    setSelected(prev => prev.size === apps.length ? new Set() : new Set(apps.map(a => a.id)))
+  }
+
+  const bulkSchedule = async () => {
+    if (selected.size === 0) { toast.error('Select at least one applicant.'); return }
+    if (!bulkForm.scheduledAt) { toast.error('Please select a date/time for the bulk schedule.'); return }
+    if (new Date(bulkForm.scheduledAt) <= new Date()) { toast.error('Scheduled date must be in the future.'); return }
+    setBulkActing(true)
+    try {
+      const res = await adminService.bulkScheduleExam({
+        applicationIds: [...selected],
+        scheduledAt: bulkForm.scheduledAt,
+        location: bulkForm.location || '',
+        type: bulkForm.type || 'BOTH',
+      })
+      const { scheduled, skipped } = res.data.summary
+      toast.success(`Scheduled ${scheduled} applicant${scheduled !== 1 ? 's' : ''}.${skipped > 0 ? ` ${skipped} skipped.` : ''}`)
+      setBulkForm({ scheduledAt: '', location: '', type: 'BOTH' })
+      fetchData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Bulk schedule failed.')
+    } finally {
+      setBulkActing(false)
+    }
+  }
 
   const scheduleExam = async (id) => {
     const form = scheduleForm[id] || {}
@@ -80,15 +120,91 @@ export default function ExamInterview() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+
+          {/* ── Bulk Schedule Panel ── */}
+          <div className="portal-surface p-5">
+            <div className="mb-4 flex items-center gap-2 text-brand-primary">
+              <UsersIcon className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-[0.16em]">Bulk Schedule</p>
+              {selected.size > 0 && (
+                <span className="ml-auto rounded-full bg-brand-primary px-2 py-0.5 text-xs font-bold text-white">
+                  {selected.size} selected
+                </span>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <input
+                type="datetime-local"
+                className="portal-input text-sm"
+                value={bulkForm.scheduledAt}
+                onChange={e => setBulkForm(f => ({ ...f, scheduledAt: e.target.value }))}
+              />
+              <input
+                className="portal-input text-sm"
+                placeholder="Location (optional)"
+                value={bulkForm.location}
+                onChange={e => setBulkForm(f => ({ ...f, location: e.target.value }))}
+              />
+              <select
+                className="portal-input text-sm"
+                value={bulkForm.type}
+                onChange={e => setBulkForm(f => ({ ...f, type: e.target.value }))}
+              >
+                <option value="EXAM">Exam only</option>
+                <option value="INTERVIEW">Interview only</option>
+                <option value="BOTH">Exam + Interview</option>
+              </select>
+              <button
+                onClick={bulkSchedule}
+                disabled={bulkActing || selected.size === 0}
+                className="portal-button-primary text-xs disabled:opacity-50"
+              >
+                {bulkActing ? 'Scheduling…' : `Schedule ${selected.size > 0 ? `(${selected.size})` : 'Selected'}`}
+              </button>
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500">
+              Check applicants below to include them in the bulk schedule. All selected applicants receive the same date, location, and type.
+            </p>
+          </div>
+
+          {/* ── Select-all bar ── */}
+          <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-2">
+            <input
+              type="checkbox"
+              id="select-all"
+              className="h-4 w-4 cursor-pointer accent-brand-primary"
+              checked={selected.size === apps.length && apps.length > 0}
+              onChange={toggleSelectAll}
+            />
+            <label htmlFor="select-all" className="cursor-pointer text-xs font-medium text-slate-600">
+              {selected.size === apps.length ? 'Deselect all' : `Select all ${apps.length} applicants`}
+            </label>
+          </div>
+
+          {/* ── Applicant cards ── */}
           {apps.map(app => {
             const sf = scheduleForm[app.id] || {}
             const scf = scoreForm[app.id] || {}
+            const isSelected = selected.has(app.id)
             return (
-              <div key={app.id} className="portal-surface p-6">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                    <p className="text-xs text-slate-500">{app.school} • GWA: <span className="font-mono font-bold">{app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}</span></p>
+              <div
+                key={app.id}
+                className={`portal-surface p-6 transition-all ${isSelected ? 'ring-2 ring-brand-primary' : ''}`}
+              >
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 h-4 w-4 cursor-pointer accent-brand-primary"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(app.id)}
+                    />
+                    <div>
+                      <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="font-mono font-bold">{app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}</span></p>
+                    </div>
                   </div>
                   <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
                     View <ArrowRightIcon className="h-4 w-4" />
