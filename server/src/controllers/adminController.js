@@ -30,9 +30,9 @@ const EMAIL_JOB_DEFAULT_MAX_ATTEMPTS = (() => {
 
 const ensureAdminDailyCap = async (adminId, requestedCount) => {
   const start = new Date();
-  start.setHours(0, 0, 0, 0);
+  start.setUTCHours(0, 0, 0, 0);
   const end = new Date();
-  end.setHours(23, 59, 59, 999);
+  end.setUTCHours(23, 59, 59, 999);
 
   const count = await prisma.communicationLog.count({
     where: {
@@ -215,19 +215,25 @@ const applyStatusUpdate = async ({
     updateData.requirementChecklist = requirementChecklist;
   }
 
-  const updated = await prisma.application.update({ where: { id: application.id }, data: updateData });
-
-  await prisma.activityLog.create({
-    data: {
-      applicationId: application.id,
-      performedById,
-      action: `Status changed to ${status}`,
-      fromStatus: application.status,
-      toStatus: status,
-      notes: remarks || rejectionReason || null,
-    },
+  // Wrap the DB writes in a transaction so the application update and its
+  // activity log entry are always committed together or not at all.
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.application.update({ where: { id: application.id }, data: updateData });
+    await tx.activityLog.create({
+      data: {
+        applicationId: application.id,
+        performedById,
+        action: `Status changed to ${status}`,
+        fromStatus: application.status,
+        toStatus: status,
+        notes: remarks || rejectionReason || null,
+      },
+    });
+    return result;
   });
 
+  // Notifications and emails run after the transaction commits — they are
+  // intentionally outside the transaction since they cannot be rolled back.
   await handleStatusNotification(application, status, remarks, rejectionReason);
   return updated;
 };

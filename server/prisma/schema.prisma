@@ -183,10 +183,17 @@ model CommunicationLog {
   @@map("communication_logs")
 }
 
+enum EmailJobStatus {
+  PENDING
+  RETRY
+  FAILED
+  COMPLETED
+}
+
 model EmailJob {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   type        String
-  status      String   @default("PENDING")
+  status      EmailJobStatus @default(PENDING)
   payload     Json
   createdById String?  @map("created_by_id")
   createdBy   User?    @relation("EmailJobCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -202,19 +209,25 @@ model EmailJob {
   @@map("email_jobs")
 }
 
+enum AppealStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
 model Appeal {
-  id            String   @id @default(uuid())
-  applicationId String   @map("application_id")
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  applicantId   String   @map("applicant_id")
-  applicant     User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid())
+  applicationId String       @map("application_id")
+  application   Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicantId   String       @map("applicant_id")
+  applicant     User         @relation(fields: [applicantId], references: [id], onDelete: Cascade)
   reason        String
-  status        String   @default("PENDING")
+  status        AppealStatus @default(PENDING)
   resolution    String?
-  reviewedById  String?  @map("reviewed_by_id")
-  reviewedBy    User?    @relation("AppealReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  reviewedById  String?      @map("reviewed_by_id")
+  reviewedBy    User?        @relation("AppealReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   @@index([applicationId, status])
   @@index([applicantId, createdAt])

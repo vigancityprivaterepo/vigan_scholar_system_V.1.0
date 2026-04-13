@@ -16,6 +16,7 @@ const scholarRoutes = require('./routes/scholars');
 const { errorHandler } = require('./middleware/errorHandler');
 const { processDueEmailJobs } = require('./controllers/adminController');
 const { runAutomatedReminders } = require('./services/reminderService');
+const { purgeExpiredRefreshTokens } = require('./services/cleanupService');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -83,5 +84,11 @@ setInterval(() => {
 setInterval(() => {
   runAutomatedReminders().catch((err) => console.error('Automated reminder worker error:', err.message));
 }, 15 * 60 * 1000);
+
+// Run once at startup, then every 24 h to purge expired refresh tokens
+purgeExpiredRefreshTokens().catch((err) => console.error('Refresh token cleanup error:', err.message));
+setInterval(() => {
+  purgeExpiredRefreshTokens().catch((err) => console.error('Refresh token cleanup error:', err.message));
+}, 24 * 60 * 60 * 1000);
 
 module.exports = app;
