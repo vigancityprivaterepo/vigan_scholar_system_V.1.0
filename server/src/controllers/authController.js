@@ -5,6 +5,7 @@ const { generateTokens } = require('../utils/generateTokens');
 const { hashToken } = require('../utils/tokenHash');
 const { AppError } = require('../middleware/errorHandler');
 const { sendEmail } = require('../services/emailService');
+const logger = require('../utils/logger');
 
 const prisma = new PrismaClient();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -166,6 +167,8 @@ const forgotPassword = async (req, res, next) => {
         template: 'passwordReset',
         data: { name: user.fullName, resetUrl },
       });
+
+      logger.info('Password reset email sent', { userId: user.id, email: user.email, ip: req.ip });
     }
 
     res.json({
@@ -187,16 +190,22 @@ const login = async (req, res, next) => {
     if (!user) throw new AppError('Invalid email or password', 401);
 
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new AppError('Invalid email or password', 401);
+    if (!valid) {
+      logger.warn('Failed login attempt', { email: normalizedEmail, ip: req.ip });
+      throw new AppError('Invalid email or password', 401);
+    }
 
     // Email verification is required for ALL roles — including admin accounts.
     // Staff accounts are seeded/invited with isEmailVerified = true already.
     if (!user.isEmailVerified) {
+      logger.warn('Login blocked — email not verified', { email: normalizedEmail, ip: req.ip });
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
 
     const tokens = await generateTokens(user.id);
     res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
+
+    logger.info('User logged in', { userId: user.id, email: user.email, role: user.role, ip: req.ip });
 
     const profile = await getUserProfile(user.id);
     res.json({ success: true, user: profile, accessToken: tokens.accessToken });
@@ -229,6 +238,8 @@ const verifyEmail = async (req, res, next) => {
       where: { id: user.id },
       data: { isEmailVerified: true },
     });
+
+    logger.info('Email verified', { userId: user.id, email: user.email });
 
     res.json({ success: true, message: 'Email confirmed successfully. You may now sign in.' });
   } catch (err) {
@@ -272,6 +283,8 @@ const resetPassword = async (req, res, next) => {
     });
 
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
+    logger.info('Password reset completed', { userId: user.id, email: user.email, ip: req.ip });
 
     res.json({ success: true, message: 'Password reset successfully. You may now sign in.' });
   } catch (err) {

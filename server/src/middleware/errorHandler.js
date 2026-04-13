@@ -1,8 +1,19 @@
+const logger = require('../utils/logger');
+
 const errorHandler = (err, req, res, next) => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack);
-  } else {
-    console.error(`[${new Date().toISOString()}] ${err.name || 'Error'}: ${err.message}`);
+  const statusCode = err.statusCode || 500;
+  const logMeta = {
+    method: req.method,
+    path: req.path,
+    status: statusCode,
+    ip: req.ip,
+    userId: req.user?.id,
+  };
+
+  if (statusCode >= 500) {
+    logger.error(err.message, { ...logMeta, stack: err.stack });
+  } else if (statusCode >= 400) {
+    logger.warn(err.message, logMeta);
   }
 
   if (err.name === 'ValidationError') {
@@ -18,7 +29,6 @@ const errorHandler = (err, req, res, next) => {
     return res.status(404).json({ success: false, message: 'Resource not found' });
   }
 
-  const statusCode = err.statusCode || 500;
   const exposeMessage = process.env.NODE_ENV !== 'production' || statusCode < 500;
   res.status(statusCode).json({
     success: false,
