@@ -246,7 +246,7 @@ function SealPlaceholder({ small = false }) {
   )
 }
 
-const SERVER_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'
+// All API calls use relative paths — Nginx proxies /api/* and /public-uploads/* internally.
 
 const FALLBACK_SLIDES = [
   {
@@ -264,7 +264,7 @@ function ScholarCarousel() {
   const [paused, setPaused] = useState(false)
 
   useEffect(() => {
-    fetch(`${SERVER_BASE}/api/carousel`)
+    fetch('/api/carousel')
       .then(r => r.json())
       .then(data => { if (data.slides?.length) setSlides(data.slides) })
       .catch(() => {/* keep fallback */})
@@ -293,7 +293,7 @@ function ScholarCarousel() {
             key={i}
             className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             style={{
-              backgroundImage: `linear-gradient(105deg, rgba(12,35,64,0.88) 0%, rgba(12,35,64,0.60) 45%, rgba(6,78,59,0.45) 100%), url('${(slide.imageUrl.startsWith('/public-uploads') || slide.imageUrl.startsWith('/uploads')) ? SERVER_BASE + slide.imageUrl : slide.imageUrl}')`,
+              backgroundImage: `linear-gradient(105deg, rgba(12,35,64,0.88) 0%, rgba(12,35,64,0.60) 45%, rgba(6,78,59,0.45) 100%), url('${slide.imageUrl}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
@@ -500,7 +500,7 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
-    fetch(`${SERVER_BASE}/api/settings`)
+    fetch('/api/settings')
       .then(r => r.json())
       .then((data) => {
         if (data.settings) setSiteSettings(data.settings)
@@ -509,7 +509,7 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
-    fetch(`${SERVER_BASE}/api/scholars`)
+    fetch('/api/scholars')
       .then(r => r.json())
       .then((data) => {
         if (data.posts) {
