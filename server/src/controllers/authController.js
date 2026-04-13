@@ -35,34 +35,21 @@ const getRefreshCookieOptions = () => ({
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
-const ensureEmailVerificationColumn = async () => {
-  await prisma.$executeRawUnsafe(`
-    ALTER TABLE "users"
-    ADD COLUMN IF NOT EXISTS "is_email_verified" BOOLEAN NOT NULL DEFAULT false
-  `);
-};
-
-const getEmailVerificationStatus = async (userId) => {
-  await ensureEmailVerificationColumn();
-
-  const rows = await prisma.$queryRawUnsafe(
-    'SELECT "is_email_verified" FROM "users" WHERE "id" = $1 LIMIT 1',
-    userId
-  );
-
-  return Boolean(rows?.[0]?.is_email_verified);
-};
-
+// Builds a short-lived JWT for email-address verification.
+// Signed with JWT_SECRET only — no user data embedded in the secret.
 const buildEmailVerificationToken = (user) =>
   jwt.sign(
     { userId: user.id, purpose: 'email-verification' },
-    `${process.env.JWT_SECRET}${user.passwordHash}`,
+    process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 
 const buildEmailVerificationUrl = (user) => {
   const token = buildEmailVerificationToken(user);
-  return `${process.env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  // The token payload already contains userId; the backend no longer needs
+  // the email as a query param. It is omitted here to avoid leaking it into
+  // server/proxy logs and browser history.
+  return `${process.env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}`;
 };
 
 const getUserProfile = async (userId) => {
@@ -73,6 +60,7 @@ const getUserProfile = async (userId) => {
       email: true,
       fullName: true,
       role: true,
+      isEmailVerified: true,
       createdAt: true,
       applications: {
         select: { contact: true },
@@ -89,6 +77,7 @@ const getUserProfile = async (userId) => {
     email: user.email,
     fullName: user.fullName,
     role: user.role,
+    isEmailVerified: user.isEmailVerified,
     createdAt: user.createdAt,
     contact: user.applications[0]?.contact || '',
   };
@@ -97,8 +86,6 @@ const getUserProfile = async (userId) => {
 const register = async (req, res, next) => {
   try {
     const { email, password, fullName } = req.body;
-
-    await ensureEmailVerificationColumn();
 
     if (!email || !password || !fullName) {
       throw new AppError('All fields are required', 400);
@@ -113,20 +100,20 @@ const register = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
-      const existingIsVerified = await getEmailVerificationStatus(existing.id);
-
-      if (existing.role !== 'APPLICANT' || existingIsVerified) {
+      if (existing.role !== 'APPLICANT' || existing.isEmailVerified) {
         throw new AppError('Email already registered', 409);
       }
 
+      // Unverified applicant re-registering — clean up the stale account.
       await prisma.refreshToken.deleteMany({ where: { userId: existing.id } });
       await prisma.user.delete({ where: { id: existing.id } });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    // passwordHash is not included in the select — it is not needed after creation.
     const user = await prisma.user.create({
       data: { email: normalizedEmail, passwordHash, fullName: fullName.trim(), role: 'APPLICANT' },
-      select: { id: true, email: true, fullName: true, role: true, createdAt: true, passwordHash: true },
+      select: { id: true, email: true, fullName: true, role: true, createdAt: true },
     });
 
     try {
@@ -163,9 +150,11 @@ const forgotPassword = async (req, res, next) => {
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (user) {
+      // Signed with JWT_SECRET only.  The 30-minute expiry is the primary
+      // invalidation mechanism; this keeps the secret simple and auditable.
       const token = jwt.sign(
         { userId: user.id, purpose: 'password-reset' },
-        `${process.env.JWT_SECRET}${user.passwordHash}`,
+        process.env.JWT_SECRET,
         { expiresIn: '30m' }
       );
 
@@ -200,9 +189,9 @@ const login = async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new AppError('Invalid email or password', 401);
 
-    const isEmailVerified = await getEmailVerificationStatus(user.id);
-    const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role);
-    if (!isAdminRole && !isEmailVerified) {
+    // Email verification is required for ALL roles — including admin accounts.
+    // Staff accounts are seeded/invited with isEmailVerified = true already.
+    if (!user.isEmailVerified) {
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
 
@@ -219,30 +208,27 @@ const login = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
   try {
     const token = req.query.token || req.body.token;
-    const email = req.query.email || req.body.email;
+    if (!token) throw new AppError('Verification token is required', 400);
 
-    if (!token || !email) {
-      throw new AppError('Verification token and email are required', 400);
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) throw new AppError('Invalid or expired confirmation link', 400);
-
+    // Decode the token first to extract userId — no separate email param needed.
+    let decoded;
     try {
-      const decoded = jwt.verify(token, `${process.env.JWT_SECRET}${user.passwordHash}`);
-      if (decoded.userId !== user.id || decoded.purpose !== 'email-verification') {
-        throw new Error('invalid');
-      }
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch {
       throw new AppError('Invalid or expired confirmation link', 400);
     }
 
-    await ensureEmailVerificationColumn();
-    await prisma.$executeRawUnsafe(
-      'UPDATE "users" SET "is_email_verified" = true WHERE "id" = $1',
-      user.id
-    );
+    if (decoded.purpose !== 'email-verification' || !decoded.userId) {
+      throw new AppError('Invalid or expired confirmation link', 400);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    if (!user) throw new AppError('Invalid or expired confirmation link', 400);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isEmailVerified: true },
+    });
 
     res.json({ success: true, message: 'Email confirmed successfully. You may now sign in.' });
   } catch (err) {
@@ -265,7 +251,7 @@ const resetPassword = async (req, res, next) => {
     if (!user) throw new AppError('Invalid or expired reset link', 400);
 
     try {
-      const decoded = jwt.verify(token, `${process.env.JWT_SECRET}${user.passwordHash}`);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       if (decoded.userId !== user.id || decoded.purpose !== 'password-reset') {
         throw new Error('invalid');
       }
@@ -331,8 +317,7 @@ const logout = async (req, res, next) => {
 const me = async (req, res, next) => {
   try {
     const user = await getUserProfile(req.user.id);
-    const isEmailVerified = user ? await getEmailVerificationStatus(user.id) : false;
-    res.json({ success: true, user: user ? { ...user, isEmailVerified } : null });
+    res.json({ success: true, user });
   } catch (err) {
     next(err);
   }
@@ -379,7 +364,6 @@ const updateProfile = async (req, res, next) => {
       data: { fullName: fullName.trim() },
     });
 
-    // Update contact in application if exists.
     if (contact !== undefined) {
       const normalizedContact = String(contact).trim();
       if (normalizedContact && !/^(09|\+639)\d{9}$/.test(normalizedContact.replace(/\s/g, ''))) {

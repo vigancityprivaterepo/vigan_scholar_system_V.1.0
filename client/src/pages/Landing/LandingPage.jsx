@@ -1193,7 +1193,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-7xl border-t border-white/10 px-4 pt-6 text-xs text-slate-500 md:px-8">
-          © {new Date().getFullYear()} City Government of Vigan. All rights reserved.
+          © {new Date().getFullYear()} City Government of Vigan · By City Management Information Systems · All rights reserved.
         </div>
       </footer>
     </div>

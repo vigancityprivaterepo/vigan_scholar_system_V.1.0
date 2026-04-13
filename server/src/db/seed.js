@@ -5,64 +5,38 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.$executeRawUnsafe(`
-    ALTER TABLE "users"
-    ADD COLUMN IF NOT EXISTS "is_email_verified" BOOLEAN NOT NULL DEFAULT false
-  `);
+  // Create or update the primary admin account.
+  // isEmailVerified is set to true so the account works immediately without
+  // going through the email verification flow.
+  const adminEmail = process.env.PRIMARY_ADMIN_EMAIL || 'data@vigancity.gov.ph';
+  const adminExists = await prisma.user.findUnique({ where: { email: adminEmail } });
 
-  // Create admin user
-  const adminExists = await prisma.user.findUnique({ where: { email: 'data@vigancity.gov.ph' } });
   if (!adminExists) {
     const passwordHash = await bcrypt.hash('4gR7B5gmJ<Z36rG<12345', 12);
     await prisma.user.create({
       data: {
-        email: 'data@vigancity.gov.ph',
+        email: adminEmail,
         passwordHash,
         fullName: 'System Administrator',
         role: 'ADMIN',
+        isEmailVerified: true,
       },
     });
-    console.log('Admin user created: data@vigancity.gov.ph');
-  }
-
-  await prisma.$executeRawUnsafe(`
-    UPDATE "users"
-    SET "is_email_verified" = true
-    WHERE "email" = 'data@vigancity.gov.ph'
-  `);
-
-  // Create sample applicant
-  const applicantExists = await prisma.user.findUnique({ where: { email: 'applicant@test.com' } });
-  if (!applicantExists) {
-    const passwordHash = await bcrypt.hash('Test@2024', 12);
-    await prisma.user.create({
-      data: {
-        email: 'applicant@test.com',
-        passwordHash,
-        fullName: 'Juan dela Cruz',
-        role: 'APPLICANT',
-      },
+    console.log(`Admin user created: ${adminEmail}`);
+  } else if (!adminExists.isEmailVerified) {
+    await prisma.user.update({
+      where: { email: adminEmail },
+      data: { isEmailVerified: true },
     });
-    console.log('Test applicant created: applicant@test.com / Test@2024');
+    console.log(`Admin email verification flag set for: ${adminEmail}`);
   }
 
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "site_settings" (
-      "id" TEXT NOT NULL DEFAULT 'default',
-      "facebook_page_name" TEXT,
-      "facebook_page_url" TEXT,
-      "facebook_page_description" TEXT,
-      "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "site_settings_pkey" PRIMARY KEY ("id")
-    )
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO "site_settings" ("id", "updated_at")
-    VALUES ('default', CURRENT_TIMESTAMP)
-    ON CONFLICT ("id") DO NOTHING
-  `);
+  // Seed default site settings (no-op if already present).
+  await prisma.siteSetting.upsert({
+    where: { id: 'default' },
+    create: { id: 'default' },
+    update: {},
+  });
 
   console.log('Seed complete!');
 }

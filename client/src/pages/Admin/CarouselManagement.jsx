@@ -195,7 +195,7 @@ export default function CarouselManagement() {
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal CMS</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal VSMS</p>
           <h1 className="mt-1 text-2xl font-bold text-brand-primary">Carousel Management</h1>
           <p className="mt-1 text-sm text-slate-500">Manage the image slides displayed on the public landing page.</p>
         </div>

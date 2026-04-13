@@ -1554,7 +1554,7 @@ const inviteAdminUser = async (req, res, next) => {
 
     const inviteToken = jwt.sign(
       { userId: user.id, purpose: 'password-reset' },
-      `${process.env.JWT_SECRET}${user.passwordHash}`,
+      process.env.JWT_SECRET,
       { expiresIn: '48h' }
     );
 
