@@ -47,33 +47,26 @@ const EMAIL_TEMPLATES = [
   },
 ]
 
-const getSubmissionYearOptions = () => {
-  const currentYear = new Date().getFullYear()
-  return Array.from({ length: 8 }, (_, index) => String(currentYear - index))
-}
-
-const getDateRangeByYear = (year) => {
-  const normalized = String(year || '').trim()
-  if (!normalized) return { submittedFrom: '', submittedTo: '' }
-  return {
-    submittedFrom: `${normalized}-01-01`,
-    submittedTo: `${normalized}-12-31`,
-  }
+const getAcademicYearOptions = () => {
+  const now = new Date()
+  const baseStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1
+  return Array.from({ length: 8 }, (_, index) => {
+    const start = baseStartYear - index
+    return `${start}-${start + 1}`
+  })
 }
 
 export default function BulkEmail() {
-  const currentYear = new Date().getFullYear()
-  const submissionYearOptions = useMemo(() => getSubmissionYearOptions(), [])
-  const defaultYear = String(currentYear)
-  const defaultDateRange = getDateRangeByYear(defaultYear)
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
+  const defaultAcademicYear = academicYearOptions[0] || ''
 
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [selectedSubmissionYear, setSelectedSubmissionYear] = useState(defaultYear)
-  const [submittedFrom, setSubmittedFrom] = useState(defaultDateRange.submittedFrom)
-  const [submittedTo, setSubmittedTo] = useState(defaultDateRange.submittedTo)
+  const [academicYear, setAcademicYear] = useState(defaultAcademicYear)
+  const [submittedFrom, setSubmittedFrom] = useState('')
+  const [submittedTo, setSubmittedTo] = useState('')
   const [sortBy, setSortBy] = useState('submittedAt')
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
@@ -99,15 +92,11 @@ export default function BulkEmail() {
   const [historyTo, setHistoryTo] = useState('')
   const [historyPage, setHistoryPage] = useState(1)
   const [historyExporting, setHistoryExporting] = useState(false)
+  const [scheduleRunAt, setScheduleRunAt] = useState('')
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+  const [jobData, setJobData] = useState({ jobs: [], pagination: { page: 1, pages: 1, total: 0 } })
+  const [jobLoading, setJobLoading] = useState(false)
   const [activeSection, setActiveSection] = useState('audience')
-
-  useEffect(() => {
-    if (!selectedSubmissionYear) return
-    const range = getDateRangeByYear(selectedSubmissionYear)
-    setSubmittedFrom(range.submittedFrom)
-    setSubmittedTo(range.submittedTo)
-    setPage(1)
-  }, [selectedSubmissionYear])
 
   useEffect(() => {
     try {
@@ -130,6 +119,7 @@ export default function BulkEmail() {
       const params = { page, limit: 20, sortBy, sortOrder }
       if (search) params.search = search
       if (statusFilter) params.status = statusFilter
+      if (academicYear) params.academicYear = academicYear
       if (submittedFrom) params.submittedFrom = submittedFrom
       if (submittedTo) params.submittedTo = submittedTo
       const r = await adminService.listApplications(params)
@@ -138,7 +128,7 @@ export default function BulkEmail() {
       toast.error('Failed to load applicants')
     }
     setLoading(false)
-  }, [page, search, sortBy, sortOrder, statusFilter, submittedFrom, submittedTo])
+  }, [page, search, sortBy, sortOrder, statusFilter, academicYear, submittedFrom, submittedTo])
 
   useEffect(() => { fetchData() }, [fetchData])
   const fetchHistory = useCallback(async () => {
@@ -146,6 +136,7 @@ export default function BulkEmail() {
     try {
       const params = { page: historyPage, limit: 10 }
       if (historySearch.trim()) params.search = historySearch.trim()
+      if (academicYear) params.academicYear = academicYear
       if (historyFrom) params.sentFrom = historyFrom
       if (historyTo) params.sentTo = historyTo
       const r = await adminService.getBulkEmailLogs(params)
@@ -154,22 +145,34 @@ export default function BulkEmail() {
       toast.error('Failed to load bulk email history')
     }
     setHistoryLoading(false)
-  }, [historyFrom, historyPage, historySearch, historyTo])
+  }, [historyFrom, historyPage, historySearch, historyTo, academicYear])
+
+  const fetchJobs = useCallback(async () => {
+    setJobLoading(true)
+    try {
+      const r = await adminService.listBulkEmailJobs({ page: 1, limit: 10 })
+      setJobData(r.data)
+    } catch {
+      toast.error('Failed to load scheduled jobs')
+    }
+    setJobLoading(false)
+  }, [])
 
   useEffect(() => { fetchHistory() }, [fetchHistory])
+  useEffect(() => { fetchJobs() }, [fetchJobs])
   useEffect(() => {
     setPreviewSummary({ count: 0, maxRecipients: 0, exceedsMax: false })
     setPreviewRecipients([])
-  }, [emailScope, selectedIds, search, statusFilter, submittedFrom, submittedTo])
+  }, [emailScope, selectedIds, search, statusFilter, academicYear, submittedFrom, submittedTo])
 
   const visibleIds = useMemo(() => data.applications.map((app) => app.id), [data.applications])
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
   const selectedVisibleCount = useMemo(() => visibleIds.filter((id) => selectedSet.has(id)).length, [visibleIds, selectedSet])
   const isAllVisibleSelected = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length
   const filteredRecipientCount = useMemo(() => {
-    if (!statusFilter && !search.trim() && !submittedFrom && !submittedTo) return 0
+    if (!statusFilter && !search.trim() && !academicYear && !submittedFrom && !submittedTo) return 0
     return data.pagination.total || 0
-  }, [data.pagination.total, search, statusFilter, submittedFrom, submittedTo])
+  }, [data.pagination.total, search, statusFilter, academicYear, submittedFrom, submittedTo])
 
   const toggleSelect = (id) => {
     setSelectedIds((current) => {
@@ -212,7 +215,7 @@ export default function BulkEmail() {
       name: normalizedName,
       search,
       statusFilter,
-      selectedSubmissionYear,
+      academicYear,
       submittedFrom,
       submittedTo,
       emailScope,
@@ -230,7 +233,7 @@ export default function BulkEmail() {
     if (!view) return
     setSearch(view.search || '')
     setStatusFilter(view.statusFilter || '')
-    setSelectedSubmissionYear(view.selectedSubmissionYear || '')
+    setAcademicYear(view.academicYear || '')
     setSubmittedFrom(view.submittedFrom || '')
     setSubmittedTo(view.submittedTo || '')
     setEmailScope(view.emailScope === 'filtered' ? 'filtered' : 'selected')
@@ -259,6 +262,7 @@ export default function BulkEmail() {
     return {
       status: statusFilter || undefined,
       search: search.trim() || undefined,
+      academicYear: academicYear || undefined,
       submittedFrom: submittedFrom || undefined,
       submittedTo: submittedTo || undefined,
     }
@@ -326,8 +330,8 @@ export default function BulkEmail() {
       toast.error('Select at least one application, or switch to filtered recipients.')
       return
     }
-    if (!usingSelected && !statusFilter && !search.trim() && !submittedFrom && !submittedTo) {
-      toast.error('Set a status/search/date filter first.')
+    if (!usingSelected && !statusFilter && !search.trim() && !academicYear && !submittedFrom && !submittedTo) {
+      toast.error('Set a status/search/academic year/date filter first.')
       return
     }
 
@@ -366,6 +370,39 @@ export default function BulkEmail() {
     }
   }
 
+  const runScheduleBulkEmail = async () => {
+    if (!scheduleRunAt) {
+      toast.error('Select schedule date and time first.')
+      return
+    }
+    if (!emailSubject.trim()) {
+      toast.error('Email subject is required.')
+      return
+    }
+    if (!emailMessage.trim()) {
+      toast.error('Email message is required.')
+      return
+    }
+    try {
+      setScheduleLoading(true)
+      const payload = {
+        runAt: new Date(scheduleRunAt).toISOString(),
+        subject: emailSubject.trim(),
+        greeting: emailGreeting.trim() || undefined,
+        message: emailMessage.trim(),
+        ...buildRecipientPayload(),
+      }
+      const response = await adminService.scheduleBulkEmailApplicants(payload)
+      toast.success(response.data.message || 'Bulk email scheduled.')
+      setScheduleRunAt('')
+      fetchJobs()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to schedule bulk email.')
+    } finally {
+      setScheduleLoading(false)
+    }
+  }
+
   const runExportHistoryCSV = async () => {
     try {
       setHistoryExporting(true)
@@ -376,6 +413,7 @@ export default function BulkEmail() {
       while (current <= pages) {
         const params = { page: current, limit: 100 }
         if (historySearch.trim()) params.search = historySearch.trim()
+        if (academicYear) params.academicYear = academicYear
         if (historyFrom) params.sentFrom = historyFrom
         if (historyTo) params.sentTo = historyTo
         const response = await adminService.getBulkEmailLogs(params)
@@ -414,6 +452,39 @@ export default function BulkEmail() {
     } finally {
       setHistoryExporting(false)
     }
+  }
+
+  const runExportHistoryPDF = () => {
+    const win = window.open('', '_blank', 'width=900,height=700')
+    if (!win) {
+      toast.error('Please allow popups to export PDF.')
+      return
+    }
+    const rows = (historyData.logs || [])
+      .map((log) => `
+        <tr>
+          <td>${new Date(log.createdAt).toLocaleString()}</td>
+          <td>${log.performedBy?.fullName || '-'}</td>
+          <td>${log.application?.applicant?.fullName || '-'}</td>
+          <td>${String(log.application?.status || '-').replaceAll('_', ' ')}</td>
+          <td>${log.notes || '-'}</td>
+        </tr>
+      `)
+      .join('')
+    win.document.write(`
+      <html>
+        <head><title>Bulk Email History</title></head>
+        <body>
+          <h2>Bulk Email History - AY ${academicYear || 'All'}</h2>
+          <table border="1" cellspacing="0" cellpadding="6">
+            <thead><tr><th>Sent At</th><th>Sender</th><th>Recipient</th><th>Status</th><th>Subject</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `)
+    win.document.close()
   }
 
   return (
@@ -484,15 +555,15 @@ export default function BulkEmail() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="block md:col-span-2">
-            <span className="mb-1 block text-xs font-medium text-slate-600">Submission Year</span>
+            <span className="mb-1 block text-xs font-medium text-slate-600">Academic Year</span>
             <select
               className="portal-input"
-              value={selectedSubmissionYear}
-              onChange={(e) => setSelectedSubmissionYear(e.target.value)}
+              value={academicYear}
+              onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
             >
               <option value="">Custom / All</option>
-              {submissionYearOptions.map((year) => (
-                <option key={year} value={year}>{year}</option>
+              {academicYearOptions.map((year) => (
+                <option key={year} value={year}>AY {year}</option>
               ))}
             </select>
           </label>
@@ -503,7 +574,7 @@ export default function BulkEmail() {
               className="portal-input"
               value={submittedFrom}
               max={submittedTo || undefined}
-              onChange={(e) => { setSubmittedFrom(e.target.value); setSelectedSubmissionYear(''); setPage(1) }}
+              onChange={(e) => { setSubmittedFrom(e.target.value); setAcademicYear(''); setPage(1) }}
             />
           </label>
           <label className="block">
@@ -513,15 +584,15 @@ export default function BulkEmail() {
               className="portal-input"
               value={submittedTo}
               min={submittedFrom || undefined}
-              onChange={(e) => { setSubmittedTo(e.target.value); setSelectedSubmissionYear(''); setPage(1) }}
+              onChange={(e) => { setSubmittedTo(e.target.value); setAcademicYear(''); setPage(1) }}
             />
           </label>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Default range is the current year so older application batches (e.g., last year) are excluded unless you change the dates.</p>
+        <p className="mt-2 text-xs text-slate-500">Default audience uses the current academic year. Switch AY or customize date range when emailing prior batches.</p>
         <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input
             className="portal-input"
-            placeholder="Saved audience name (e.g., Accepted 2026)"
+            placeholder="Saved audience name (e.g., Accepted AY 2026-2027)"
             value={audienceViewName}
             onChange={(e) => setAudienceViewName(e.target.value)}
           />
@@ -646,6 +717,22 @@ export default function BulkEmail() {
                 className="portal-button-primary"
               >
                 {emailLoading ? 'Sending...' : 'Send Bulk Email'}
+              </button>
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <input
+                type="datetime-local"
+                className="portal-input"
+                value={scheduleRunAt}
+                onChange={(e) => setScheduleRunAt(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={runScheduleBulkEmail}
+                disabled={scheduleLoading}
+                className="portal-button-secondary whitespace-nowrap"
+              >
+                {scheduleLoading ? 'Scheduling...' : 'Schedule Send'}
               </button>
             </div>
             <div className="mt-3 rounded-lg border border-sky-200 bg-white p-3">
@@ -802,6 +889,42 @@ export default function BulkEmail() {
           <button onClick={runExportHistoryCSV} disabled={historyExporting} className="portal-button-secondary">
             {historyExporting ? 'Exporting...' : 'Export CSV'}
           </button>
+          <button onClick={runExportHistoryPDF} className="portal-button-secondary">Export PDF</button>
+        </div>
+
+        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Scheduled Email Jobs</p>
+            <button onClick={fetchJobs} className="text-xs font-medium text-brand-primary hover:underline">Refresh</button>
+          </div>
+          {jobLoading ? (
+            <p className="text-xs text-slate-500">Loading jobs...</p>
+          ) : !jobData.jobs?.length ? (
+            <p className="text-xs text-slate-500">No scheduled jobs.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead>
+                  <tr className="text-left text-slate-500">
+                    <th className="py-1 pr-2">Run At</th>
+                    <th className="py-1 pr-2">Status</th>
+                    <th className="py-1 pr-2">Attempts</th>
+                    <th className="py-1">Created By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {jobData.jobs.map((job) => (
+                    <tr key={job.id} className="border-t border-slate-200">
+                      <td className="py-1 pr-2">{formatDate(job.runAt)}</td>
+                      <td className="py-1 pr-2">{job.status}</td>
+                      <td className="py-1 pr-2">{job.attempts}/{job.maxAttempts}</td>
+                      <td className="py-1">{job.createdBy?.fullName || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 overflow-x-auto">

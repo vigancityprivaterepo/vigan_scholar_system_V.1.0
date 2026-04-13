@@ -8,6 +8,9 @@ const {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  listMyCommunications,
+  submitAppeal,
+  listMyAppeals,
 } = require('../controllers/applicationController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { requireApplicant } = require('../middleware/roleGuard');
@@ -19,6 +22,9 @@ router.post('/', upload.array('files', 10), submitApplication);
 router.get('/mine', getMyApplication);
 router.patch('/mine/resubmit', upload.array('files', 10), resubmit);
 router.post('/mine/cor', uploadCOR.single('cor'), submitCOR);
+router.get('/mine/communications', listMyCommunications);
+router.get('/mine/appeals', listMyAppeals);
+router.post('/mine/appeals', submitAppeal);
 router.get('/notifications', getNotifications);
 router.patch('/notifications/read-all', markAllNotificationsRead);
 router.patch('/notifications/:id/read', markNotificationRead);

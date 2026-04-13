@@ -9,6 +9,8 @@ export const adminService = {
   previewBulkEmailRecipients: (data) => api.post('/admin/applications/bulk-email/preview', data),
   sendBulkEmailTest: (data) => api.post('/admin/applications/bulk-email/test', data),
   bulkEmailApplicants: (data) => api.post('/admin/applications/bulk-email', data),
+  scheduleBulkEmailApplicants: (data) => api.post('/admin/applications/bulk-email/schedule', data),
+  listBulkEmailJobs: (params) => api.get('/admin/applications/bulk-email/jobs', { params }),
   getBulkEmailLogs: (params) => api.get('/admin/applications/bulk-email/logs', { params }),
   scheduleExam: (id, data) => api.post(`/admin/applications/${id}/schedule`, data),
   reviewCOR: (id, data) => api.patch(`/admin/applications/${id}/cor`, data),
@@ -29,6 +31,8 @@ export const adminService = {
   listUsers: (params) => api.get('/admin/users', { params }),
   updateUserRole: (id, role) => api.patch(`/admin/users/${id}/role`, { role }),
   inviteAdminUser: (data) => api.post('/admin/users/invite', data),
+  listAppeals: (params) => api.get('/admin/appeals', { params }),
+  resolveAppeal: (id, data) => api.patch(`/admin/appeals/${id}`, data),
 
   // Carousel CMS
   getCarouselSlides: () => api.get('/carousel/admin'),

@@ -8,6 +8,8 @@ const {
   previewBulkEmailRecipients,
   sendBulkEmailTest,
   bulkEmailApplicants,
+  scheduleBulkEmailApplicants,
+  listEmailJobs,
   scheduleExam,
   reviewCOR,
   getDashboardStats,
@@ -20,6 +22,8 @@ const {
   listUsers,
   updateUserRole,
   inviteAdminUser,
+  listAppeals,
+  resolveAppeal,
 } = require('../controllers/adminController');
 const { getAdminSiteSettings, updateAdminSiteSettings } = require('../controllers/siteSettingsController');
 const {
@@ -30,29 +34,33 @@ const {
   deleteAllScholarPosts,
 } = require('../controllers/scholarPostController');
 const { authenticate } = require('../middleware/authMiddleware');
-const { requireAdmin } = require('../middleware/roleGuard');
+const { requireAdmin, requireReviewer, requireScheduler, requireSuperAdmin } = require('../middleware/roleGuard');
 
 router.use(authenticate, requireAdmin);
 
 router.get('/stats', getDashboardStats);
 router.get('/applications', listApplications);
+router.get('/appeals', requireReviewer, listAppeals);
+router.patch('/appeals/:id', requireReviewer, resolveAppeal);
 router.patch('/applications/batch-status', batchUpdateStatus);
 router.post('/applications/bulk-email/preview', previewBulkEmailRecipients);
 router.post('/applications/bulk-email/test', sendBulkEmailTest);
-router.post('/applications/bulk-email', bulkEmailApplicants);
+router.post('/applications/bulk-email', requireReviewer, bulkEmailApplicants);
+router.post('/applications/bulk-email/schedule', requireScheduler, scheduleBulkEmailApplicants);
+router.get('/applications/bulk-email/jobs', requireScheduler, listEmailJobs);
 router.get('/applications/bulk-email/logs', listBulkEmailLogs);
 router.get('/applications/:id', getApplication);
-router.patch('/applications/:id/status', updateStatus);
-router.post('/applications/:id/schedule', scheduleExam);
-router.patch('/applications/:id/cor', reviewCOR);
+router.patch('/applications/:id/status', requireReviewer, updateStatus);
+router.post('/applications/:id/schedule', requireScheduler, scheduleExam);
+router.patch('/applications/:id/cor', requireReviewer, reviewCOR);
 router.post('/notify/:id', sendManualNotification);
 router.get('/logs/:id', getActivityLogs);
 router.get('/notifications', getAdminNotifications);
 router.patch('/notifications/read-all', markAllAdminNotificationsRead);
 router.patch('/notifications/:id/read', markAdminNotificationRead);
-router.post('/users/invite', inviteAdminUser);
-router.get('/users', listUsers);
-router.patch('/users/:id/role', updateUserRole);
+router.post('/users/invite', requireSuperAdmin, inviteAdminUser);
+router.get('/users', requireSuperAdmin, listUsers);
+router.patch('/users/:id/role', requireSuperAdmin, updateUserRole);
 router.get('/settings', getAdminSiteSettings);
 router.patch('/settings', updateAdminSiteSettings);
 router.get('/scholars/posts', getAdminScholarPosts);

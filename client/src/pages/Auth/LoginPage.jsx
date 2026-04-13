@@ -48,7 +48,8 @@ export default function LoginPage() {
     try {
       const user = await login(form.email.trim(), form.password)
       toast.success(`Welcome back, ${user.fullName}!`)
-      navigate(user.role === 'ADMIN' ? '/admin/dashboard' : '/applicant/dashboard')
+      const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role)
+      navigate(isAdminRole ? '/admin/dashboard' : '/applicant/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to sign in. Please check your credentials and try again.')
     } finally {

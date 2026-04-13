@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 
 export default function ProtectedRoute({ role }) {
   const { user, isLoading } = useAuthStore()
+  const normalizedAllowedRoles = Array.isArray(role) ? role : role ? [role] : []
 
   if (isLoading) {
     return (
@@ -14,8 +15,9 @@ export default function ProtectedRoute({ role }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
-  if (role && user.role !== role) {
-    return <Navigate to={user.role === 'ADMIN' ? '/admin/dashboard' : '/applicant/dashboard'} replace />
+  if (normalizedAllowedRoles.length > 0 && !normalizedAllowedRoles.includes(user.role)) {
+    const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role)
+    return <Navigate to={isAdminRole ? '/admin/dashboard' : '/applicant/dashboard'} replace />
   }
 
   return <Outlet />

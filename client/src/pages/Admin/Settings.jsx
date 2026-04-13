@@ -63,7 +63,7 @@ export default function AdminSettings() {
 
     setUsersLoading(true)
     try {
-      const params = { role: 'ADMIN' }
+      const params = {}
       if (search) params.search = search
       const { data } = await adminService.listUsers(params)
       setUsers(data.users || [])
@@ -358,8 +358,6 @@ export default function AdminSettings() {
               ) : (
                 users.map((u) => {
                   const isSelf = u.id === user?.id
-                  const isAdmin = u.role === 'ADMIN'
-
                   return (
                     <tr key={u.id} className="border-t border-slate-100">
                       <td className="px-3 py-3 text-sm font-medium text-brand-primary">
@@ -369,14 +367,21 @@ export default function AdminSettings() {
                       <td className="px-3 py-3 text-sm text-slate-600">{u.email}</td>
                       <td className="px-3 py-3 text-sm text-slate-700">{u.role}</td>
                       <td className="px-3 py-3">
-                        <button
-                          type="button"
-                          disabled={!isPrimaryAdmin || isSelf || roleUpdatingId === u.id}
-                          onClick={() => handleRoleChange(u, 'APPLICANT')}
-                          className="text-xs font-semibold text-amber-700 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          {roleUpdatingId === u.id ? 'Updating...' : 'Remove Admin Access'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="portal-input !py-1.5 text-xs"
+                            value={u.role}
+                            disabled={!isPrimaryAdmin || isSelf || roleUpdatingId === u.id}
+                            onChange={(e) => handleRoleChange(u, e.target.value)}
+                          >
+                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                            <option value="ADMIN">ADMIN</option>
+                            <option value="REVIEWER">REVIEWER</option>
+                            <option value="SCHEDULER">SCHEDULER</option>
+                            <option value="APPLICANT">APPLICANT</option>
+                          </select>
+                          {roleUpdatingId === u.id && <span className="text-xs text-slate-500">Updating...</span>}
+                        </div>
                       </td>
                     </tr>
                   )

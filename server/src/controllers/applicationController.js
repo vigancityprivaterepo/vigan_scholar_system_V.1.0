@@ -4,6 +4,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { isValidTransition } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
+const { toAcademicYear } = require('../utils/academicYear');
 
 const prisma = new PrismaClient();
 
@@ -73,6 +74,7 @@ const submitApplication = async (req, res, next) => {
         gwa: parseFloat(gwa),
         achievements: achievements || null,
         status: 'PENDING_REVIEW',
+        academicYear: toAcademicYear(new Date()),
       },
     });
 
@@ -171,6 +173,7 @@ const resubmit = async (req, res, next) => {
         gwa: gwa ? parseFloat(gwa) : undefined,
         achievements: achievements || undefined,
         adminRemarks: null,
+        requirementChecklist: undefined,
       },
     });
 
@@ -318,6 +321,119 @@ const markAllNotificationsRead = async (req, res, next) => {
   }
 };
 
+const listMyCommunications = async (req, res, next) => {
+  try {
+    const application = await prisma.application.findFirst({
+      where: { applicantId: req.user.id },
+      select: { id: true },
+    });
+    if (!application) return res.json({ success: true, timeline: [] });
+
+    const [notifications, communicationLogs] = await Promise.all([
+      prisma.notification.findMany({
+        where: { userId: req.user.id, applicationId: application.id },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+      prisma.communicationLog.findMany({
+        where: { userId: req.user.id, applicationId: application.id },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      }),
+    ]);
+
+    const timeline = [
+      ...notifications.map((item) => ({
+        id: `notif_${item.id}`,
+        source: 'NOTIFICATION',
+        title: item.title,
+        message: item.message,
+        status: item.type,
+        createdAt: item.createdAt,
+      })),
+      ...communicationLogs.map((item) => ({
+        id: `comm_${item.id}`,
+        source: item.channel || 'COMMUNICATION',
+        title: item.subject || item.channel,
+        message: item.message || '',
+        status: item.direction || 'OUTBOUND',
+        createdAt: item.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({ success: true, timeline });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const submitAppeal = async (req, res, next) => {
+  try {
+    const reason = String(req.body.reason || '').trim();
+    if (!reason) throw new AppError('Appeal reason is required.', 400);
+
+    const application = await prisma.application.findFirst({
+      where: { applicantId: req.user.id },
+      select: { id: true, status: true },
+    });
+    if (!application) throw new AppError('Application not found.', 404);
+    if (!['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM'].includes(application.status)) {
+      throw new AppError('Appeals are only allowed for rejected applications.', 400);
+    }
+
+    const existingPending = await prisma.appeal.findFirst({
+      where: { applicationId: application.id, status: 'PENDING' },
+      select: { id: true },
+    });
+    if (existingPending) throw new AppError('You already have a pending appeal.', 409);
+
+    const appeal = await prisma.appeal.create({
+      data: {
+        applicationId: application.id,
+        applicantId: req.user.id,
+        reason,
+        status: 'PENDING',
+      },
+    });
+
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER'] } },
+      select: { id: true },
+    });
+    if (admins.length) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          applicationId: application.id,
+          title: 'New Appeal Submitted',
+          message: `${req.user.fullName} submitted an appeal for application ${application.id.slice(0, 8).toUpperCase()}.`,
+          type: 'WARNING',
+        })),
+      });
+    }
+
+    res.status(201).json({ success: true, message: 'Appeal submitted.', appeal });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const listMyAppeals = async (req, res, next) => {
+  try {
+    const appeals = await prisma.appeal.findMany({
+      where: { applicantId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        application: { select: { id: true, status: true, academicYear: true } },
+        reviewedBy: { select: { fullName: true, role: true } },
+      },
+    });
+    res.json({ success: true, appeals });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   submitApplication,
   getMyApplication,
@@ -326,4 +442,7 @@ module.exports = {
   getNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  listMyCommunications,
+  submitAppeal,
+  listMyAppeals,
 };

@@ -7,7 +7,19 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
-const requireAdmin = requireRole('ADMIN');
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'];
+const requireAdmin = requireRole(...ADMIN_ROLES);
+const requireReviewer = requireRole('ADMIN', 'SUPER_ADMIN', 'REVIEWER');
+const requireScheduler = requireRole('ADMIN', 'SUPER_ADMIN', 'SCHEDULER');
+const requireSuperAdmin = requireRole('SUPER_ADMIN', 'ADMIN');
 const requireApplicant = requireRole('APPLICANT');
 
-module.exports = { requireRole, requireAdmin, requireApplicant };
+module.exports = {
+  requireRole,
+  requireAdmin,
+  requireReviewer,
+  requireScheduler,
+  requireSuperAdmin,
+  requireApplicant,
+  ADMIN_ROLES,
+};

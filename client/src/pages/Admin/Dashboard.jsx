@@ -68,12 +68,48 @@ export default function AdminDashboard() {
     { to: '/admin/applicants', label: 'All Applicants', Icon: UsersIcon },
   ]
 
+  const exportAnalyticsCSV = () => {
+    const headers = ['Metric', 'Value']
+    const metricRows = statCards.map((item) => [item.label, item.value || 0])
+    const statusRows = chartData.map((item) => [`Status: ${item.name}`, item.count])
+    const csv = [headers, ...metricRows, ...statusRows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `dashboard-analytics-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportAnalyticsPDF = () => {
+    const win = window.open('', '_blank', 'width=900,height=700')
+    if (!win) return
+    const statusRows = chartData.map((item) => `<tr><td>${item.name}</td><td>${item.count}</td></tr>`).join('')
+    win.document.write(`
+      <html><head><title>Dashboard Analytics</title></head><body>
+      <h2>Dashboard Analytics Report</h2>
+      <h3>Core Metrics</h3>
+      <ul>${statCards.map((item) => `<li>${item.label}: ${item.value || 0}</li>`).join('')}</ul>
+      <h3>Status Funnel</h3>
+      <table border="1" cellspacing="0" cellpadding="6"><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>${statusRows}</tbody></table>
+      <script>window.print();</script></body></html>
+    `)
+    win.document.close()
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <p className="portal-kicker">Administrative Overview</p>
         <h1 className="portal-page-title mt-2">Admin Dashboard</h1>
         <p className="portal-page-subtitle">Scholarship management summary and current workload.</p>
+        <div className="mt-3 flex gap-2">
+          <button onClick={exportAnalyticsCSV} className="portal-button-secondary text-sm">Export Analytics CSV</button>
+          <button onClick={exportAnalyticsPDF} className="portal-button-secondary text-sm">Export Analytics PDF</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -160,6 +196,73 @@ export default function AdminDashboard() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="portal-surface p-6">
+          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Funnel Conversion</h2>
+          <div className="flex flex-col gap-2 text-sm text-slate-700">
+            <div className="flex justify-between"><span>Submitted</span><strong>{stats?.funnel?.submitted || 0}</strong></div>
+            <div className="flex justify-between"><span>Screened</span><strong>{stats?.funnel?.screened || 0}</strong></div>
+            <div className="flex justify-between"><span>Exam Stage</span><strong>{stats?.funnel?.exam || 0}</strong></div>
+            <div className="flex justify-between"><span>Approved</span><strong>{stats?.funnel?.approved || 0}</strong></div>
+            <div className="flex justify-between"><span>Accepted</span><strong>{stats?.funnel?.accepted || 0}</strong></div>
+          </div>
+        </div>
+
+        <div className="portal-surface p-6">
+          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Top Rejection Reasons</h2>
+          {!stats?.rejectionReasons?.length ? (
+            <p className="text-sm text-slate-500">No rejection reasons available yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {stats.rejectionReasons.map((item) => (
+                <div key={item.reason} className="flex justify-between gap-2 text-sm">
+                  <span className="truncate text-slate-600">{item.reason}</span>
+                  <strong className="text-brand-primary">{item.count}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="portal-surface p-6">
+          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Appeals Overview</h2>
+          <div className="flex flex-col gap-2 text-sm text-slate-700">
+            <div className="flex justify-between"><span>Pending</span><strong>{stats?.appeals?.PENDING || 0}</strong></div>
+            <div className="flex justify-between"><span>Approved</span><strong>{stats?.appeals?.APPROVED || 0}</strong></div>
+            <div className="flex justify-between"><span>Denied</span><strong>{stats?.appeals?.DENIED || 0}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="portal-surface p-6">
+          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Top Schools</h2>
+          {stats?.trends?.schools?.length ? (
+            <div className="flex flex-col gap-2">
+              {stats.trends.schools.map((item) => (
+                <div key={item.label} className="flex justify-between text-sm">
+                  <span className="truncate text-slate-600">{item.label}</span>
+                  <strong className="text-brand-primary">{item.count}</strong>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm text-slate-500">No school trend data.</p>}
+        </div>
+        <div className="portal-surface p-6">
+          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Top Courses</h2>
+          {stats?.trends?.courses?.length ? (
+            <div className="flex flex-col gap-2">
+              {stats.trends.courses.map((item) => (
+                <div key={item.label} className="flex justify-between text-sm">
+                  <span className="truncate text-slate-600">{item.label}</span>
+                  <strong className="text-brand-primary">{item.count}</strong>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-sm text-slate-500">No course trend data.</p>}
         </div>
       </div>
 

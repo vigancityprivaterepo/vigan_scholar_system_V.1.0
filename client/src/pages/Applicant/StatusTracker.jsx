@@ -10,10 +10,22 @@ import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, DocumentIcon, InfoIco
 export default function StatusTracker() {
   const [application, setApplication] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [communications, setCommunications] = useState([])
+  const [appeals, setAppeals] = useState([])
+  const [appealReason, setAppealReason] = useState('')
+  const [appealLoading, setAppealLoading] = useState(false)
 
   useEffect(() => {
-    applicationService.getMine()
-      .then(r => setApplication(r.data.application))
+    Promise.all([
+      applicationService.getMine(),
+      applicationService.getCommunications(),
+      applicationService.getAppeals(),
+    ])
+      .then(([appRes, commRes, appealRes]) => {
+        setApplication(appRes.data.application)
+        setCommunications(commRes.data.timeline || [])
+        setAppeals(appealRes.data.appeals || [])
+      })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load status data.'))
       .finally(() => setLoading(false))
   }, [])
@@ -38,6 +50,26 @@ export default function StatusTracker() {
   const isIncomplete = application.status === 'INCOMPLETE'
   const isCORRejected = application.status === 'COR_REJECTED'
   const isRejected = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM'].includes(application.status)
+  const pendingAppeal = appeals.find((appeal) => appeal.status === 'PENDING')
+
+  const submitAppeal = async () => {
+    if (!appealReason.trim()) {
+      toast.error('Please provide appeal reason.')
+      return
+    }
+    try {
+      setAppealLoading(true)
+      const response = await applicationService.submitAppeal({ reason: appealReason.trim() })
+      toast.success(response.data.message || 'Appeal submitted.')
+      const refreshed = await applicationService.getAppeals()
+      setAppeals(refreshed.data.appeals || [])
+      setAppealReason('')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit appeal.')
+    } finally {
+      setAppealLoading(false)
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -95,6 +127,25 @@ export default function StatusTracker() {
           <>
             <p className="mb-2 text-sm text-slate-700">Unfortunately, your application was not successful.</p>
             {application.rejectionReason && <div className="portal-panel p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
+            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Appeal / Reconsideration</p>
+              {pendingAppeal ? (
+                <p className="text-sm text-amber-700">You already have a pending appeal under review.</p>
+              ) : (
+                <>
+                  <textarea
+                    className="portal-input"
+                    rows={3}
+                    placeholder="State your reconsideration request and supporting context."
+                    value={appealReason}
+                    onChange={(e) => setAppealReason(e.target.value)}
+                  />
+                  <button onClick={submitAppeal} disabled={appealLoading} className="portal-button-primary mt-2 text-sm">
+                    {appealLoading ? 'Submitting...' : 'Submit Appeal'}
+                  </button>
+                </>
+              )}
+            </div>
           </>
         )}
 
@@ -165,6 +216,26 @@ export default function StatusTracker() {
           </div>
         </div>
       )}
+
+      <div className="portal-surface p-6">
+        <h3 className="mb-4 text-lg font-semibold text-brand-primary">Communication Timeline</h3>
+        {communications.length === 0 ? (
+          <p className="text-sm text-slate-500">No communication records yet.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {communications.slice(0, 50).map((item) => (
+              <div key={item.id} className="rounded-md border border-slate-200 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-brand-primary">{item.title || item.source}</p>
+                  <span className="text-[11px] text-slate-400">{formatDateTime(item.createdAt)}</span>
+                </div>
+                <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500">{item.source}</p>
+                <p className="mt-2 text-sm text-slate-700">{item.message || '-'}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

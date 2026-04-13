@@ -5,6 +5,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { isValidTransition } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
+const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = 'data@vigancity.gov.ph';
@@ -14,6 +15,53 @@ const BULK_EMAIL_MAX_RECIPIENTS = (() => {
   const parsed = parseInt(process.env.BULK_EMAIL_MAX_RECIPIENTS || '300', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 300;
 })();
+const BULK_EMAIL_DAILY_CAP_PER_ADMIN = (() => {
+  const parsed = parseInt(process.env.BULK_EMAIL_DAILY_CAP_PER_ADMIN || '1000', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1000;
+})();
+const EMAIL_JOB_DEFAULT_MAX_ATTEMPTS = (() => {
+  const parsed = parseInt(process.env.BULK_EMAIL_JOB_MAX_ATTEMPTS || '3', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+})();
+
+const ensureAdminDailyCap = async (adminId, requestedCount) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  const count = await prisma.communicationLog.count({
+    where: {
+      createdById: adminId,
+      channel: 'EMAIL',
+      createdAt: { gte: start, lte: end },
+    },
+  });
+
+  if (count + requestedCount > BULK_EMAIL_DAILY_CAP_PER_ADMIN) {
+    throw new AppError(`Daily email cap exceeded. Limit is ${BULK_EMAIL_DAILY_CAP_PER_ADMIN} per admin.`, 400);
+  }
+};
+
+const recordCommunication = async ({
+  applicationId,
+  userId,
+  channel,
+  subject,
+  message,
+  metadata,
+  createdById,
+}) => prisma.communicationLog.create({
+  data: {
+    applicationId: applicationId || null,
+    userId: userId || null,
+    channel,
+    subject: subject || null,
+    message: message || null,
+    metadata: metadata || undefined,
+    createdById: createdById || null,
+  },
+});
 
 const buildSubmittedAtWhere = (submittedFrom, submittedTo) => {
   const fromRaw = String(submittedFrom || '').trim();
@@ -53,12 +101,14 @@ const buildBulkEmailWhere = ({
   search,
   submittedFrom,
   submittedTo,
+  academicYear,
 }) => {
   const where = {};
   const hasApplicationIds = Array.isArray(applicationIds) && applicationIds.length > 0;
   const hasStatusFilter = Boolean(String(status || '').trim());
   const hasSearchFilter = Boolean(String(search || '').trim());
   const hasDateFilter = Boolean(String(submittedFrom || '').trim() || String(submittedTo || '').trim());
+  const hasAcademicYearFilter = Boolean(String(academicYear || '').trim());
 
   if (hasApplicationIds) {
     const uniqueIds = [...new Set(applicationIds.map((value) => String(value).trim()).filter(Boolean))];
@@ -67,8 +117,8 @@ const buildBulkEmailWhere = ({
     return where;
   }
 
-  if (!hasStatusFilter && !hasSearchFilter && !hasDateFilter) {
-    throw new AppError('Provide applicationIds or a status/search/date filter for bulk email.', 400);
+  if (!hasStatusFilter && !hasSearchFilter && !hasDateFilter && !hasAcademicYearFilter) {
+    throw new AppError('Provide applicationIds or a status/search/date/academic year filter for bulk email.', 400);
   }
 
   if (hasStatusFilter) {
@@ -89,6 +139,20 @@ const buildBulkEmailWhere = ({
   const submittedAtFilter = buildSubmittedAtWhere(submittedFrom, submittedTo);
   if (submittedAtFilter) where.submittedAt = submittedAtFilter;
 
+  if (hasAcademicYearFilter) {
+    const normalizedAy = String(academicYear).trim();
+    const ayRange = parseAcademicYearRange(normalizedAy);
+    if (ayRange) {
+      if (!submittedAtFilter) {
+        where.submittedAt = { gte: ayRange.from, lte: ayRange.to };
+      }
+      // Match records with an explicit academicYear OR legacy records (NULL) within the date range
+      where.OR = [{ academicYear: normalizedAy }, { academicYear: null }];
+    } else {
+      where.academicYear = normalizedAy;
+    }
+  }
+
   return where;
 };
 
@@ -99,6 +163,7 @@ const applyStatusUpdate = async ({
   rejectionReason,
   examScore,
   interviewNotes,
+  requirementChecklist,
   performedById,
 }) => {
   const normalizedRejectionReason = String(rejectionReason || '').trim();
@@ -126,6 +191,13 @@ const applyStatusUpdate = async ({
     }
   }
 
+  if (status === 'ELIGIBILITY_SCREENING' && requirementChecklist && typeof requirementChecklist === 'object') {
+    const allChecked = Object.values(requirementChecklist).every((value) => Boolean(value && value.checked));
+    if (!allChecked) {
+      throw new AppError('All requirement checklist items must be checked before moving to Eligibility Screening.', 400);
+    }
+  }
+
   const updateData = { status };
   if (remarks) updateData.adminRemarks = remarks;
   if (REJECTION_REQUIRED_STATUSES.includes(status)) {
@@ -135,6 +207,9 @@ const applyStatusUpdate = async ({
   }
   if (examScore !== undefined) updateData.examScore = parseFloat(examScore);
   if (interviewNotes) updateData.interviewNotes = interviewNotes;
+  if (requirementChecklist && typeof requirementChecklist === 'object') {
+    updateData.requirementChecklist = requirementChecklist;
+  }
 
   const updated = await prisma.application.update({ where: { id: application.id }, data: updateData });
 
@@ -156,10 +231,21 @@ const applyStatusUpdate = async ({
 const listApplications = async (req, res, next) => {
   try {
     const ALLOWED_SORT_FIELDS = ['submittedAt', 'updatedAt', 'gwa', 'status'];
-  const { page = 1, limit = 20, status, search, submittedFrom, submittedTo, sortBy: rawSortBy = 'submittedAt', sortOrder: rawSortOrder = 'desc' } = req.query;
+  const {
+    page = 1,
+    limit = 20,
+    status,
+    search,
+    submittedFrom,
+    submittedTo,
+    academicYear: rawAcademicYear,
+    sortBy: rawSortBy = 'submittedAt',
+    sortOrder: rawSortOrder = 'desc',
+  } = req.query;
   const sortBy = ALLOWED_SORT_FIELDS.includes(rawSortBy) ? rawSortBy : 'submittedAt';
   const sortOrder = rawSortOrder === 'asc' ? 'asc' : 'desc';
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    const academicYear = String(rawAcademicYear || '').trim() || toAcademicYear(new Date());
 
     const where = {};
     if (status) {
@@ -176,6 +262,18 @@ const listApplications = async (req, res, next) => {
     }
     const submittedAtFilter = buildSubmittedAtWhere(submittedFrom, submittedTo);
     if (submittedAtFilter) where.submittedAt = submittedAtFilter;
+    if (academicYear) {
+      const ayRange = parseAcademicYearRange(academicYear);
+      if (ayRange) {
+        if (!submittedAtFilter) {
+          where.submittedAt = { gte: ayRange.from, lte: ayRange.to };
+        }
+        // Match records with an explicit academicYear OR legacy records (NULL) within the date range
+        where.OR = [{ academicYear }, { academicYear: null }];
+      } else {
+        where.academicYear = academicYear;
+      }
+    }
 
     const [applications, total] = await Promise.all([
       prisma.application.findMany({
@@ -206,6 +304,7 @@ const listApplications = async (req, res, next) => {
     res.json({
       success: true,
       applications,
+      academicYear,
       pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) },
     });
   } catch (err) {
@@ -239,7 +338,7 @@ const getApplication = async (req, res, next) => {
 const updateStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, remarks, rejectionReason, examScore, interviewNotes } = req.body;
+    const { status, remarks, rejectionReason, examScore, interviewNotes, requirementChecklist } = req.body;
 
     const application = await prisma.application.findUnique({
       where: { id },
@@ -254,6 +353,7 @@ const updateStatus = async (req, res, next) => {
       rejectionReason,
       examScore,
       interviewNotes,
+      requirementChecklist,
       performedById: req.user.id,
     });
 
@@ -265,7 +365,7 @@ const updateStatus = async (req, res, next) => {
 
 const batchUpdateStatus = async (req, res, next) => {
   try {
-    const { applicationIds, status, remarks, rejectionReason, examScore, interviewNotes } = req.body;
+    const { applicationIds, status, remarks, rejectionReason, examScore, interviewNotes, requirementChecklist } = req.body;
 
     if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
       throw new AppError('applicationIds is required and must contain at least one id.', 400);
@@ -297,6 +397,7 @@ const batchUpdateStatus = async (req, res, next) => {
           rejectionReason,
           examScore,
           interviewNotes,
+          requirementChecklist,
           performedById: req.user.id,
         });
         processed.push({ id: appId, previousStatus: application.status, newStatus: updated.status });
@@ -329,6 +430,7 @@ const previewBulkEmailRecipients = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
+      academicYear,
     } = req.body;
 
     const where = buildBulkEmailWhere({
@@ -337,6 +439,7 @@ const previewBulkEmailRecipients = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
+      academicYear: academicYear || toAcademicYear(new Date()),
     });
 
     const [count, sample] = await Promise.all([
@@ -411,6 +514,7 @@ const bulkEmailApplicants = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
+      academicYear,
       subject,
       greeting,
       message,
@@ -429,6 +533,7 @@ const bulkEmailApplicants = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
+      academicYear: academicYear || toAcademicYear(new Date()),
     });
 
     const applications = await prisma.application.findMany({
@@ -446,6 +551,7 @@ const bulkEmailApplicants = async (req, res, next) => {
     if (applications.length > BULK_EMAIL_MAX_RECIPIENTS) {
       throw new AppError(`Recipient count (${applications.length}) exceeds the max allowed (${BULK_EMAIL_MAX_RECIPIENTS}) for one send. Narrow your filters.`, 400);
     }
+    await ensureAdminDailyCap(req.user.id, applications.length);
 
     const sent = [];
     const skipped = [];
@@ -481,6 +587,15 @@ const bulkEmailApplicants = async (req, res, next) => {
             notes: emailSubject,
           },
         });
+        await recordCommunication({
+          applicationId: application.id,
+          userId: application.applicant.id,
+          channel: 'EMAIL',
+          subject: emailSubject,
+          message: emailBody,
+          metadata: { template: 'adminBroadcast', status: application.status, type: 'bulk-send-now' },
+          createdById: req.user.id,
+        });
 
         sent.push({ id: application.id, email: recipientEmail });
       } catch (err) {
@@ -498,6 +613,102 @@ const bulkEmailApplicants = async (req, res, next) => {
       },
       sent,
       skipped,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const scheduleBulkEmailApplicants = async (req, res, next) => {
+  try {
+    const {
+      applicationIds,
+      status,
+      search,
+      submittedFrom,
+      submittedTo,
+      academicYear,
+      subject,
+      greeting,
+      message,
+      runAt,
+    } = req.body;
+
+    const emailSubject = String(subject || '').trim();
+    const emailBody = String(message || '').trim();
+    const emailGreeting = String(greeting || '').trim();
+    if (!emailSubject) throw new AppError('Email subject is required.', 400);
+    if (!emailBody) throw new AppError('Email message is required.', 400);
+
+    const runAtDate = new Date(runAt);
+    if (Number.isNaN(runAtDate.getTime())) throw new AppError('runAt must be a valid datetime.', 400);
+    if (runAtDate.getTime() < Date.now() + 30 * 1000) throw new AppError('Scheduled time must be at least 30 seconds in the future.', 400);
+
+    const filterPayload = {
+      applicationIds,
+      status,
+      search,
+      submittedFrom,
+      submittedTo,
+      academicYear: academicYear || toAcademicYear(new Date()),
+    };
+    const where = buildBulkEmailWhere(filterPayload);
+    const count = await prisma.application.count({ where });
+    if (!count) throw new AppError('No recipients found for the given filter.', 404);
+    if (count > BULK_EMAIL_MAX_RECIPIENTS) throw new AppError(`Recipient count (${count}) exceeds max allowed (${BULK_EMAIL_MAX_RECIPIENTS}) for one send.`, 400);
+
+    const job = await prisma.emailJob.create({
+      data: {
+        type: 'BULK_EMAIL',
+        status: 'PENDING',
+        runAt: runAtDate,
+        maxAttempts: EMAIL_JOB_DEFAULT_MAX_ATTEMPTS,
+        createdById: req.user.id,
+        payload: {
+          ...filterPayload,
+          subject: emailSubject,
+          greeting: emailGreeting,
+          message: emailBody,
+          scheduledBy: { id: req.user.id, email: req.user.email, fullName: req.user.fullName },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Bulk email scheduled for ${runAtDate.toISOString()}.`,
+      job: { id: job.id, status: job.status, runAt: job.runAt, createdAt: job.createdAt },
+      summary: { recipients: count },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const listEmailJobs = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 20, status = '' } = req.query;
+    const take = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
+    const currentPage = Math.max(1, parseInt(page, 10) || 1);
+    const skip = (currentPage - 1) * take;
+    const where = {};
+    if (String(status || '').trim()) where.status = String(status).trim();
+
+    const [jobs, total] = await Promise.all([
+      prisma.emailJob.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ runAt: 'desc' }, { createdAt: 'desc' }],
+        include: { createdBy: { select: { id: true, fullName: true, email: true, role: true } } },
+      }),
+      prisma.emailJob.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      jobs,
+      pagination: { page: currentPage, limit: take, total, pages: Math.ceil(total / take) },
     });
   } catch (err) {
     next(err);
@@ -594,6 +805,15 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
     message: config.message,
     type: config.type,
   });
+  await recordCommunication({
+    applicationId: application.id,
+    userId: user.id,
+    channel: 'PORTAL_NOTICE',
+    subject: config.title,
+    message: config.message,
+    metadata: { status: newStatus },
+    createdById: null,
+  });
 
   if (config.email) {
     await sendEmail({
@@ -607,6 +827,15 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
         rejectionReason,
         portalUrl: `${process.env.CLIENT_URL}/applicant/status`,
       },
+    });
+    await recordCommunication({
+      applicationId: application.id,
+      userId: user.id,
+      channel: 'EMAIL',
+      subject: config.email.subject,
+      message: rejectionReason || remarks || '',
+      metadata: { template: config.email.template, status: newStatus },
+      createdById: null,
     });
   }
 };
@@ -731,9 +960,11 @@ const reviewCOR = async (req, res, next) => {
 
 const getDashboardStats = async (req, res, next) => {
   try {
-    const [total, byStatus, recentLogs] = await Promise.all([
-      prisma.application.count(),
-      prisma.application.groupBy({ by: ['status'], _count: { _all: true } }),
+    const academicYear = String(req.query.academicYear || '').trim() || toAcademicYear(new Date());
+    const where = academicYear ? { academicYear } : {};
+    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats] = await Promise.all([
+      prisma.application.count({ where }),
+      prisma.application.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.activityLog.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -741,6 +972,35 @@ const getDashboardStats = async (req, res, next) => {
           application: { include: { applicant: { select: { fullName: true } } } },
           performedBy: { select: { fullName: true } },
         },
+      }),
+      prisma.application.groupBy({
+        by: ['school'],
+        where: { ...where, school: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { school: 'desc' } },
+        take: 8,
+      }),
+      prisma.application.groupBy({
+        by: ['course'],
+        where: { ...where, course: { not: null } },
+        _count: { _all: true },
+        orderBy: { _count: { course: 'desc' } },
+        take: 8,
+      }),
+      prisma.application.groupBy({
+        by: ['rejectionReason'],
+        where: {
+          ...where,
+          status: { in: ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM', 'COR_REJECTED'] },
+          rejectionReason: { not: null },
+        },
+        _count: { _all: true },
+        orderBy: { _count: { rejectionReason: 'desc' } },
+        take: 8,
+      }),
+      prisma.appeal.groupBy({
+        by: ['status'],
+        _count: { _all: true },
       }),
     ]);
 
@@ -754,9 +1014,22 @@ const getDashboardStats = async (req, res, next) => {
       accepted: statusCounts.ACCEPTED || 0,
       rejected: (statusCounts.REJECTED || 0) + (statusCounts.NOT_QUALIFIED || 0) + (statusCounts.FAILED_EXAM || 0),
       byStatus: statusCounts,
+      funnel: {
+        submitted: total,
+        screened: (statusCounts.ELIGIBILITY_SCREENING || 0) + (statusCounts.EXAM_INTERVIEW || 0) + (statusCounts.APPROVED || 0) + (statusCounts.COR_SUBMITTED || 0) + (statusCounts.ACCEPTED || 0),
+        exam: (statusCounts.EXAM_INTERVIEW || 0) + (statusCounts.FAILED_EXAM || 0),
+        approved: statusCounts.APPROVED || 0,
+        accepted: statusCounts.ACCEPTED || 0,
+      },
+      trends: {
+        schools: topSchoolsRaw.map((row) => ({ label: row.school || 'Unknown', count: row._count._all })),
+        courses: topCoursesRaw.map((row) => ({ label: row.course || 'Unknown', count: row._count._all })),
+      },
+      rejectionReasons: rejectionRaw.map((row) => ({ reason: row.rejectionReason || 'Unspecified', count: row._count._all })),
+      appeals: Object.fromEntries(appealStats.map((item) => [item.status, item._count._all])),
     };
 
-    res.json({ success: true, stats, recentActivity: recentLogs });
+    res.json({ success: true, academicYear, stats, recentActivity: recentLogs });
   } catch (err) {
     next(err);
   }
@@ -803,7 +1076,8 @@ const getActivityLogs = async (req, res, next) => {
 
 const listBulkEmailLogs = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search = '', sentFrom, sentTo } = req.query;
+    const { page = 1, limit = 20, search = '', sentFrom, sentTo, academicYear: rawAcademicYear } = req.query;
+    const academicYear = String(rawAcademicYear || '').trim() || toAcademicYear(new Date());
     const take = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const currentPage = Math.max(1, parseInt(page, 10) || 1);
     const skip = (currentPage - 1) * take;
@@ -823,6 +1097,7 @@ const listBulkEmailLogs = async (req, res, next) => {
 
     const sentAtFilter = buildSubmittedAtWhere(sentFrom, sentTo);
     if (sentAtFilter) where.createdAt = sentAtFilter;
+    if (academicYear) where.application = { ...(where.application || {}), academicYear };
 
     const [logs, total] = await Promise.all([
       prisma.activityLog.findMany({
@@ -856,7 +1131,90 @@ const listBulkEmailLogs = async (req, res, next) => {
         total,
         pages: Math.ceil(total / take),
       },
+      academicYear,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const listAppeals = async (req, res, next) => {
+  try {
+    const { status = '', page = 1, limit = 20 } = req.query;
+    const take = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
+    const currentPage = Math.max(1, parseInt(page, 10) || 1);
+    const skip = (currentPage - 1) * take;
+    const where = {};
+    if (String(status).trim()) where.status = String(status).trim();
+
+    const [appeals, total] = await Promise.all([
+      prisma.appeal.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          applicant: { select: { id: true, fullName: true, email: true } },
+          application: { select: { id: true, status: true, academicYear: true } },
+          reviewedBy: { select: { id: true, fullName: true, email: true, role: true } },
+        },
+      }),
+      prisma.appeal.count({ where }),
+    ]);
+
+    res.json({
+      success: true,
+      appeals,
+      pagination: { page: currentPage, limit: take, total, pages: Math.ceil(total / take) },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resolveAppeal = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, resolution } = req.body;
+    const normalizedStatus = String(status || '').trim().toUpperCase();
+    if (!['APPROVED', 'DENIED'].includes(normalizedStatus)) throw new AppError('status must be APPROVED or DENIED.', 400);
+    const reason = String(resolution || '').trim();
+    if (!reason) throw new AppError('resolution is required.', 400);
+
+    const appeal = await prisma.appeal.findUnique({
+      where: { id },
+      include: { applicant: true, application: true },
+    });
+    if (!appeal) throw new AppError('Appeal not found.', 404);
+    if (appeal.status !== 'PENDING') throw new AppError('Appeal is already resolved.', 400);
+
+    const updated = await prisma.appeal.update({
+      where: { id },
+      data: {
+        status: normalizedStatus,
+        resolution: reason,
+        reviewedById: req.user.id,
+      },
+    });
+
+    await createNotification({
+      userId: appeal.applicantId,
+      applicationId: appeal.applicationId,
+      title: 'Appeal Update',
+      message: normalizedStatus === 'APPROVED' ? 'Your appeal was approved. Please monitor your portal for next steps.' : `Your appeal was denied. Reason: ${reason}`,
+      type: normalizedStatus === 'APPROVED' ? 'SUCCESS' : 'ERROR',
+    });
+    await recordCommunication({
+      applicationId: appeal.applicationId,
+      userId: appeal.applicantId,
+      channel: 'PORTAL_NOTICE',
+      subject: 'Appeal Update',
+      message: reason,
+      metadata: { appealId: id, status: normalizedStatus },
+      createdById: req.user.id,
+    });
+
+    res.json({ success: true, message: 'Appeal resolved.', appeal: updated });
   } catch (err) {
     next(err);
   }
@@ -909,8 +1267,13 @@ const listUsers = async (req, res, next) => {
     const { role, search } = req.query;
     const where = {};
 
-    // Restrict user control to admin accounts only.
-    where.role = 'ADMIN';
+    // Restrict user control to admin accounts only by default.
+    const requestedRole = String(role || '').trim().toUpperCase();
+    if (requestedRole && ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER', 'APPLICANT'].includes(requestedRole)) {
+      where.role = requestedRole;
+    } else {
+      where.role = { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] };
+    }
 
     if (search) {
       where.OR = [
@@ -947,8 +1310,9 @@ const updateUserRole = async (req, res, next) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!['ADMIN', 'APPLICANT'].includes(role)) {
-      throw new AppError('Role must be ADMIN or APPLICANT.', 400);
+    const allowedRoles = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER', 'APPLICANT'];
+    if (!allowedRoles.includes(role)) {
+      throw new AppError(`Role must be one of: ${allowedRoles.join(', ')}.`, 400);
     }
 
     const target = await prisma.user.findUnique({
@@ -961,16 +1325,16 @@ const updateUserRole = async (req, res, next) => {
       throw new AppError('You cannot change your own role.', 400);
     }
 
-    if (target.role === 'APPLICANT' && role === 'ADMIN') {
-      throw new AppError('Applicants cannot be promoted to admin from this panel.', 400);
+    if (target.role === 'APPLICANT' && role !== 'APPLICANT') {
+      throw new AppError('Applicants cannot be promoted to admin roles from this panel.', 400);
     }
 
     if (target.role === role) {
       return res.json({ success: true, message: 'Role is already set.', user: target });
     }
 
-    if (target.role === 'ADMIN' && role === 'APPLICANT') {
-      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
+    if (['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(target.role) && role === 'APPLICANT') {
+      const adminCount = await prisma.user.count({ where: { role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] } } });
       if (adminCount <= 1) {
         throw new AppError('At least one admin account must remain.', 400);
       }
@@ -1064,6 +1428,64 @@ const inviteAdminUser = async (req, res, next) => {
     next(err);
   }
 };
+
+const processDueEmailJobs = async () => {
+  const dueJobs = await prisma.emailJob.findMany({
+    where: {
+      status: { in: ['PENDING', 'RETRY'] },
+      runAt: { lte: new Date() },
+    },
+    orderBy: { runAt: 'asc' },
+    take: 5,
+  });
+
+  for (const job of dueJobs) {
+    const lock = await prisma.emailJob.updateMany({
+      where: { id: job.id, status: { in: ['PENDING', 'RETRY'] } },
+      data: { status: 'PROCESSING' },
+    });
+    if (!lock.count) continue;
+
+    try {
+      const payload = job.payload || {};
+      if (job.type !== 'BULK_EMAIL') throw new AppError(`Unsupported email job type: ${job.type}`, 400);
+
+      const fakeReq = {
+        body: payload,
+        user: {
+          id: payload.scheduledBy?.id || job.createdById || null,
+          email: payload.scheduledBy?.email || '',
+          fullName: payload.scheduledBy?.fullName || 'Scheduler',
+        },
+      };
+
+      await bulkEmailApplicants(
+        fakeReq,
+        { json: () => null },
+        (err) => { if (err) throw err; }
+      );
+
+      await prisma.emailJob.update({
+        where: { id: job.id },
+        data: { status: 'COMPLETED', processedAt: new Date(), lastError: null },
+      });
+    } catch (err) {
+      const nextAttempts = (job.attempts || 0) + 1;
+      const failed = nextAttempts >= (job.maxAttempts || EMAIL_JOB_DEFAULT_MAX_ATTEMPTS);
+      await prisma.emailJob.update({
+        where: { id: job.id },
+        data: {
+          attempts: nextAttempts,
+          status: failed ? 'FAILED' : 'RETRY',
+          runAt: failed ? job.runAt : new Date(Date.now() + 15 * 60 * 1000),
+          lastError: String(err.message || 'Unknown job failure').slice(0, 1000),
+          processedAt: failed ? new Date() : null,
+        },
+      });
+    }
+  }
+};
+
 module.exports = {
   listApplications,
   getApplication,
@@ -1072,21 +1494,23 @@ module.exports = {
   previewBulkEmailRecipients,
   sendBulkEmailTest,
   bulkEmailApplicants,
+  scheduleBulkEmailApplicants,
+  listEmailJobs,
   scheduleExam,
   reviewCOR,
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,
   listBulkEmailLogs,
+  listAppeals,
+  resolveAppeal,
   getAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
   listUsers,
   updateUserRole,
   inviteAdminUser,
+  processDueEmailJobs,
 };
-
-
-
 
 

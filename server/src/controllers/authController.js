@@ -201,7 +201,8 @@ const login = async (req, res, next) => {
     if (!valid) throw new AppError('Invalid email or password', 401);
 
     const isEmailVerified = await getEmailVerificationStatus(user.id);
-    if (user.role !== 'ADMIN' && !isEmailVerified) {
+    const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role);
+    if (!isAdminRole && !isEmailVerified) {
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
 

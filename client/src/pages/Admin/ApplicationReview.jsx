@@ -9,6 +9,15 @@ import { openProtectedFile } from '../../utils/openProtectedFile'
 import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon } from '../../components/ui/PortalIcons'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
+const REQUIREMENT_CHECKLIST_ITEMS = [
+  'Letter of Application',
+  'Barangay Residency Certificate',
+  'Form 138 / Grades',
+  'Good Moral Certificate',
+  'College Admission Test Result',
+  'Passport-size Photo',
+  'Affidavit of Income and Property',
+]
 
 export default function ApplicationReview() {
   const { id } = useParams()
@@ -23,10 +32,14 @@ export default function ApplicationReview() {
   const [remarks, setRemarks] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [examScore, setExamScore] = useState('')
+  const [requirementChecklist, setRequirementChecklist] = useState({})
 
   useEffect(() => {
     adminService.getApplication(id)
-      .then(r => setApp(r.data.application))
+      .then(r => {
+        setApp(r.data.application)
+        setRequirementChecklist(r.data.application?.requirementChecklist || {})
+      })
       .catch(() => toast.error('Failed to load application'))
       .finally(() => setLoading(false))
   }, [id])
@@ -43,11 +56,13 @@ export default function ApplicationReview() {
         remarks: remarks || undefined,
         rejectionReason: rejectionReason || extra.rejectionReason || undefined,
         examScore: examScore ? parseFloat(examScore) : undefined,
+        requirementChecklist,
         ...extra,
       })
       toast.success(`Status updated to ${newStatus.replace(/_/g, ' ')}`)
       const r = await adminService.getApplication(id)
       setApp(r.data.application)
+      setRequirementChecklist(r.data.application?.requirementChecklist || {})
       setShowConfirm(false)
       setConfirmText('')
       setRemarks('')
@@ -196,6 +211,32 @@ export default function ApplicationReview() {
           {activeTab === 'requirements' && (
             <div className="portal-surface p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Requirement Files ({app.requirementFiles?.length || 0})</h3>
+              <div className="mb-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-2 text-sm font-semibold text-brand-primary">Per-Requirement Checklist</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {REQUIREMENT_CHECKLIST_ITEMS.map((item) => {
+                    const current = requirementChecklist[item] || { checked: false, notes: '' }
+                    return (
+                      <label key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(current.checked)}
+                          onChange={(e) =>
+                            setRequirementChecklist((prev) => ({
+                              ...prev,
+                              [item]: { ...current, checked: e.target.checked },
+                            }))
+                          }
+                        />
+                        <span>{item}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  All items must be checked before moving to Eligibility Screening.
+                </p>
+              </div>
               {!app.requirementFiles?.length ? (
                 <p className="py-6 text-center text-sm text-slate-500">No files uploaded</p>
               ) : (

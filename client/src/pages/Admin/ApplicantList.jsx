@@ -9,28 +9,21 @@ import { ArrowRightIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
 const SAVED_VIEWS_KEY = 'adminApplicantList.savedViews.v1'
 
-const getSubmissionYearOptions = () => {
-  const currentYear = new Date().getFullYear()
-  return Array.from({ length: 8 }, (_, index) => String(currentYear - index))
+const getAcademicYearOptions = () => {
+  const now = new Date()
+  const baseStartYear = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1
+  return Array.from({ length: 8 }, (_, index) => {
+    const start = baseStartYear - index
+    return `${start}-${start + 1}`
+  })
 }
 
-const getDateRangeByYear = (year) => {
-  const normalized = String(year || '').trim()
-  if (!normalized) return {}
-  return {
-    submittedFrom: `${normalized}-01-01`,
-    submittedTo: `${normalized}-12-31`,
-  }
-}
-
-const exportToCSV = async (search, statusFilter, submissionYear) => {
+const exportToCSV = async (search, statusFilter, academicYear) => {
   try {
     const params = { page: 1, limit: 9999, sortBy: 'submittedAt', sortOrder: 'desc' }
     if (search) params.search = search
     if (statusFilter) params.status = statusFilter
-    const { submittedFrom, submittedTo } = getDateRangeByYear(submissionYear)
-    if (submittedFrom) params.submittedFrom = submittedFrom
-    if (submittedTo) params.submittedTo = submittedTo
+    if (academicYear) params.academicYear = academicYear
     const r = await adminService.listApplications(params)
     const apps = r.data.applications
 
@@ -65,12 +58,12 @@ const DESTRUCTIVE_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED']
 
 export default function ApplicantList() {
   const [searchParams] = useSearchParams()
-  const submissionYearOptions = useMemo(() => getSubmissionYearOptions(), [])
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
-  const [submissionYear, setSubmissionYear] = useState('')
+  const [academicYear, setAcademicYear] = useState(academicYearOptions[0] || '')
   const [sortBy, setSortBy] = useState('submittedAt')
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
@@ -91,16 +84,14 @@ export default function ApplicantList() {
       const params = { page, limit: 20, sortBy, sortOrder }
       if (search) params.search = search
       if (statusFilter) params.status = statusFilter
-      const { submittedFrom, submittedTo } = getDateRangeByYear(submissionYear)
-      if (submittedFrom) params.submittedFrom = submittedFrom
-      if (submittedTo) params.submittedTo = submittedTo
+      if (academicYear) params.academicYear = academicYear
       const r = await adminService.listApplications(params)
       setData(r.data)
     } catch {
       toast.error('Failed to load applications')
     }
     setLoading(false)
-  }, [page, search, statusFilter, sortBy, sortOrder, submissionYear])
+  }, [page, search, statusFilter, sortBy, sortOrder, academicYear])
 
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => {
@@ -162,7 +153,7 @@ export default function ApplicantList() {
       name: normalizedName,
       search,
       statusFilter,
-      submissionYear,
+      academicYear,
       sortBy,
       sortOrder,
     }
@@ -179,7 +170,7 @@ export default function ApplicantList() {
     if (!view) return
     setSearch(view.search || '')
     setStatusFilter(view.statusFilter || '')
-    setSubmissionYear(view.submissionYear || '')
+    setAcademicYear(view.academicYear || '')
     setSortBy(view.sortBy || 'submittedAt')
     setSortOrder(view.sortOrder === 'asc' ? 'asc' : 'desc')
     setPage(1)
@@ -256,7 +247,7 @@ export default function ApplicantList() {
             Bulk Email Module
           </Link>
           <button
-            onClick={() => exportToCSV(search, statusFilter, submissionYear)}
+            onClick={() => exportToCSV(search, statusFilter, academicYear)}
             className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
           >
             Export CSV
@@ -291,13 +282,13 @@ export default function ApplicantList() {
             ))}
           </select>
           <select
-            value={submissionYear}
-            onChange={(e) => { setSubmissionYear(e.target.value); setPage(1) }}
+            value={academicYear}
+            onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
             className="portal-input w-auto"
           >
-            <option value="">All Submission Years</option>
-            {submissionYearOptions.map((year) => (
-              <option key={year} value={year}>{year}</option>
+            <option value="">All Academic Years</option>
+            {academicYearOptions.map((year) => (
+              <option key={year} value={year}>AY {year}</option>
             ))}
           </select>
         </div>

@@ -28,6 +28,7 @@ export default function ApplicationForm() {
   const [checkingApplication, setCheckingApplication] = useState(true)
   const [settings, setSettings] = useState({ applicationOpen: true, applicationDeadline: null })
   const [countdownNow, setCountdownNow] = useState(Date.now())
+  const [qualityWarnings, setQualityWarnings] = useState([])
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(SAVED_KEY)
@@ -94,11 +95,65 @@ export default function ApplicationForm() {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const err = (k) => errors[k] ? <p className="mt-1 text-xs text-red-500">{errors[k]}</p> : null
 
-  const onDrop = useCallback((acceptedFiles) => {
+  const analyzeImageQuality = async (file) => {
+    if (!file.type.startsWith('image/')) return null
+    const imageUrl = URL.createObjectURL(file)
+    try {
+      const img = await new Promise((resolve, reject) => {
+        const image = new Image()
+        image.onload = () => resolve(image)
+        image.onerror = reject
+        image.src = imageUrl
+      })
+
+      const canvas = document.createElement('canvas')
+      const maxDim = 300
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      canvas.width = Math.max(1, Math.floor(img.width * scale))
+      canvas.height = Math.max(1, Math.floor(img.height * scale))
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+      let edgeSum = 0
+      let edgeCount = 0
+      for (let y = 1; y < canvas.height - 1; y += 1) {
+        for (let x = 1; x < canvas.width - 1; x += 1) {
+          const i = (y * canvas.width + x) * 4
+          const left = ((y * canvas.width + (x - 1)) * 4)
+          const right = ((y * canvas.width + (x + 1)) * 4)
+          const top = (((y - 1) * canvas.width + x) * 4)
+          const bottom = (((y + 1) * canvas.width + x) * 4)
+          const gray = (data[i] + data[i + 1] + data[i + 2]) / 3
+          const gx = Math.abs(gray - (data[left] + data[left + 1] + data[left + 2]) / 3) + Math.abs(gray - (data[right] + data[right + 1] + data[right + 2]) / 3)
+          const gy = Math.abs(gray - (data[top] + data[top + 1] + data[top + 2]) / 3) + Math.abs(gray - (data[bottom] + data[bottom + 1] + data[bottom + 2]) / 3)
+          edgeSum += gx + gy
+          edgeCount += 1
+        }
+      }
+      const sharpnessScore = edgeCount ? edgeSum / edgeCount : 0
+      const warnings = []
+      if (img.width < 1000 || img.height < 1000) warnings.push('Low resolution')
+      if (sharpnessScore < 20) warnings.push('Potentially blurry')
+      if (!warnings.length) return null
+      return { fileName: file.name, warnings, width: img.width, height: img.height }
+    } finally {
+      URL.revokeObjectURL(imageUrl)
+    }
+  }
+
+  const onDrop = useCallback(async (acceptedFiles) => {
     const valid = acceptedFiles.filter(f => f.size <= 5 * 1024 * 1024)
     const oversized = acceptedFiles.filter(f => f.size > 5 * 1024 * 1024)
     if (oversized.length) toast.error(`${oversized.length} file(s) exceed 5MB limit`)
     setFiles(prev => [...prev, ...valid])
+
+    const checks = await Promise.all(valid.map((file) => analyzeImageQuality(file)))
+    const detected = checks.filter(Boolean)
+    if (detected.length > 0) {
+      setQualityWarnings((prev) => [...detected, ...prev].slice(0, 12))
+      toast.error('Some uploaded images may be blurry or low-resolution. Review warnings before submit.')
+    }
   }, [])
 
   const deadlineDate = settings.applicationDeadline ? new Date(settings.applicationDeadline) : null
@@ -361,6 +416,19 @@ export default function ApplicationForm() {
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {qualityWarnings.length > 0 && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-700">Document Quality Warnings</p>
+                <ul className="mt-2 flex flex-col gap-1 text-xs text-amber-800">
+                  {qualityWarnings.map((warning, index) => (
+                    <li key={`${warning.fileName}-${index}`}>
+                      {warning.fileName}: {warning.warnings.join(', ')} ({warning.width}x{warning.height})
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

@@ -21,6 +21,11 @@ model User {
   notifications   Notification[]
   activityLogs    ActivityLog[]
   refreshTokens   RefreshToken[]
+  communicationLogs CommunicationLog[]
+  createdCommunications CommunicationLog[] @relation("CommunicationCreatedBy")
+  createdEmailJobs EmailJob[] @relation("EmailJobCreatedBy")
+  appeals Appeal[]
+  reviewedAppeals Appeal[] @relation("AppealReviewedBy")
 
   @@map("users")
 }
@@ -28,6 +33,9 @@ model User {
 enum Role {
   APPLICANT
   ADMIN
+  REVIEWER
+  SCHEDULER
+  SUPER_ADMIN
 }
 
 model Application {
@@ -54,6 +62,8 @@ model Application {
   interviewDate  DateTime? @map("interview_date")
   interviewNotes String?   @map("interview_notes")
   rejectionReason String?  @map("rejection_reason")
+  academicYear    String?  @map("academic_year")
+  requirementChecklist Json? @map("requirement_checklist")
 
   submittedAt DateTime  @default(now()) @map("submitted_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
@@ -63,10 +73,13 @@ model Application {
   notifications    Notification[]
   activityLogs     ActivityLog[]
   examSchedules    ExamSchedule[]
+  communicationLogs CommunicationLog[]
+  appeals Appeal[]
 
   @@index([status])
   @@index([applicantId])
   @@index([submittedAt])
+  @@index([academicYear])
   @@map("applications")
 }
 
@@ -147,6 +160,64 @@ model ActivityLog {
 
   @@index([applicationId])
   @@map("activity_logs")
+}
+
+model CommunicationLog {
+  id            String   @id @default(uuid())
+  applicationId String?  @map("application_id")
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  userId        String?  @map("user_id")
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel       String
+  direction     String   @default("OUTBOUND")
+  subject       String?
+  message       String?
+  metadata      Json?
+  createdById   String?  @map("created_by_id")
+  createdBy     User?    @relation("CommunicationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([applicationId, createdAt])
+  @@index([userId, createdAt])
+  @@map("communication_logs")
+}
+
+model EmailJob {
+  id          String   @id @default(uuid())
+  type        String
+  status      String   @default("PENDING")
+  payload     Json
+  createdById String?  @map("created_by_id")
+  createdBy   User?    @relation("EmailJobCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  runAt       DateTime @map("run_at")
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3) @map("max_attempts")
+  lastError   String?  @map("last_error")
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([status, runAt])
+  @@map("email_jobs")
+}
+
+model Appeal {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  applicantId   String   @map("applicant_id")
+  applicant     User     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  reason        String
+  status        String   @default("PENDING")
+  resolution    String?
+  reviewedById  String?  @map("reviewed_by_id")
+  reviewedBy    User?    @relation("AppealReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([applicationId, status])
+  @@index([applicantId, createdAt])
+  @@map("appeals")
 }
 
 model ExamSchedule {
