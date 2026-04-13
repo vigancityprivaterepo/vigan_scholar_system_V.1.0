@@ -18,6 +18,17 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app = express();
 app.set('trust proxy', 1);
 
+const parseAllowedOrigins = () => {
+  const configured = String(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (configured.length > 0) return configured;
+  return ['http://localhost:5173', 'http://localhost:3000'];
+};
+const allowedOrigins = parseAllowedOrigins();
+
 // Rate limiters
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many attempts. Please try again later.' } });
 const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many password reset requests. Please try again in an hour.' } });
@@ -25,15 +36,19 @@ const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, stan
 // Security & parsing middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
-  origin: true,
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
   credentials: true,
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploads
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Serve public uploads only (carousel assets).
+app.use('/public-uploads', express.static(path.join(__dirname, '..', 'public_uploads')));
 
 // Routes
 app.use('/api/auth/login', authLimiter);

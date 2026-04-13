@@ -49,6 +49,9 @@ const escapeHtml = (value = '') =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
+const escapeHtmlMultiline = (value = '') =>
+  escapeHtml(value).replace(/\r?\n/g, '<br />');
+
 const renderPanel = (title, body, tone = 'blue') => {
   const tones = {
     blue: { bg: '#eff6ff', border: '#93c5fd', title: '#1d4ed8', text: '#1e3a8a' },
@@ -402,6 +405,33 @@ const emailTemplates = {
       accent: '#0c2340',
       accentSoft: '#064e3b',
       ctaColor: '#10b981',
+    }),
+  }),
+
+  adminBroadcast: (data) => ({
+    subject: data.subject || 'Scholarship Portal Announcement',
+    html: renderEmailLayout({
+      title: 'Scholarship Portal Announcement',
+      subtitle: 'Important update from the scholarship office.',
+      recipientName: data.name,
+      intro: escapeHtmlMultiline(
+        data.greeting || 'Greetings from the City Government of Vigan Scholarship Office.'
+      ),
+      sections: [
+        renderPanel(
+          'Message',
+          escapeHtmlMultiline(data.message || ''),
+          'blue'
+        ),
+        data.status
+          ? renderPanel('Current Status', escapeHtml(String(data.status).replaceAll('_', ' ')), 'gray')
+          : '',
+        data.refId ? renderPanel('Reference Number', `#${escapeHtml(data.refId)}`, 'teal') : '',
+      ].filter(Boolean),
+      ctaLabel: data.portalUrl ? 'Open Applicant Portal' : undefined,
+      ctaUrl: data.portalUrl || undefined,
+      accent: '#0f3d6d',
+      accentSoft: '#164f8c',
     }),
   }),
 };

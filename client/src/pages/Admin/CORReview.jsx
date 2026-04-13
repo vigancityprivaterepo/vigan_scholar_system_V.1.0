@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
+import { openProtectedFile } from '../../utils/openProtectedFile'
 import { ArrowRightIcon, DocumentIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
 
 export default function CORReview() {
@@ -81,9 +82,19 @@ export default function CORReview() {
                           <p className="text-xs text-slate-500">Uploaded {formatDate(latestCOR.uploadedAt)}</p>
                         </div>
                       </div>
-                      <a href={latestCOR.fileUrl} target="_blank" rel="noreferrer" className="portal-button-secondary !px-3 !py-1.5 text-xs">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await openProtectedFile(`/files/cor/${latestCOR.id}`)
+                          } catch (err) {
+                            toast.error(err.response?.data?.message || 'Failed to open COR file.')
+                          }
+                        }}
+                        className="portal-button-secondary !px-3 !py-1.5 text-xs"
+                      >
                         View PDF
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ) : (

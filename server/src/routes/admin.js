@@ -5,11 +5,15 @@ const {
   getApplication,
   updateStatus,
   batchUpdateStatus,
+  previewBulkEmailRecipients,
+  sendBulkEmailTest,
+  bulkEmailApplicants,
   scheduleExam,
   reviewCOR,
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,
+  listBulkEmailLogs,
   getAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
@@ -33,6 +37,10 @@ router.use(authenticate, requireAdmin);
 router.get('/stats', getDashboardStats);
 router.get('/applications', listApplications);
 router.patch('/applications/batch-status', batchUpdateStatus);
+router.post('/applications/bulk-email/preview', previewBulkEmailRecipients);
+router.post('/applications/bulk-email/test', sendBulkEmailTest);
+router.post('/applications/bulk-email', bulkEmailApplicants);
+router.get('/applications/bulk-email/logs', listBulkEmailLogs);
 router.get('/applications/:id', getApplication);
 router.patch('/applications/:id/status', updateStatus);
 router.post('/applications/:id/schedule', scheduleExam);

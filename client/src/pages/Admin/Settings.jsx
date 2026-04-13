@@ -386,16 +386,7 @@ export default function AdminSettings() {
           </table>
         </div>
       </div>
-
-      <div className="portal-surface mt-6 p-6">
-        <h2 className="mb-2 text-lg font-semibold text-brand-primary">Default Admin Credentials</h2>
-        <p className="mb-4 text-xs text-slate-500">Created via database seed script</p>
-        <div className="portal-panel p-4 font-mono text-sm">
-          <p><span className="text-slate-500">Email:</span> data@vigancity.gov.ph</p>
-          <p><span className="text-slate-500">Pass:</span> Secret</p>
-        </div>
-        <p className="mt-2 text-xs text-red-500">Change default credentials in production.</p>
       </div>
-    </div>
-  )
+    )
 }
+    

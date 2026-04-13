@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { hashToken } = require('./tokenHash');
 const prisma = new PrismaClient();
 
 const generateTokens = async (userId) => {
@@ -19,7 +20,7 @@ const generateTokens = async (userId) => {
   expiresAt.setDate(expiresAt.getDate() + 7);
 
   await prisma.refreshToken.create({
-    data: { userId, token: refreshToken, expiresAt },
+    data: { userId, token: hashToken(refreshToken), expiresAt },
   });
 
   return { accessToken, refreshToken };

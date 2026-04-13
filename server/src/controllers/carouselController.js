@@ -4,6 +4,7 @@ const fs = require('fs');
 const { AppError } = require('../middleware/errorHandler');
 
 const prisma = new PrismaClient();
+const publicUploadsDir = path.join(__dirname, '../../public_uploads');
 
 const getPublicSlides = async (req, res, next) => {
   try {
@@ -36,7 +37,7 @@ const createSlide = async (req, res, next) => {
 
     const slide = await prisma.carouselSlide.create({
       data: {
-        imageUrl: `/uploads/${req.file.filename}`,
+        imageUrl: `/public-uploads/${req.file.filename}`,
         label,
         caption,
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
@@ -62,9 +63,9 @@ const updateSlide = async (req, res, next) => {
     if (isActive !== undefined) updateData.isActive = isActive === 'true' || isActive === true;
 
     if (req.file) {
-      const oldPath = path.join(__dirname, '../../uploads', path.basename(existing.imageUrl));
+      const oldPath = path.join(publicUploadsDir, path.basename(existing.imageUrl));
       if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      updateData.imageUrl = `/uploads/${req.file.filename}`;
+      updateData.imageUrl = `/public-uploads/${req.file.filename}`;
     }
 
     const slide = await prisma.carouselSlide.update({ where: { id }, data: updateData });
@@ -80,7 +81,7 @@ const deleteSlide = async (req, res, next) => {
     const existing = await prisma.carouselSlide.findUnique({ where: { id } });
     if (!existing) throw new AppError('Slide not found', 404);
 
-    const imagePath = path.join(__dirname, '../../uploads', path.basename(existing.imageUrl));
+    const imagePath = path.join(publicUploadsDir, path.basename(existing.imageUrl));
     if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
 
     await prisma.carouselSlide.delete({ where: { id } });

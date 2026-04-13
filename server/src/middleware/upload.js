@@ -2,13 +2,25 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+const privateUploadsDir = path.join(__dirname, '../../private_uploads');
+const publicUploadsDir = path.join(__dirname, '../../public_uploads');
+if (!fs.existsSync(privateUploadsDir)) {
+  fs.mkdirSync(privateUploadsDir, { recursive: true });
+}
+if (!fs.existsSync(publicUploadsDir)) {
+  fs.mkdirSync(publicUploadsDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
+const privateStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, privateUploadsDir),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  },
+});
+
+const publicStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, publicUploadsDir),
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, unique + path.extname(file.originalname));
@@ -24,13 +36,13 @@ const fileFilter = (req, file, cb) => {
 const maxSizeMB = parseInt(process.env.MAX_FILE_SIZE_MB || '5');
 
 const upload = multer({
-  storage,
+  storage: privateStorage,
   fileFilter,
   limits: { fileSize: maxSizeMB * 1024 * 1024 },
 });
 
 const uploadCOR = multer({
-  storage,
+  storage: privateStorage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') cb(null, true);
     else cb(new Error('Only PDF files are allowed for COR'), false);
@@ -39,7 +51,7 @@ const uploadCOR = multer({
 });
 
 const uploadImage = multer({
-  storage,
+  storage: publicStorage,
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (allowed.includes(file.mimetype)) cb(null, true);

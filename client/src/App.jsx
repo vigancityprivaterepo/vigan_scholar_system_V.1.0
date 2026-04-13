@@ -28,6 +28,7 @@ import EligibilityScreening from './pages/Admin/EligibilityScreening'
 import ExamInterview from './pages/Admin/ExamInterview'
 import CORReview from './pages/Admin/CORReview'
 import ScholarPostsManagement from './pages/Admin/ScholarPostsManagement'
+import BulkEmail from './pages/Admin/BulkEmail'
 import AdminSettings from './pages/Admin/Settings'
 import CarouselManagement from './pages/Admin/CarouselManagement'
 
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/admin/eligibility" element={<EligibilityScreening />} />
             <Route path="/admin/exam" element={<ExamInterview />} />
             <Route path="/admin/cor" element={<CORReview />} />
+            <Route path="/admin/bulk-email" element={<BulkEmail />} />
             <Route path="/admin/scholar-posts" element={<ScholarPostsManagement />} />
             <Route path="/admin/carousel" element={<CarouselManagement />} />
             <Route path="/admin/settings" element={<AdminSettings />} />

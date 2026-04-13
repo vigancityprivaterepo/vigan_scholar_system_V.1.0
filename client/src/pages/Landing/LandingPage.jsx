@@ -293,7 +293,7 @@ function ScholarCarousel() {
             key={i}
             className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             style={{
-              backgroundImage: `linear-gradient(105deg, rgba(12,35,64,0.88) 0%, rgba(12,35,64,0.60) 45%, rgba(6,78,59,0.45) 100%), url('${slide.imageUrl.startsWith('/uploads') ? SERVER_BASE + slide.imageUrl : slide.imageUrl}')`,
+              backgroundImage: `linear-gradient(105deg, rgba(12,35,64,0.88) 0%, rgba(12,35,64,0.60) 45%, rgba(6,78,59,0.45) 100%), url('${(slide.imageUrl.startsWith('/public-uploads') || slide.imageUrl.startsWith('/uploads')) ? SERVER_BASE + slide.imageUrl : slide.imageUrl}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}

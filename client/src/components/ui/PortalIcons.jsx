@@ -58,6 +58,7 @@ export function AlertTriangleIcon(props) { return <IconBase {...props}><path d="
 export function ClockIcon(props) { return <IconBase {...props}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v5l3 2" /></IconBase> }
 export function ArrowRightIcon(props) { return <IconBase {...props}><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></IconBase> }
 export function SearchIcon(props) { return <IconBase {...props}><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></IconBase> }
+export function MailIcon(props) { return <IconBase {...props}><rect x="3.5" y="5.5" width="17" height="13" rx="1.5" /><path d="m4.5 7 7.5 6 7.5-6" /></IconBase> }
 export function CalendarIcon(props) { return <IconBase {...props}><rect x="4" y="5.5" width="16" height="14" rx="1.5" /><path d="M8 3.5v4" /><path d="M16 3.5v4" /><path d="M4 9.5h16" /></IconBase> }
 export function UploadIcon(props) { return <IconBase {...props}><path d="M12 15V5" /><path d="m8.5 8.5 3.5-3.5 3.5 3.5" /><path d="M5 18.5h14" /></IconBase> }
 export function XIcon(props) { return <IconBase {...props}><path d="m6 6 12 12" /><path d="M18 6 6 18" /></IconBase> }

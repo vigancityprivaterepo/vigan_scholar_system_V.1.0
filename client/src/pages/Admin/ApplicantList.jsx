@@ -163,12 +163,17 @@ export default function ApplicantList() {
           <h1 className="portal-page-title mt-2">Applicants</h1>
           <p className="portal-page-subtitle">{data.pagination.total} total applications</p>
         </div>
-        <button
-          onClick={() => exportToCSV(search, statusFilter)}
-          className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
-        >
-          Export CSV
-        </button>
+        <div className="flex gap-2">
+          <Link to="/admin/bulk-email" className="portal-button-primary whitespace-nowrap !px-4 !py-2 text-sm">
+            Bulk Email Module
+          </Link>
+          <button
+            onClick={() => exportToCSV(search, statusFilter)}
+            className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
 
       <div className="portal-surface p-5">
@@ -395,4 +400,3 @@ export default function ApplicantList() {
     </div>
   )
 }
-

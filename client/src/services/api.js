@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
 })
 
@@ -53,18 +54,16 @@ api.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
 
-      const { refreshToken, setTokens, logout } = useAuthStore.getState()
-      if (!refreshToken) {
-        processQueue(error, null)
-        isRefreshing = false
-        await logout()
-        return Promise.reject(error)
-      }
+      const { setTokens, logout } = useAuthStore.getState()
 
       try {
-        const res = await axios.post((import.meta.env.VITE_API_BASE_URL || '/api') + '/auth/refresh', { refreshToken })
-        const { accessToken, refreshToken: newRefresh } = res.data
-        setTokens(accessToken, newRefresh)
+        const res = await axios.post(
+          (import.meta.env.VITE_API_BASE_URL || '/api') + '/auth/refresh',
+          {},
+          { withCredentials: true }
+        )
+        const { accessToken } = res.data
+        setTokens(accessToken)
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return api(originalRequest)

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import api from '../services/api'
 
 export const useAuthStore = create(
@@ -7,23 +7,30 @@ export const useAuthStore = create(
     (set, get) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isLoading: true,
 
-      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      setTokens: (accessToken) => set({ accessToken }),
       setUser: (user) => set({ user }),
 
       initAuth: async () => {
-        const { accessToken } = get()
-        if (!accessToken) {
-          set({ isLoading: false })
-          return
-        }
         try {
-          const res = await api.get('/auth/me')
-          set({ user: res.data.user, isLoading: false })
+          const existingAccess = get().accessToken
+
+          if (existingAccess) {
+            const meRes = await api.get('/auth/me', { _skipAuthRefresh: true })
+            set({ user: meRes.data.user, isLoading: false })
+            return
+          }
+
+          const refreshRes = await api.post('/auth/refresh', {}, { _skipAuthRefresh: true })
+          const newAccess = refreshRes.data?.accessToken
+          if (!newAccess) throw new Error('No access token')
+          set({ accessToken: newAccess })
+
+          const meRes = await api.get('/auth/me')
+          set({ user: meRes.data.user, isLoading: false })
         } catch {
-          set({ user: null, accessToken: null, refreshToken: null, isLoading: false })
+          set({ user: null, accessToken: null, isLoading: false })
         }
       },
 
@@ -32,7 +39,6 @@ export const useAuthStore = create(
         set({
           user: res.data.user,
           accessToken: res.data.accessToken,
-          refreshToken: res.data.refreshToken,
         })
         return res.data.user
       },
@@ -43,14 +49,14 @@ export const useAuthStore = create(
       },
 
       logout: async () => {
-        const { refreshToken } = get()
-        try { await api.post('/auth/logout', { refreshToken }) } catch {}
-        set({ user: null, accessToken: null, refreshToken: null })
+        try { await api.post('/auth/logout', {}) } catch {}
+        set({ user: null, accessToken: null })
       },
     }),
     {
-      name: 'scholarship-auth',
-      partialize: (s) => ({ accessToken: s.accessToken, refreshToken: s.refreshToken }),
+      name: 'scholarship-auth-session',
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({ accessToken: state.accessToken }),
     }
   )
 )

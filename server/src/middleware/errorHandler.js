@@ -1,5 +1,9 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(err.stack);
+  } else {
+    console.error(`[${new Date().toISOString()}] ${err.name || 'Error'}: ${err.message}`);
+  }
 
   if (err.name === 'ValidationError') {
     return res.status(400).json({ success: false, message: err.message, errors: err.errors });
@@ -15,9 +19,10 @@ const errorHandler = (err, req, res, next) => {
   }
 
   const statusCode = err.statusCode || 500;
+  const exposeMessage = process.env.NODE_ENV !== 'production' || statusCode < 500;
   res.status(statusCode).json({
     success: false,
-    message: err.message || 'Internal server error',
+    message: exposeMessage ? (err.message || 'Internal server error') : 'Internal server error',
   });
 };
 

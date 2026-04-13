@@ -2,11 +2,38 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { generateTokens } = require('../utils/generateTokens');
+const { hashToken } = require('../utils/tokenHash');
 const { AppError } = require('../middleware/errorHandler');
 const { sendEmail } = require('../services/emailService');
 
 const prisma = new PrismaClient();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const REFRESH_COOKIE_NAME = 'refreshToken';
+
+const parseCookies = (req) => {
+  const raw = String(req.headers.cookie || '');
+  if (!raw) return {};
+  return raw.split(';').reduce((acc, chunk) => {
+    const [name, ...rest] = chunk.split('=');
+    const key = String(name || '').trim();
+    if (!key) return acc;
+    acc[key] = decodeURIComponent(rest.join('=').trim());
+    return acc;
+  }, {});
+};
+
+const getRefreshTokenFromRequest = (req) => {
+  const cookies = parseCookies(req);
+  return cookies[REFRESH_COOKIE_NAME] || req.body?.refreshToken || null;
+};
+
+const getRefreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/api/auth',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
 
 const ensureEmailVerificationColumn = async () => {
   await prisma.$executeRawUnsafe(`
@@ -179,9 +206,10 @@ const login = async (req, res, next) => {
     }
 
     const tokens = await generateTokens(user.id);
+    res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
 
     const profile = await getUserProfile(user.id);
-    res.json({ success: true, user: profile, ...tokens });
+    res.json({ success: true, user: profile, accessToken: tokens.accessToken });
   } catch (err) {
     next(err);
   }
@@ -266,19 +294,21 @@ const resetPassword = async (req, res, next) => {
 
 const refresh = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = getRefreshTokenFromRequest(req);
     if (!refreshToken) throw new AppError('Refresh token required', 400);
 
-    const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const tokenHash = hashToken(refreshToken);
+    const stored = await prisma.refreshToken.findUnique({ where: { token: tokenHash } });
     if (!stored || stored.expiresAt < new Date()) {
       throw new AppError('Invalid or expired refresh token', 401);
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    await prisma.refreshToken.delete({ where: { token: refreshToken } });
+    await prisma.refreshToken.delete({ where: { token: tokenHash } });
 
     const tokens = await generateTokens(decoded.userId);
-    res.json({ success: true, ...tokens });
+    res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
+    res.json({ success: true, accessToken: tokens.accessToken });
   } catch (err) {
     next(err);
   }
@@ -286,10 +316,11 @@ const refresh = async (req, res, next) => {
 
 const logout = async (req, res, next) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = getRefreshTokenFromRequest(req);
     if (refreshToken) {
-      await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
+      await prisma.refreshToken.deleteMany({ where: { token: hashToken(refreshToken) } });
     }
+    res.clearCookie(REFRESH_COOKIE_NAME, getRefreshCookieOptions());
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate, formatDateTime } from '../../utils/formatDate'
+import { openProtectedFile } from '../../utils/openProtectedFile'
 import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon } from '../../components/ui/PortalIcons'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
@@ -208,9 +209,19 @@ export default function ApplicationReview() {
                           <p className="text-xs text-slate-500">{formatDate(file.uploadedAt)}</p>
                         </div>
                       </div>
-                      <a href={file.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-primary hover:underline">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await openProtectedFile(`/files/requirements/${file.id}`)
+                          } catch (err) {
+                            toast.error(err.response?.data?.message || 'Failed to open file.')
+                          }
+                        }}
+                        className="text-sm font-medium text-brand-primary hover:underline"
+                      >
                         View file
-                      </a>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -232,7 +243,19 @@ export default function ApplicationReview() {
                         <span className={`badge ${cor.isApproved === null ? 'bg-gray-100 text-gray-600' : cor.isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {cor.isApproved === null ? 'Pending' : cor.isApproved ? 'Approved' : 'Rejected'}
                         </span>
-                        <a href={cor.fileUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-primary hover:underline">View file</a>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await openProtectedFile(`/files/cor/${cor.id}`)
+                            } catch (err) {
+                              toast.error(err.response?.data?.message || 'Failed to open file.')
+                            }
+                          }}
+                          className="text-sm font-medium text-brand-primary hover:underline"
+                        >
+                          View file
+                        </button>
                       </div>
                     </div>
                   ))}
