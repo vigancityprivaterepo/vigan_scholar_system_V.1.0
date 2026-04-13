@@ -1,4 +1,4 @@
-// Valid status transitions
+// Valid status transitions (normal workflow)
 const TRANSITIONS = {
   PENDING_REVIEW: ['INCOMPLETE', 'ELIGIBILITY_SCREENING'],
   INCOMPLETE: ['PENDING_REVIEW'],
@@ -11,6 +11,15 @@ const TRANSITIONS = {
   COR_REJECTED: ['COR_SUBMITTED'],
   ACCEPTED: [],
   REJECTED: [],
+};
+
+// Appeal-approval reversions — bypasses normal transition validation.
+// Each key is a terminal rejection status; the value is the stage the application
+// is reinstated to when an admin approves the applicant's appeal.
+const APPEAL_REVERT_STATUS = {
+  REJECTED: 'PENDING_REVIEW',
+  NOT_QUALIFIED: 'ELIGIBILITY_SCREENING',
+  FAILED_EXAM: 'EXAM_INTERVIEW',
 };
 
 const isValidTransition = (from, to) => {
@@ -31,4 +40,4 @@ const STATUS_LABELS = {
   REJECTED: 'Rejected',
 };
 
-module.exports = { isValidTransition, STATUS_LABELS, TRANSITIONS };
+module.exports = { isValidTransition, STATUS_LABELS, TRANSITIONS, APPEAL_REVERT_STATUS };

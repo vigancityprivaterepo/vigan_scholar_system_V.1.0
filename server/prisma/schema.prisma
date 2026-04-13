@@ -76,8 +76,8 @@ model Application {
   communicationLogs CommunicationLog[]
   appeals Appeal[]
 
+  @@unique([applicantId])
   @@index([status])
-  @@index([applicantId])
   @@index([submittedAt])
   @@index([academicYear])
   @@map("applications")

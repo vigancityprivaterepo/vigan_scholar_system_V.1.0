@@ -2,15 +2,19 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { AppError } = require('../middleware/errorHandler');
-const { isValidTransition } = require('../utils/statusTransitions');
+const { isValidTransition, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
 
 const prisma = new PrismaClient();
-const PRIMARY_ADMIN_EMAIL = 'data@vigancity.gov.ph';
+const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || '').toLowerCase().trim();
+if (!PRIMARY_ADMIN_EMAIL) {
+  console.warn('[adminController] WARNING: PRIMARY_ADMIN_EMAIL env var is not set. User management endpoints will be inaccessible.');
+}
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REJECTION_REQUIRED_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED', 'COR_REJECTED'];
+
 const BULK_EMAIL_MAX_RECIPIENTS = (() => {
   const parsed = parseInt(process.env.BULK_EMAIL_MAX_RECIPIENTS || '300', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 300;
@@ -1197,22 +1201,87 @@ const resolveAppeal = async (req, res, next) => {
       },
     });
 
-    await createNotification({
-      userId: appeal.applicantId,
-      applicationId: appeal.applicationId,
-      title: 'Appeal Update',
-      message: normalizedStatus === 'APPROVED' ? 'Your appeal was approved. Please monitor your portal for next steps.' : `Your appeal was denied. Reason: ${reason}`,
-      type: normalizedStatus === 'APPROVED' ? 'SUCCESS' : 'ERROR',
-    });
-    await recordCommunication({
-      applicationId: appeal.applicationId,
-      userId: appeal.applicantId,
-      channel: 'PORTAL_NOTICE',
-      subject: 'Appeal Update',
-      message: reason,
-      metadata: { appealId: id, status: normalizedStatus },
-      createdById: req.user.id,
-    });
+    if (normalizedStatus === 'APPROVED') {
+      const currentAppStatus = appeal.application.status;
+      const revertTo = APPEAL_REVERT_STATUS_MAP[currentAppStatus];
+
+      if (revertTo) {
+        await prisma.application.update({
+          where: { id: appeal.applicationId },
+          data: { status: revertTo, rejectionReason: null },
+        });
+
+        await prisma.activityLog.create({
+          data: {
+            applicationId: appeal.applicationId,
+            performedById: req.user.id,
+            action: `Appeal approved — application reinstated to ${revertTo}`,
+            fromStatus: currentAppStatus,
+            toStatus: revertTo,
+            notes: reason,
+          },
+        });
+
+        const stageLabels = {
+          PENDING_REVIEW: 'Pending Review',
+          ELIGIBILITY_SCREENING: 'Eligibility Screening',
+          EXAM_INTERVIEW: 'Exam / Interview',
+        };
+        const stageLabel = stageLabels[revertTo] || revertTo;
+
+        await createNotification({
+          userId: appeal.applicantId,
+          applicationId: appeal.applicationId,
+          title: 'Appeal Approved — Application Reinstated',
+          message: `Your appeal has been approved. Your application has been reinstated to the ${stageLabel} stage. Please monitor your portal for further updates.`,
+          type: 'SUCCESS',
+        });
+        await recordCommunication({
+          applicationId: appeal.applicationId,
+          userId: appeal.applicantId,
+          channel: 'PORTAL_NOTICE',
+          subject: 'Appeal Approved — Application Reinstated',
+          message: reason,
+          metadata: { appealId: id, appealStatus: normalizedStatus, revertedTo: revertTo },
+          createdById: req.user.id,
+        });
+      } else {
+        // Application is in an unexpected status — still notify, but no automatic reversion
+        await createNotification({
+          userId: appeal.applicantId,
+          applicationId: appeal.applicationId,
+          title: 'Appeal Approved',
+          message: 'Your appeal has been approved. An administrator will contact you regarding your application status.',
+          type: 'SUCCESS',
+        });
+        await recordCommunication({
+          applicationId: appeal.applicationId,
+          userId: appeal.applicantId,
+          channel: 'PORTAL_NOTICE',
+          subject: 'Appeal Approved',
+          message: reason,
+          metadata: { appealId: id, appealStatus: normalizedStatus },
+          createdById: req.user.id,
+        });
+      }
+    } else {
+      await createNotification({
+        userId: appeal.applicantId,
+        applicationId: appeal.applicationId,
+        title: 'Appeal Denied',
+        message: `Your appeal has been reviewed and denied. Reason: ${reason}`,
+        type: 'ERROR',
+      });
+      await recordCommunication({
+        applicationId: appeal.applicationId,
+        userId: appeal.applicantId,
+        channel: 'PORTAL_NOTICE',
+        subject: 'Appeal Denied',
+        message: reason,
+        metadata: { appealId: id, appealStatus: normalizedStatus },
+        createdById: req.user.id,
+      });
+    }
 
     res.json({ success: true, message: 'Appeal resolved.', appeal: updated });
   } catch (err) {
@@ -1261,7 +1330,7 @@ const markAllAdminNotificationsRead = async (req, res, next) => {
 const listUsers = async (req, res, next) => {
   try {
     if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
-      throw new AppError('Only data@vigancity.gov.ph can manage admin users.', 403);
+      throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can manage admin users.`, 403);
     }
 
     const { role, search } = req.query;
@@ -1304,7 +1373,7 @@ const listUsers = async (req, res, next) => {
 const updateUserRole = async (req, res, next) => {
   try {
     if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
-      throw new AppError('Only data@vigancity.gov.ph can manage admin users.', 403);
+      throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can manage admin users.`, 403);
     }
 
     const { id } = req.params;
@@ -1359,7 +1428,7 @@ const updateUserRole = async (req, res, next) => {
 const inviteAdminUser = async (req, res, next) => {
   try {
     if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
-      throw new AppError('Only data@vigancity.gov.ph can invite admin users.', 403);
+      throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can invite admin users.`, 403);
     }
 
     const rawEmail = String(req.body.email || '').trim().toLowerCase();
