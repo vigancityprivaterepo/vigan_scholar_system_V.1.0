@@ -36,6 +36,15 @@ const getRefreshCookieOptions = () => ({
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
+// clearCookie must NOT receive maxAge — Express 5 deprecates it and will
+// ignore it entirely.  Use a separate options object without that field.
+const getClearCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  path: '/api/auth',
+});
+
 // Builds a short-lived JWT for email-address verification.
 // Signed with JWT_SECRET only — no user data embedded in the secret.
 const buildEmailVerificationToken = (user) =>
@@ -320,7 +329,7 @@ const logout = async (req, res, next) => {
     if (refreshToken) {
       await prisma.refreshToken.deleteMany({ where: { token: hashToken(refreshToken) } });
     }
-    res.clearCookie(REFRESH_COOKIE_NAME, getRefreshCookieOptions());
+    res.clearCookie(REFRESH_COOKIE_NAME, getClearCookieOptions());
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);

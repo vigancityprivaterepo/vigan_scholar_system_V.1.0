@@ -12,7 +12,10 @@ const errorHandler = (err, req, res, next) => {
 
   if (statusCode >= 500) {
     logger.error(err.message, { ...logMeta, stack: err.stack });
-  } else if (statusCode >= 400) {
+  } else if (statusCode >= 400 && err.name !== 'AppError') {
+    // AppError instances are intentional application responses; the controller
+    // that threw them already logged the relevant context (email, userId, etc.).
+    // Only log unexpected 4xx errors (JWT errors, Prisma errors, etc.) here.
     logger.warn(err.message, logMeta);
   }
 
