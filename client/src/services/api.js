@@ -1,8 +1,19 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
+// Use the build-time env var, but never point at localhost from a
+// non-localhost browser (catches stale Docker images built with the
+// old VITE_API_BASE_URL=http://localhost:5000/api dev value).
+const rawBase = import.meta.env.VITE_API_BASE_URL || '/api';
+const BASE_URL =
+  typeof window !== 'undefined' &&
+  rawBase.includes('localhost') &&
+  window.location.hostname !== 'localhost'
+    ? '/api'
+    : rawBase;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
 })
@@ -58,7 +69,7 @@ api.interceptors.response.use(
 
       try {
         const res = await axios.post(
-          (import.meta.env.VITE_API_BASE_URL || '/api') + '/auth/refresh',
+          BASE_URL + '/auth/refresh',
           {},
           { withCredentials: true }
         )
