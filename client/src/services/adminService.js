@@ -35,6 +35,16 @@ export const adminService = {
   listAppeals: (params) => api.get('/admin/appeals', { params }),
   resolveAppeal: (id, data) => api.patch(`/admin/appeals/${id}`, data),
 
+  // Backup & Restore
+  createBackup: () => api.post('/admin/backup'),
+  listBackups: () => api.get('/admin/backup'),
+  downloadBackup: (filename) => api.get(`/admin/backup/${encodeURIComponent(filename)}`, { responseType: 'blob' }),
+  deleteBackup: (filename) => api.delete(`/admin/backup/${encodeURIComponent(filename)}`),
+  restoreBackup: (formData) => api.post('/admin/backup/restore', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  }),
+
   // Carousel CMS
   getCarouselSlides: () => api.get('/carousel/admin'),
   createCarouselSlide: (formData) => api.post('/carousel/admin', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),

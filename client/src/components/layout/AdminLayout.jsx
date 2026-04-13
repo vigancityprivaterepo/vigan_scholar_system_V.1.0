@@ -14,6 +14,7 @@ import {
   LogoutIcon,
   MenuIcon,
   PhotoIcon,
+  DatabaseIcon,
 } from '../ui/PortalIcons'
 import { adminService } from '../../services/adminService'
 import logo from '../../assets/logo.png'
@@ -29,6 +30,7 @@ const navItems = [
   { to: '/admin/scholar-posts', label: 'Scholar Posts', Icon: FileTextIcon },
   { to: '/admin/carousel', label: 'Carousel', Icon: PhotoIcon },
   { to: '/admin/settings', label: 'Settings', Icon: CogIcon },
+  { to: '/admin/backup', label: 'Backup', Icon: DatabaseIcon, superAdminOnly: true },
 ]
 
 export default function AdminLayout() {
@@ -172,7 +174,7 @@ export default function AdminLayout() {
         <div className="border-t border-slate-300 bg-white">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 md:px-8 lg:flex-row lg:items-center lg:justify-between">
             <nav className="hidden flex-wrap items-center gap-2 md:flex">
-              {navItems.map(({ to, label, Icon }) => (
+              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -194,7 +196,7 @@ export default function AdminLayout() {
         {menuOpen && (
           <div className="border-t border-slate-300 bg-white md:hidden">
             <div className="mx-auto flex max-w-7xl flex-col px-4 py-2">
-              {navItems.map(({ to, label, Icon }) => (
+              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon }) => (
                 <NavLink
                   key={to}
                   to={to}

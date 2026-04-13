@@ -63,3 +63,4 @@ export function CalendarIcon(props) { return <IconBase {...props}><rect x="4" y=
 export function UploadIcon(props) { return <IconBase {...props}><path d="M12 15V5" /><path d="m8.5 8.5 3.5-3.5 3.5 3.5" /><path d="M5 18.5h14" /></IconBase> }
 export function XIcon(props) { return <IconBase {...props}><path d="m6 6 12 12" /><path d="M18 6 6 18" /></IconBase> }
 export function PhotoIcon(props) { return <IconBase {...props}><rect x="4" y="4" width="16" height="16" rx="1.5" /><circle cx="9" cy="9.5" r="1.5" /><path d="m4 16 4.5-5 3.5 4 2.5-3 5.5 4" /></IconBase> }
+export function DatabaseIcon(props) { return <IconBase {...props}><ellipse cx="12" cy="6.5" rx="7.5" ry="2.5" /><path d="M4.5 6.5v4c0 1.38 3.358 2.5 7.5 2.5s7.5-1.12 7.5-2.5v-4" /><path d="M4.5 10.5v4c0 1.38 3.358 2.5 7.5 2.5s7.5-1.12 7.5-2.5v-4" /></IconBase> }

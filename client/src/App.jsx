@@ -32,6 +32,7 @@ import BulkEmail from './pages/Admin/BulkEmail'
 import AppealsPage from './pages/Admin/Appeals'
 import AdminSettings from './pages/Admin/Settings'
 import CarouselManagement from './pages/Admin/CarouselManagement'
+import BackupRestore from './pages/Admin/BackupRestore'
 
 import NotFoundPage from './pages/NotFoundPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="/admin/scholar-posts" element={<ScholarPostsManagement />} />
             <Route path="/admin/carousel" element={<CarouselManagement />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/backup" element={<BackupRestore />} />
           </Route>
         </Route>
 

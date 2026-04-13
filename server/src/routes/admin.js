@@ -27,6 +27,7 @@ const {
   resolveAppeal,
 } = require('../controllers/adminController');
 const { getAdminSiteSettings, updateAdminSiteSettings } = require('../controllers/siteSettingsController');
+const { createBackup, listBackups, downloadBackup, deleteBackup, restoreBackup, upload } = require('../controllers/backupController');
 const {
   getAdminScholarPosts,
   publishAcceptedScholars,
@@ -70,5 +71,12 @@ router.post('/scholars/publish', publishAcceptedScholars);
 router.post('/scholars/posts/delete-many', deleteManyScholarPosts);
 router.delete('/scholars/posts', deleteAllScholarPosts);
 router.delete('/scholars/posts/:applicationId', deleteScholarPost);
+
+// Backup & Restore (SUPER_ADMIN only)
+router.post('/backup', requireSuperAdmin, createBackup);
+router.get('/backup', requireSuperAdmin, listBackups);
+router.get('/backup/:filename', requireSuperAdmin, downloadBackup);
+router.delete('/backup/:filename', requireSuperAdmin, deleteBackup);
+router.post('/backup/restore', requireSuperAdmin, upload.single('backup'), restoreBackup);
 
 module.exports = router;
