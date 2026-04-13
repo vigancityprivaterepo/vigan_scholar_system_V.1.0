@@ -7,20 +7,19 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') || ''
-  const email = searchParams.get('email') || ''
   const [status, setStatus] = useState('loading')
   const [message, setMessage] = useState('Confirming your email address...')
 
   useEffect(() => {
     const verify = async () => {
-      if (!token || !email) {
+      if (!token) {
         setStatus('error')
         setMessage('Invalid confirmation link. Please use the link sent to your email.')
         return
       }
 
       try {
-        const { data } = await api.get('/auth/verify-email', { params: { token, email } })
+        const { data } = await api.get('/auth/verify-email', { params: { token } })
         setStatus('success')
         setMessage(data.message || 'Email confirmed successfully. You may now sign in.')
         setTimeout(() => navigate('/login', { replace: true }), 2000)
@@ -31,7 +30,7 @@ export default function VerifyEmailPage() {
     }
 
     verify()
-  }, [email, navigate, token])
+  }, [navigate, token])
 
   const statusBanner =
     status === 'success'
