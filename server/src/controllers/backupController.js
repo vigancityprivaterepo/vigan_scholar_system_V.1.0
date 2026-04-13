@@ -7,7 +7,7 @@ const { pipeline } = require('stream/promises')
 const { Readable } = require('stream')
 const multer = require('multer')
 const logger = require('../utils/logger')
-const AppError = require('../utils/AppError')
+const { AppError } = require('../middleware/errorHandler')
 
 const BACKUP_DIR = path.resolve('backups')
 const BACKUP_VERSION = '1'
