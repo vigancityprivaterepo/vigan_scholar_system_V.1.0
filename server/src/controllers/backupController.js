@@ -1,4 +1,5 @@
-const { prisma } = require('../db/prismaClient')
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -123,7 +124,7 @@ const createBackup = async (req, res, next) => {
   }
 }
 
-const listBackups = (req, res, next) => {
+const listBackups = (_req, res, next) => {
   try {
     fs.mkdirSync(BACKUP_DIR, { recursive: true })
     const files = fs
