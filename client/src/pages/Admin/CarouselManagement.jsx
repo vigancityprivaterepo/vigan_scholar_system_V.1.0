@@ -7,7 +7,7 @@ const EMPTY_FORM = { label: '', caption: '', sortOrder: '0', isActive: true }
 function SlideForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || EMPTY_FORM)
   const [file, setFile] = useState(null)
-  const [preview, setPreview] = useState(initial?.imageUrl ? `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${initial.imageUrl}` : null)
+  const [preview, setPreview] = useState(initial?.imageUrl || null)
   const fileRef = useRef()
 
   const isEdit = Boolean(initial?.id)
@@ -143,8 +143,6 @@ export default function CarouselManagement() {
   const [panel, setPanel] = useState(null) // null | 'new' | { slide }
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(null)
-  const serverBase = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'
-
   const load = async () => {
     try {
       const { data } = await adminService.getCarouselSlides()
@@ -254,7 +252,7 @@ export default function CarouselManagement() {
               <div key={slide.id} className="flex flex-wrap items-center gap-4 px-6 py-4">
                 {/* Thumbnail */}
                 <img
-                  src={`${serverBase}${slide.imageUrl}`}
+                  src={slide.imageUrl}
                   alt={slide.label}
                   className="h-16 w-24 shrink-0 rounded border border-slate-200 object-cover"
                   onError={e => { e.target.style.display = 'none' }}
