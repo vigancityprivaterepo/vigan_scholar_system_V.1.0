@@ -7,11 +7,30 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate } from '../../utils/formatDate'
 import { ArrowRightIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
-const exportToCSV = async (search, statusFilter) => {
+const SAVED_VIEWS_KEY = 'adminApplicantList.savedViews.v1'
+
+const getSubmissionYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 8 }, (_, index) => String(currentYear - index))
+}
+
+const getDateRangeByYear = (year) => {
+  const normalized = String(year || '').trim()
+  if (!normalized) return {}
+  return {
+    submittedFrom: `${normalized}-01-01`,
+    submittedTo: `${normalized}-12-31`,
+  }
+}
+
+const exportToCSV = async (search, statusFilter, submissionYear) => {
   try {
     const params = { page: 1, limit: 9999, sortBy: 'submittedAt', sortOrder: 'desc' }
     if (search) params.search = search
     if (statusFilter) params.status = statusFilter
+    const { submittedFrom, submittedTo } = getDateRangeByYear(submissionYear)
+    if (submittedFrom) params.submittedFrom = submittedFrom
+    if (submittedTo) params.submittedTo = submittedTo
     const r = await adminService.listApplications(params)
     const apps = r.data.applications
 
@@ -46,13 +65,18 @@ const DESTRUCTIVE_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED']
 
 export default function ApplicantList() {
   const [searchParams] = useSearchParams()
+  const submissionYearOptions = useMemo(() => getSubmissionYearOptions(), [])
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
+  const [submissionYear, setSubmissionYear] = useState('')
   const [sortBy, setSortBy] = useState('submittedAt')
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
+  const [savedViews, setSavedViews] = useState([])
+  const [selectedViewId, setSelectedViewId] = useState('')
+  const [viewName, setViewName] = useState('')
 
   const [selectedIds, setSelectedIds] = useState([])
   const [batchStatus, setBatchStatus] = useState('')
@@ -67,15 +91,31 @@ export default function ApplicantList() {
       const params = { page, limit: 20, sortBy, sortOrder }
       if (search) params.search = search
       if (statusFilter) params.status = statusFilter
+      const { submittedFrom, submittedTo } = getDateRangeByYear(submissionYear)
+      if (submittedFrom) params.submittedFrom = submittedFrom
+      if (submittedTo) params.submittedTo = submittedTo
       const r = await adminService.listApplications(params)
       setData(r.data)
     } catch {
       toast.error('Failed to load applications')
     }
     setLoading(false)
-  }, [page, search, statusFilter, sortBy, sortOrder])
+  }, [page, search, statusFilter, sortBy, sortOrder, submissionYear])
 
   useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SAVED_VIEWS_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) setSavedViews(parsed)
+    } catch {
+      setSavedViews([])
+    }
+  }, [])
+  useEffect(() => {
+    window.localStorage.setItem(SAVED_VIEWS_KEY, JSON.stringify(savedViews))
+  }, [savedViews])
 
   const visibleIds = useMemo(() => data.applications.map((app) => app.id), [data.applications])
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
@@ -109,6 +149,54 @@ export default function ApplicantList() {
     setBatchRemarks('')
     setBatchRejectionReason('')
     setBatchExamScore('')
+  }
+
+  const saveCurrentView = () => {
+    const normalizedName = viewName.trim()
+    if (!normalizedName) {
+      toast.error('Enter a view name first.')
+      return
+    }
+    const newView = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: normalizedName,
+      search,
+      statusFilter,
+      submissionYear,
+      sortBy,
+      sortOrder,
+    }
+    setSavedViews((current) => [newView, ...current].slice(0, 20))
+    setSelectedViewId(newView.id)
+    setViewName('')
+    toast.success('Filter view saved.')
+  }
+
+  const applySavedView = (viewId) => {
+    setSelectedViewId(viewId)
+    if (!viewId) return
+    const view = savedViews.find((item) => item.id === viewId)
+    if (!view) return
+    setSearch(view.search || '')
+    setStatusFilter(view.statusFilter || '')
+    setSubmissionYear(view.submissionYear || '')
+    setSortBy(view.sortBy || 'submittedAt')
+    setSortOrder(view.sortOrder === 'asc' ? 'asc' : 'desc')
+    setPage(1)
+    toast.success(`Applied view: ${view.name}`)
+  }
+
+  const deleteSavedView = () => {
+    if (!selectedViewId) {
+      toast.error('Select a saved view to delete.')
+      return
+    }
+    const target = savedViews.find((item) => item.id === selectedViewId)
+    const yes = window.confirm(`Delete saved view "${target?.name || 'selected'}"?`)
+    if (!yes) return
+    setSavedViews((current) => current.filter((item) => item.id !== selectedViewId))
+    setSelectedViewId('')
+    toast.success('Saved view deleted.')
   }
 
   const runBatchStatus = async () => {
@@ -168,7 +256,7 @@ export default function ApplicantList() {
             Bulk Email Module
           </Link>
           <button
-            onClick={() => exportToCSV(search, statusFilter)}
+            onClick={() => exportToCSV(search, statusFilter, submissionYear)}
             className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
           >
             Export CSV
@@ -202,6 +290,43 @@ export default function ApplicantList() {
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
+          <select
+            value={submissionYear}
+            onChange={(e) => { setSubmissionYear(e.target.value); setPage(1) }}
+            className="portal-input w-auto"
+          >
+            <option value="">All Submission Years</option>
+            {submissionYearOptions.map((year) => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <input
+            className="portal-input"
+            placeholder="Saved view name (e.g., Accepted 2026)"
+            value={viewName}
+            onChange={(e) => setViewName(e.target.value)}
+          />
+          <button type="button" onClick={saveCurrentView} className="portal-button-secondary whitespace-nowrap">
+            Save Current View
+          </button>
+          <div className="flex gap-2">
+            <select
+              value={selectedViewId}
+              onChange={(e) => applySavedView(e.target.value)}
+              className="portal-input min-w-[180px]"
+            >
+              <option value="">Saved Views</option>
+              {savedViews.map((view) => (
+                <option key={view.id} value={view.id}>{view.name}</option>
+              ))}
+            </select>
+            <button type="button" onClick={deleteSavedView} className="portal-button-secondary whitespace-nowrap">
+              Delete
+            </button>
+          </div>
         </div>
       </div>
 

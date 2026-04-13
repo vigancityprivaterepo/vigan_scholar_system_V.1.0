@@ -7,6 +7,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate } from '../../utils/formatDate'
 import { SearchIcon } from '../../components/ui/PortalIcons'
 
+const SAVED_AUDIENCE_VIEWS_KEY = 'adminBulkEmail.audienceViews.v1'
 const ALL_STATUSES = ['PENDING_REVIEW', 'INCOMPLETE', 'ELIGIBILITY_SCREENING', 'NOT_QUALIFIED', 'EXAM_INTERVIEW', 'FAILED_EXAM', 'APPROVED', 'COR_SUBMITTED', 'COR_REJECTED', 'ACCEPTED', 'REJECTED']
 const EMAIL_TEMPLATES = [
   {
@@ -46,20 +47,39 @@ const EMAIL_TEMPLATES = [
   },
 ]
 
+const getSubmissionYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  return Array.from({ length: 8 }, (_, index) => String(currentYear - index))
+}
+
+const getDateRangeByYear = (year) => {
+  const normalized = String(year || '').trim()
+  if (!normalized) return { submittedFrom: '', submittedTo: '' }
+  return {
+    submittedFrom: `${normalized}-01-01`,
+    submittedTo: `${normalized}-12-31`,
+  }
+}
+
 export default function BulkEmail() {
   const currentYear = new Date().getFullYear()
-  const defaultFrom = `${currentYear}-01-01`
-  const defaultTo = `${currentYear}-12-31`
+  const submissionYearOptions = useMemo(() => getSubmissionYearOptions(), [])
+  const defaultYear = String(currentYear)
+  const defaultDateRange = getDateRangeByYear(defaultYear)
 
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [submittedFrom, setSubmittedFrom] = useState(defaultFrom)
-  const [submittedTo, setSubmittedTo] = useState(defaultTo)
+  const [selectedSubmissionYear, setSelectedSubmissionYear] = useState(defaultYear)
+  const [submittedFrom, setSubmittedFrom] = useState(defaultDateRange.submittedFrom)
+  const [submittedTo, setSubmittedTo] = useState(defaultDateRange.submittedTo)
   const [sortBy, setSortBy] = useState('submittedAt')
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)
+  const [savedAudienceViews, setSavedAudienceViews] = useState([])
+  const [selectedAudienceViewId, setSelectedAudienceViewId] = useState('')
+  const [audienceViewName, setAudienceViewName] = useState('')
 
   const [selectedIds, setSelectedIds] = useState([])
   const [emailScope, setEmailScope] = useState('selected')
@@ -78,7 +98,31 @@ export default function BulkEmail() {
   const [historyFrom, setHistoryFrom] = useState('')
   const [historyTo, setHistoryTo] = useState('')
   const [historyPage, setHistoryPage] = useState(1)
+  const [historyExporting, setHistoryExporting] = useState(false)
   const [activeSection, setActiveSection] = useState('audience')
+
+  useEffect(() => {
+    if (!selectedSubmissionYear) return
+    const range = getDateRangeByYear(selectedSubmissionYear)
+    setSubmittedFrom(range.submittedFrom)
+    setSubmittedTo(range.submittedTo)
+    setPage(1)
+  }, [selectedSubmissionYear])
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SAVED_AUDIENCE_VIEWS_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) setSavedAudienceViews(parsed)
+    } catch {
+      setSavedAudienceViews([])
+    }
+  }, [])
+
+  useEffect(() => {
+    window.localStorage.setItem(SAVED_AUDIENCE_VIEWS_KEY, JSON.stringify(savedAudienceViews))
+  }, [savedAudienceViews])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -155,6 +199,56 @@ export default function BulkEmail() {
       setStatusFilter(template.status)
       setPage(1)
     }
+  }
+
+  const saveAudienceView = () => {
+    const normalizedName = audienceViewName.trim()
+    if (!normalizedName) {
+      toast.error('Enter a view name first.')
+      return
+    }
+    const newView = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: normalizedName,
+      search,
+      statusFilter,
+      selectedSubmissionYear,
+      submittedFrom,
+      submittedTo,
+      emailScope,
+    }
+    setSavedAudienceViews((current) => [newView, ...current].slice(0, 20))
+    setSelectedAudienceViewId(newView.id)
+    setAudienceViewName('')
+    toast.success('Audience view saved.')
+  }
+
+  const applyAudienceView = (viewId) => {
+    setSelectedAudienceViewId(viewId)
+    if (!viewId) return
+    const view = savedAudienceViews.find((item) => item.id === viewId)
+    if (!view) return
+    setSearch(view.search || '')
+    setStatusFilter(view.statusFilter || '')
+    setSelectedSubmissionYear(view.selectedSubmissionYear || '')
+    setSubmittedFrom(view.submittedFrom || '')
+    setSubmittedTo(view.submittedTo || '')
+    setEmailScope(view.emailScope === 'filtered' ? 'filtered' : 'selected')
+    setPage(1)
+    toast.success(`Applied view: ${view.name}`)
+  }
+
+  const deleteAudienceView = () => {
+    if (!selectedAudienceViewId) {
+      toast.error('Select a saved view to delete.')
+      return
+    }
+    const target = savedAudienceViews.find((item) => item.id === selectedAudienceViewId)
+    const yes = window.confirm(`Delete saved view "${target?.name || 'selected'}"?`)
+    if (!yes) return
+    setSavedAudienceViews((current) => current.filter((item) => item.id !== selectedAudienceViewId))
+    setSelectedAudienceViewId('')
+    toast.success('Saved view deleted.')
   }
 
   const buildRecipientPayload = () => {
@@ -272,6 +366,56 @@ export default function BulkEmail() {
     }
   }
 
+  const runExportHistoryCSV = async () => {
+    try {
+      setHistoryExporting(true)
+      let current = 1
+      let pages = 1
+      const allLogs = []
+
+      while (current <= pages) {
+        const params = { page: current, limit: 100 }
+        if (historySearch.trim()) params.search = historySearch.trim()
+        if (historyFrom) params.sentFrom = historyFrom
+        if (historyTo) params.sentTo = historyTo
+        const response = await adminService.getBulkEmailLogs(params)
+        const payload = response.data
+        allLogs.push(...(payload.logs || []))
+        pages = payload.pagination?.pages || 1
+        current += 1
+      }
+
+      if (!allLogs.length) {
+        toast.error('No history rows to export.')
+        return
+      }
+
+      const headers = ['Sent At', 'Sender Name', 'Sender Email', 'Recipient Name', 'Recipient Email', 'Application Status', 'Subject']
+      const rows = allLogs.map((log) => [
+        log.createdAt ? new Date(log.createdAt).toLocaleString() : '',
+        log.performedBy?.fullName || '',
+        log.performedBy?.email || '',
+        log.application?.applicant?.fullName || '',
+        log.application?.applicant?.email || '',
+        String(log.application?.status || '').replaceAll('_', ' '),
+        log.notes || '',
+      ])
+      const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `bulk-email-history-${new Date().toISOString().slice(0, 10)}.csv`
+      anchor.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Exported ${allLogs.length} history row(s).`)
+    } catch {
+      toast.error('Failed to export history CSV.')
+    } finally {
+      setHistoryExporting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -339,6 +483,19 @@ export default function BulkEmail() {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <label className="block md:col-span-2">
+            <span className="mb-1 block text-xs font-medium text-slate-600">Submission Year</span>
+            <select
+              className="portal-input"
+              value={selectedSubmissionYear}
+              onChange={(e) => setSelectedSubmissionYear(e.target.value)}
+            >
+              <option value="">Custom / All</option>
+              {submissionYearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">Submitted From</span>
             <input
@@ -346,7 +503,7 @@ export default function BulkEmail() {
               className="portal-input"
               value={submittedFrom}
               max={submittedTo || undefined}
-              onChange={(e) => { setSubmittedFrom(e.target.value); setPage(1) }}
+              onChange={(e) => { setSubmittedFrom(e.target.value); setSelectedSubmissionYear(''); setPage(1) }}
             />
           </label>
           <label className="block">
@@ -356,11 +513,37 @@ export default function BulkEmail() {
               className="portal-input"
               value={submittedTo}
               min={submittedFrom || undefined}
-              onChange={(e) => { setSubmittedTo(e.target.value); setPage(1) }}
+              onChange={(e) => { setSubmittedTo(e.target.value); setSelectedSubmissionYear(''); setPage(1) }}
             />
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-500">Default range is the current year so older application batches (e.g., last year) are excluded unless you change the dates.</p>
+        <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <input
+            className="portal-input"
+            placeholder="Saved audience name (e.g., Accepted 2026)"
+            value={audienceViewName}
+            onChange={(e) => setAudienceViewName(e.target.value)}
+          />
+          <button type="button" onClick={saveAudienceView} className="portal-button-secondary whitespace-nowrap">
+            Save Audience
+          </button>
+          <div className="flex gap-2">
+            <select
+              className="portal-input min-w-[180px]"
+              value={selectedAudienceViewId}
+              onChange={(e) => applyAudienceView(e.target.value)}
+            >
+              <option value="">Saved Audiences</option>
+              {savedAudienceViews.map((view) => (
+                <option key={view.id} value={view.id}>{view.name}</option>
+              ))}
+            </select>
+            <button type="button" onClick={deleteAudienceView} className="portal-button-secondary whitespace-nowrap">
+              Delete
+            </button>
+          </div>
+        </div>
 
         <div className="mt-4 flex justify-end">
           <button type="button" className="portal-button-primary" onClick={() => setActiveSection('compose')}>
@@ -573,7 +756,7 @@ export default function BulkEmail() {
 
         {data.pagination.pages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} • {data.pagination.total} results</p>
+            <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} - {data.pagination.total} results</p>
             <div className="flex gap-2">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
               <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
@@ -616,6 +799,9 @@ export default function BulkEmail() {
 
         <div className="mt-3 flex gap-2">
           <button onClick={fetchHistory} className="portal-button-secondary">Refresh History</button>
+          <button onClick={runExportHistoryCSV} disabled={historyExporting} className="portal-button-secondary">
+            {historyExporting ? 'Exporting...' : 'Export CSV'}
+          </button>
         </div>
 
         <div className="mt-4 overflow-x-auto">
@@ -666,7 +852,7 @@ export default function BulkEmail() {
         {historyData.pagination?.pages > 1 && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-slate-500">
-              Page {historyData.pagination.page} of {historyData.pagination.pages} • {historyData.pagination.total} logs
+              Page {historyData.pagination.page} of {historyData.pagination.pages} - {historyData.pagination.total} logs
             </p>
             <div className="flex gap-2">
               <button
