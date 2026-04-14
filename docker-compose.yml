@@ -26,6 +26,8 @@ services:
     # All API traffic is routed through Nginx on port 80 via the /api/ proxy block.
     volumes:
       - uploads:/app/uploads
+      - public_uploads:/app/public_uploads
+      - private_uploads:/app/private_uploads
 
   client:
     build:
@@ -42,3 +44,5 @@ services:
 volumes:
   pgdata:
   uploads:
+  public_uploads:
+  private_uploads:
