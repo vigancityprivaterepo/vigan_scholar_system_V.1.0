@@ -13,11 +13,13 @@ RUN npx prisma generate
 COPY src ./src
 COPY scripts ./scripts
 COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
+RUN tr -d '\r' < entrypoint.sh > entrypoint.tmp \
+    && mv entrypoint.tmp entrypoint.sh \
+    && chmod +x entrypoint.sh
 
 EXPOSE 5000
 
 # entrypoint.sh: waits for Postgres, runs idempotent enum migrations that
 # prisma db push cannot apply on its own (text→enum casts via USING clause),
 # then calls prisma db push and starts the server.
-CMD ["./entrypoint.sh"]
+CMD ["sh", "/app/entrypoint.sh"]
