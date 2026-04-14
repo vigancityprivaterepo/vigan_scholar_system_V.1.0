@@ -175,118 +175,131 @@ export default function AdminSettings() {
         <h1 className="portal-page-title mt-2">Settings</h1>
       </div>
 
-      <div className="portal-surface p-6">
-        <h2 className="mb-4 text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Minimum GWA Threshold</label>
-            <p className="mb-2 text-xs text-slate-500">Applicants must have a GWA equal to or below this value (1.0 scale, lower is better). Used when qualifying applicants to the Exam/Interview stage.</p>
-            <input
-              type="number"
-              className="portal-input max-w-xs"
-              value={form.gwaThreshold}
-              onChange={e => setField('gwaThreshold', e.target.value)}
-              step="0.1"
-              min="1.0"
-              max="5.0"
-            />
+      <div className="space-y-5">
+        <section className="portal-surface p-6">
+          <div className="mb-5">
+            <p className="portal-kicker">Application Rules</p>
+            <h2 className="mt-1 text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
           </div>
 
-          <div className="border-t border-slate-200 pt-4">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</label>
-            <p className="mb-3 text-xs text-slate-500">When turned off, the application form will be closed and new submissions will be blocked.</p>
-            <button
-              type="button"
-              onClick={() => setField('applicationOpen', !form.applicationOpen)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.applicationOpen ? 'bg-[#10b981]' : 'bg-slate-300'}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.applicationOpen ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-            <span className="ml-3 text-sm text-slate-600">{form.applicationOpen ? 'Open - accepting submissions' : 'Closed - submissions blocked'}</span>
-          </div>
+          <div className="grid gap-5 lg:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Minimum GWA Threshold</label>
+              <p className="mb-2 text-xs text-slate-500">Applicants must have a GWA equal to or below this value.</p>
+              <input
+                type="number"
+                className="portal-input max-w-xs"
+                value={form.gwaThreshold}
+                onChange={e => setField('gwaThreshold', e.target.value)}
+                step="0.1"
+                min="1.0"
+                max="5.0"
+              />
+            </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Application Deadline</label>
-            <p className="mb-2 text-xs text-slate-500">Optional. After this date and time, applicants can no longer submit or resubmit forms.</p>
-            <input
-              type="datetime-local"
-              className="portal-input max-w-sm"
-              value={form.applicationDeadline}
-              onChange={e => setField('applicationDeadline', e.target.value)}
-            />
-            {form.applicationDeadline && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</label>
+              <p className="mb-3 text-xs text-slate-500">Close submissions when applications should stop.</p>
               <button
                 type="button"
-                onClick={() => setField('applicationDeadline', '')}
-                className="ml-2 text-xs font-medium text-slate-500 hover:text-brand-primary"
+                onClick={() => setField('applicationOpen', !form.applicationOpen)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${form.applicationOpen ? 'bg-[#10b981]' : 'bg-slate-300'}`}
               >
-                Clear deadline
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.applicationOpen ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
-            )}
-          </div>
+              <span className="ml-3 text-sm text-slate-600">{form.applicationOpen ? 'Open - accepting submissions' : 'Closed - submissions blocked'}</span>
+            </div>
 
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="mb-3 font-medium text-brand-primary">Landing Page Socials</h3>
-            <p className="mb-4 text-sm text-slate-500">
-              Add the official Facebook page applicants should follow for announcements and updates.
-            </p>
-
-            {loading ? (
-              <div className="portal-panel p-4 text-sm text-slate-500">Loading current social settings...</div>
-            ) : (
-              <div className="grid gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page Name</label>
-                  <input
-                    type="text"
-                    className="portal-input"
-                    placeholder="Vigan City PH"
-                    value={form.facebookPageName}
-                    onChange={e => setField('facebookPageName', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page URL</label>
-                  <input
-                    type="url"
-                    className="portal-input"
-                    placeholder="https://www.facebook.com/your-page"
-                    value={form.facebookPageUrl}
-                    onChange={e => setField('facebookPageUrl', e.target.value)}
-                  />
-                  <p className="mt-2 text-xs text-slate-500">Required if you want the landing page to show the Facebook follow section.</p>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Short Description</label>
-                  <textarea
-                    className="portal-input min-h-[110px] resize-y"
-                    placeholder="Follow the official page for scholarship announcements, schedules, and public updates."
-                    value={form.facebookPageDescription}
-                    onChange={e => setField('facebookPageDescription', e.target.value)}
-                  />
-                </div>
+            <div className="lg:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-slate-700">Application Deadline</label>
+              <p className="mb-2 text-xs text-slate-500">Optional. After this date and time, applicants can no longer submit or resubmit forms.</p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="datetime-local"
+                  className="portal-input max-w-sm"
+                  value={form.applicationDeadline}
+                  onChange={e => setField('applicationDeadline', e.target.value)}
+                />
+                {form.applicationDeadline && (
+                  <button
+                    type="button"
+                    onClick={() => setField('applicationDeadline', '')}
+                    className="text-left text-xs font-medium text-slate-500 hover:text-brand-primary"
+                  >
+                    Clear deadline
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-
-          <div className="border-t border-slate-200 pt-4">
-            <h3 className="mb-3 font-medium text-brand-primary">System Info</h3>
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              {[['Version', '1.0.0'], ['Environment', 'Development'], ['Database', 'PostgreSQL via Prisma'], ['Auth', 'JWT (Access + Refresh)']].map(([l, v]) => (
-                <div key={l} className="portal-panel p-3">
-                  <p className="text-xs text-slate-500">{l}</p>
-                  <p className="font-medium text-brand-primary">{v}</p>
-                </div>
-              ))}
             </div>
           </div>
+        </section>
 
-          <div className="flex items-center gap-3 pt-2">
-            <button onClick={handleSave} disabled={saving || loading} className="portal-button-primary">
-              {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-              {saving ? 'Saving...' : 'Save Settings'}
-            </button>
+        <section className="portal-surface p-6">
+          <div className="mb-5">
+            <p className="portal-kicker">Landing Page</p>
+            <h2 className="mt-1 text-lg font-semibold text-brand-primary">Social Links</h2>
+            <p className="mt-2 text-sm text-slate-500">Add the official Facebook page applicants should follow for announcements and updates.</p>
           </div>
+
+          {loading ? (
+            <div className="portal-panel p-4 text-sm text-slate-500">Loading current social settings...</div>
+          ) : (
+            <div className="grid gap-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page Name</label>
+                <input
+                  type="text"
+                  className="portal-input"
+                  placeholder="Vigan City PH"
+                  value={form.facebookPageName}
+                  onChange={e => setField('facebookPageName', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page URL</label>
+                <input
+                  type="url"
+                  className="portal-input"
+                  placeholder="https://www.facebook.com/your-page"
+                  value={form.facebookPageUrl}
+                  onChange={e => setField('facebookPageUrl', e.target.value)}
+                />
+                <p className="mt-2 text-xs text-slate-500">Required if you want the landing page to show the Facebook follow section.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Short Description</label>
+                <textarea
+                  className="portal-input min-h-[110px] resize-y"
+                  placeholder="Follow the official page for scholarship announcements, schedules, and public updates."
+                  value={form.facebookPageDescription}
+                  onChange={e => setField('facebookPageDescription', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="portal-surface p-6">
+          <div className="mb-5">
+            <p className="portal-kicker">System</p>
+            <h2 className="mt-1 text-lg font-semibold text-brand-primary">System Info</h2>
+          </div>
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            {[['Version', '1.0.0'], ['Environment', 'Development'], ['Database', 'PostgreSQL via Prisma'], ['Auth', 'JWT (Access + Refresh)']].map(([l, v]) => (
+              <div key={l} className="portal-panel p-3">
+                <p className="text-xs text-slate-500">{l}</p>
+                <p className="font-medium text-brand-primary">{v}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="portal-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-500">Save changes to application rules and landing page settings.</p>
+          <button onClick={handleSave} disabled={saving || loading} className="portal-button-primary justify-center">
+            {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
         </div>
       </div>
 
