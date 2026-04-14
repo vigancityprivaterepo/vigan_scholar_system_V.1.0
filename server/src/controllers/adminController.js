@@ -6,7 +6,7 @@ const { isValidTransition, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = re
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
-const { getPrimaryAdminEmail, isPrimaryAdminEmail } = require('../utils/primaryAdmin');
+const { getPrimaryAdminEmail, isPrimaryAdminEmail, getEffectiveRole } = require('../utils/primaryAdmin');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
@@ -1439,25 +1439,41 @@ const listUsers = async (req, res, next) => {
     }
 
     const { role, search } = req.query;
-    const where = {};
+    const where = { AND: [] };
 
     // Restrict user control to admin accounts only by default.
     const requestedRole = String(role || '').trim().toUpperCase();
     if (requestedRole && ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER', 'APPLICANT'].includes(requestedRole)) {
-      where.role = requestedRole;
+      if (requestedRole === 'SUPER_ADMIN' && PRIMARY_ADMIN_EMAIL) {
+        where.AND.push({
+          OR: [
+            { role: requestedRole },
+            { email: PRIMARY_ADMIN_EMAIL },
+          ],
+        });
+      } else {
+        where.AND.push({ role: requestedRole });
+      }
     } else {
-      where.role = { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] };
+      where.AND.push({
+        OR: [
+          { role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] } },
+          ...(PRIMARY_ADMIN_EMAIL ? [{ email: PRIMARY_ADMIN_EMAIL }] : []),
+        ],
+      });
     }
 
     if (search) {
-      where.OR = [
-        { fullName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
+      where.AND.push({
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      });
     }
 
     const users = await prisma.user.findMany({
-      where,
+      where: where.AND.length ? where : undefined,
       orderBy: [{ role: 'asc' }, { createdAt: 'desc' }],
       select: {
         id: true,
@@ -1469,7 +1485,12 @@ const listUsers = async (req, res, next) => {
       take: 200,
     });
 
-    res.json({ success: true, users });
+    const normalizedUsers = users.map((user) => ({
+      ...user,
+      role: getEffectiveRole(user),
+    }));
+
+    res.json({ success: true, users: normalizedUsers });
   } catch (err) {
     next(err);
   }
@@ -1705,4 +1726,3 @@ module.exports = {
   inviteAdminUser,
   processDueEmailJobs,
 };
-
