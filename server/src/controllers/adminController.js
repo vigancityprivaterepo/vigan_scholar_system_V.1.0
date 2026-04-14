@@ -1147,6 +1147,18 @@ const sendManualNotification = async (req, res, next) => {
       type: type || 'INFO',
     });
 
+    await prisma.communicationLog.create({
+      data: {
+        applicationId: id,
+        userId: application.applicantId,
+        channel: 'IN_APP',
+        direction: 'OUTBOUND',
+        subject: title,
+        message,
+        createdById: req.user.id,
+      },
+    });
+
     res.json({ success: true, message: 'Notification sent' });
   } catch (err) {
     next(err);
@@ -1380,10 +1392,13 @@ const resolveAppeal = async (req, res, next) => {
 
 const getAdminNotifications = async (req, res, next) => {
   try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const offset = parseInt(req.query.offset) || 0;
     const notifications = await prisma.notification.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: limit,
+      skip: offset,
     });
     res.json({ success: true, notifications });
   } catch (err) {
@@ -1640,6 +1655,24 @@ const processDueEmailJobs = async () => {
           processedAt: failed ? new Date() : null,
         },
       });
+
+      // Notify all super-admins when a job permanently fails
+      if (failed) {
+        const superAdmins = await prisma.user.findMany({
+          where: { role: { in: ['SUPER_ADMIN', 'ADMIN'] } },
+          select: { id: true },
+        });
+        if (superAdmins.length > 0) {
+          await prisma.notification.createMany({
+            data: superAdmins.map(u => ({
+              userId: u.id,
+              title: 'Bulk Email Job Failed',
+              message: `A scheduled bulk email job (ID: ${job.id.slice(0, 8)}) permanently failed after ${nextAttempts} attempts. Check Bulk Email → History for details.`,
+              type: 'ERROR',
+            })),
+          });
+        }
+      }
     }
   }
 };

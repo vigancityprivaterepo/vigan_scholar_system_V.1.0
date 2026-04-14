@@ -1,21 +1,29 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { ArrowRightIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
 
-const GWA_THRESHOLD = 2.0
+const DEFAULT_GWA_THRESHOLD = 2.0
 
 export default function EligibilityScreening() {
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState({})
   const [remarks, setRemarks] = useState({})
+  const [threshold, setThreshold] = useState(DEFAULT_GWA_THRESHOLD)
 
   const fetchData = () => {
-    adminService.listApplications({ status: 'ELIGIBILITY_SCREENING', limit: 50 })
-      .then(r => setApps(r.data.applications))
+    Promise.all([
+      adminService.listApplications({ status: 'ELIGIBILITY_SCREENING', limit: 50 }),
+      adminService.getSiteSettings(),
+    ])
+      .then(([appsRes, settingsRes]) => {
+        setApps(appsRes.data.applications)
+        const t = parseFloat(settingsRes.data.settings?.gwaThreshold)
+        if (!isNaN(t)) setThreshold(t)
+      })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
   }
@@ -23,6 +31,11 @@ export default function EligibilityScreening() {
   useEffect(() => { fetchData() }, [])
 
   const act = async (id, status, extra = {}) => {
+    // Enforce remarks when disqualifying
+    if (status === 'NOT_QUALIFIED' && !remarks[id]?.trim()) {
+      toast.error('Remarks are required when disqualifying.')
+      return
+    }
     setActing(a => ({ ...a, [id]: true }))
     try {
       await adminService.updateStatus(id, { status, remarks: remarks[id], ...extra })
@@ -40,7 +53,7 @@ export default function EligibilityScreening() {
       <div>
         <p className="portal-kicker">Eligibility Review</p>
         <h1 className="portal-page-title mt-2">Eligibility Screening</h1>
-        <p className="portal-page-subtitle">GWA threshold: ≤ {GWA_THRESHOLD.toFixed(1)} • {apps.length} pending</p>
+        <p className="portal-page-subtitle">GWA threshold: ≤ {threshold.toFixed(1)} • {apps.length} pending</p>
       </div>
 
       {loading ? (
@@ -59,7 +72,7 @@ export default function EligibilityScreening() {
         <div className="flex flex-col gap-4">
           {apps.map(app => {
             const gwa = parseFloat(app.gwa)
-            const qualified = !isNaN(gwa) && gwa <= GWA_THRESHOLD
+            const qualified = !isNaN(gwa) && gwa <= threshold
             return (
               <div key={app.id} className="portal-surface p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -83,13 +96,20 @@ export default function EligibilityScreening() {
                   </div>
 
                   <div className="flex min-w-56 flex-col gap-2">
-                    <textarea
-                      className="portal-input text-xs"
-                      rows={2}
-                      placeholder="Remarks (optional)"
-                      value={remarks[app.id] || ''}
-                      onChange={e => setRemarks(r => ({ ...r, [app.id]: e.target.value }))}
-                    />
+                    <div>
+                      <label className="mb-1 block text-xs text-slate-500">
+                        Remarks
+                        <span className="ml-1 text-red-500" title="Required when disqualifying">*</span>
+                        <span className="ml-1 text-slate-400 font-normal">(required to disqualify)</span>
+                      </label>
+                      <textarea
+                        className="portal-input text-xs"
+                        rows={2}
+                        placeholder="Enter remarks…"
+                        value={remarks[app.id] || ''}
+                        onChange={e => setRemarks(r => ({ ...r, [app.id]: e.target.value }))}
+                      />
+                    </div>
                     <div className="flex gap-2">
                       <button onClick={() => act(app.id, 'EXAM_INTERVIEW')} disabled={acting[app.id]} className="portal-button-primary flex-1 !px-3 !py-2 text-xs">
                         Qualify

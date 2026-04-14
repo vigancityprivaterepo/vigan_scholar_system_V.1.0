@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
+import ConfirmModal from '../../components/shared/ConfirmModal'
 import { formatDate } from '../../utils/formatDate'
 import { ArrowRightIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
@@ -77,6 +78,7 @@ export default function ApplicantList() {
   const [batchRejectionReason, setBatchRejectionReason] = useState('')
   const [batchExamScore, setBatchExamScore] = useState('')
   const [batchLoading, setBatchLoading] = useState(false)
+  const [confirm, setConfirm] = useState(null) // { message, label, action }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -183,28 +185,19 @@ export default function ApplicantList() {
       return
     }
     const target = savedViews.find((item) => item.id === selectedViewId)
-    const yes = window.confirm(`Delete saved view "${target?.name || 'selected'}"?`)
-    if (!yes) return
-    setSavedViews((current) => current.filter((item) => item.id !== selectedViewId))
-    setSelectedViewId('')
-    toast.success('Saved view deleted.')
+    setConfirm({
+      message: `Delete saved view "${target?.name || 'selected'}"? This cannot be undone.`,
+      label: 'Delete View',
+      action: () => {
+        setSavedViews((current) => current.filter((item) => item.id !== selectedViewId))
+        setSelectedViewId('')
+        toast.success('Saved view deleted.')
+      },
+    })
   }
 
-  const runBatchStatus = async () => {
-    if (selectedIds.length === 0) {
-      toast.error('Select at least one application.')
-      return
-    }
-    if (!batchStatus) {
-      toast.error('Choose a target status first.')
-      return
-    }
-
-    if (DESTRUCTIVE_STATUSES.includes(batchStatus)) {
-      const yes = window.confirm(`Apply ${batchStatus.replaceAll('_', ' ')} to ${selectedIds.length} application(s)?`)
-      if (!yes) return
-    }
-
+  const executeBatch = async () => {
+    setConfirm(null)
     setBatchLoading(true)
     try {
       const payload = {
@@ -234,8 +227,34 @@ export default function ApplicantList() {
     }
   }
 
+  const runBatchStatus = () => {
+    if (selectedIds.length === 0) { toast.error('Select at least one application.'); return }
+    if (!batchStatus) { toast.error('Choose a target status first.'); return }
+
+    if (DESTRUCTIVE_STATUSES.includes(batchStatus)) {
+      setConfirm({
+        message: `Apply ${batchStatus.replaceAll('_', ' ')} to ${selectedIds.length} application(s)? This action cannot be undone.`,
+        label: `Apply ${batchStatus.replaceAll('_', ' ')}`,
+        action: executeBatch,
+      })
+      return
+    }
+
+    executeBatch()
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {confirm && (
+        <ConfirmModal
+          title={confirm.label}
+          message={confirm.message}
+          confirmLabel={confirm.label}
+          danger
+          onConfirm={() => { confirm.action(); setConfirm(null) }}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="portal-kicker">Application Queue</p>

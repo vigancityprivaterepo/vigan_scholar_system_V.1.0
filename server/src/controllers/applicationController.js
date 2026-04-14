@@ -238,6 +238,10 @@ const submitCOR = async (req, res, next) => {
       },
     });
 
+    if (!isValidTransition(application.status, 'COR_SUBMITTED')) {
+      throw new AppError(`Cannot submit COR from current status: ${application.status}`, 409);
+    }
+
     await prisma.application.update({
       where: { id: application.id },
       data: { status: 'COR_SUBMITTED' },

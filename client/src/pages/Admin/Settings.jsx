@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { useAuthStore } from '../../store/authStore'
+import ConfirmModal from '../../components/shared/ConfirmModal'
 
 const initialForm = {
   facebookPageName: '',
@@ -118,8 +119,18 @@ export default function AdminSettings() {
     }
   }
 
-  const handleRoleChange = async (targetUser, targetRole) => {
+  const [pendingRoleChange, setPendingRoleChange] = useState(null) // { user, role }
+
+  const handleRoleChange = (targetUser, targetRole) => {
+    if (targetRole === targetUser.role) return
+    setPendingRoleChange({ user: targetUser, role: targetRole })
+  }
+
+  const confirmRoleChange = async () => {
+    if (!pendingRoleChange) return
+    const { user: targetUser, role: targetRole } = pendingRoleChange
     setRoleUpdatingId(targetUser.id)
+    setPendingRoleChange(null)
     try {
       const { data } = await adminService.updateUserRole(targetUser.id, targetRole)
       toast.success(data.message || 'User role updated.')
@@ -391,7 +402,19 @@ export default function AdminSettings() {
           </table>
         </div>
       </div>
-      </div>
-    )
+
+      {pendingRoleChange && (
+        <ConfirmModal
+          title="Change User Role"
+          message={`Change ${pendingRoleChange.user.fullName}'s role from ${pendingRoleChange.user.role} to ${pendingRoleChange.role}?`}
+          confirmLabel="Change Role"
+          danger
+          loading={roleUpdatingId === pendingRoleChange.user.id}
+          onConfirm={confirmRoleChange}
+          onCancel={() => setPendingRoleChange(null)}
+        />
+      )}
+    </div>
+  )
 }
     

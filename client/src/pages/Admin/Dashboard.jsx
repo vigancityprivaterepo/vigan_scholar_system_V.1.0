@@ -35,14 +35,16 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState(null)
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     adminService.getStats()
       .then((r) => {
         setStats(r.data.stats)
         setActivity(r.data.recentActivity || [])
+        setLoadError(false)
       })
-      .catch(err => toast.error(err.response?.data?.message || 'Failed to load dashboard data.'))
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -102,6 +104,15 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+      {loadError && (
+        <div className="flex items-center gap-3 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 shrink-0"><path d="M12 4.5 20 19H4l8-14.5Z"/><path d="M12 9.5v4"/><path d="M12 16h.01"/></svg>
+          Could not load statistics. Check your connection and{' '}
+          <button onClick={() => { setLoading(true); setLoadError(false); adminService.getStats().then(r => { setStats(r.data.stats); setActivity(r.data.recentActivity || []); setLoadError(false) }).catch(() => setLoadError(true)).finally(() => setLoading(false)) }} className="underline font-medium">
+            try again
+          </button>.
+        </div>
+      )}
       <div>
         <p className="portal-kicker">Administrative Overview</p>
         <h1 className="portal-page-title mt-2">Admin Dashboard</h1>

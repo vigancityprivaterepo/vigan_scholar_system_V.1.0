@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
+import ConfirmModal from '../../components/shared/ConfirmModal'
 
 export default function ScholarPostsManagement() {
   const [postedScholars, setPostedScholars] = useState([])
@@ -10,6 +11,7 @@ export default function ScholarPostsManagement() {
   const [selectedIds, setSelectedIds] = useState([])
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [deletingAll, setDeletingAll] = useState(false)
+  const [confirm, setConfirm] = useState(null) // { action, label, message }
 
   const loadPostedScholars = async () => {
     try {
@@ -30,7 +32,8 @@ export default function ScholarPostsManagement() {
     loadPostedScholars()
   }, [])
 
-  const handlePublishAcceptedScholars = async () => {
+  const doPublish = async () => {
+    setConfirm(null)
     setPublishing(true)
     try {
       const { data } = await adminService.publishAcceptedScholars()
@@ -41,6 +44,14 @@ export default function ScholarPostsManagement() {
     } finally {
       setPublishing(false)
     }
+  }
+
+  const handlePublishAcceptedScholars = () => {
+    setConfirm({
+      label: 'Post Accepted Scholars',
+      message: 'This will create or refresh public postings for all currently accepted applicants. Continue?',
+      action: doPublish,
+    })
   }
 
   const handleDeletePostedScholar = async (applicationId) => {
@@ -74,12 +85,8 @@ export default function ScholarPostsManagement() {
     setSelectedIds(postedScholars.map((scholar) => scholar.application_id))
   }
 
-  const handleDeleteSelected = async () => {
-    if (!selectedIds.length) {
-      toast.error('Select at least one posted scholar first.')
-      return
-    }
-
+  const doDeleteSelected = async () => {
+    setConfirm(null)
     setBulkDeleting(true)
     try {
       const { data } = await adminService.deleteManyPostedScholars(selectedIds)
@@ -93,12 +100,17 @@ export default function ScholarPostsManagement() {
     }
   }
 
-  const handleDeleteAll = async () => {
-    if (!postedScholars.length) {
-      toast.error('There are no posted scholars to remove.')
-      return
-    }
+  const handleDeleteSelected = () => {
+    if (!selectedIds.length) { toast.error('Select at least one posted scholar first.'); return }
+    setConfirm({
+      label: `Delete ${selectedIds.length} Selected`,
+      message: `Remove ${selectedIds.length} selected scholar post(s) from the public landing page? This cannot be undone.`,
+      action: doDeleteSelected,
+    })
+  }
 
+  const doDeleteAll = async () => {
+    setConfirm(null)
     setDeletingAll(true)
     try {
       const { data } = await adminService.deleteAllPostedScholars()
@@ -112,10 +124,29 @@ export default function ScholarPostsManagement() {
     }
   }
 
+  const handleDeleteAll = () => {
+    if (!postedScholars.length) { toast.error('There are no posted scholars to remove.'); return }
+    setConfirm({
+      label: 'Delete All',
+      message: `Remove all ${postedScholars.length} posted scholar(s) from the public landing page? This cannot be undone.`,
+      action: doDeleteAll,
+    })
+  }
+
   const allSelected = postedScholars.length > 0 && selectedIds.length === postedScholars.length
 
   return (
     <div className="flex flex-col gap-6">
+      {confirm && (
+        <ConfirmModal
+          title={confirm.label}
+          message={confirm.message}
+          confirmLabel={confirm.label}
+          danger
+          onConfirm={confirm.action}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
       <div>
         <p className="portal-kicker">Landing Page Publishing</p>
         <h1 className="portal-page-title mt-2">Scholar Posts</h1>

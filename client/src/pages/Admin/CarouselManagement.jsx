@@ -17,6 +17,11 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
   const handleFile = (e) => {
     const f = e.target.files[0]
     if (!f) return
+    if (f.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB')
+      e.target.value = ''
+      return
+    }
     setFile(f)
     setPreview(URL.createObjectURL(f))
   }
@@ -255,8 +260,17 @@ export default function CarouselManagement() {
                   src={slide.imageUrl}
                   alt={slide.label}
                   className="h-16 w-24 shrink-0 rounded border border-slate-200 object-cover"
-                  onError={e => { e.target.style.display = 'none' }}
+                  onError={e => {
+                    e.target.style.display = 'none'
+                    e.target.nextSibling?.style && (e.target.nextSibling.style.display = 'flex')
+                  }}
                 />
+                {/* Placeholder shown when thumbnail fails to load */}
+                <div style={{ display: 'none' }} className="h-16 w-24 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-100 text-slate-400">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+                    <rect x="4" y="4" width="16" height="16" rx="1.5" /><circle cx="9" cy="9.5" r="1.5" /><path d="m4 16 4.5-5 3.5 4 2.5-3 5.5 4" />
+                  </svg>
+                </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">

@@ -11,7 +11,7 @@ const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'];
 const requireAdmin = requireRole(...ADMIN_ROLES);
 const requireReviewer = requireRole('ADMIN', 'SUPER_ADMIN', 'REVIEWER');
 const requireScheduler = requireRole('ADMIN', 'SUPER_ADMIN', 'SCHEDULER');
-const requireSuperAdmin = requireRole('SUPER_ADMIN', 'ADMIN');
+const requireSuperAdmin = requireRole('SUPER_ADMIN');
 const requireApplicant = requireRole('APPLICANT');
 
 module.exports = {
