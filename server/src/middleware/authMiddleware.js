@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { AppError } = require('./errorHandler');
+const { getEffectiveRole } = require('../utils/primaryAdmin');
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ const authenticate = async (req, res, next) => {
 
     if (!user) throw new AppError('User not found', 401);
 
-    req.user = user;
+    req.user = { ...user, role: getEffectiveRole(user) };
     next();
   } catch (err) {
     next(err);

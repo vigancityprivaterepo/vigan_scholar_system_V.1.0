@@ -6,9 +6,10 @@ const { isValidTransition, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = re
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
+const { getPrimaryAdminEmail, isPrimaryAdminEmail } = require('../utils/primaryAdmin');
 
 const prisma = new PrismaClient();
-const PRIMARY_ADMIN_EMAIL = (process.env.PRIMARY_ADMIN_EMAIL || '').toLowerCase().trim();
+const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
 if (!PRIMARY_ADMIN_EMAIL) {
   console.warn('[adminController] WARNING: PRIMARY_ADMIN_EMAIL env var is not set. User management endpoints will be inaccessible.');
 }
@@ -1433,7 +1434,7 @@ const markAllAdminNotificationsRead = async (req, res, next) => {
 
 const listUsers = async (req, res, next) => {
   try {
-    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+    if (!isPrimaryAdminEmail(req.user.email)) {
       throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can manage admin users.`, 403);
     }
 
@@ -1476,7 +1477,7 @@ const listUsers = async (req, res, next) => {
 
 const updateUserRole = async (req, res, next) => {
   try {
-    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+    if (!isPrimaryAdminEmail(req.user.email)) {
       throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can manage admin users.`, 403);
     }
 
@@ -1531,7 +1532,7 @@ const updateUserRole = async (req, res, next) => {
 
 const inviteAdminUser = async (req, res, next) => {
   try {
-    if ((req.user.email || '').toLowerCase() !== PRIMARY_ADMIN_EMAIL) {
+    if (!isPrimaryAdminEmail(req.user.email)) {
       throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can invite admin users.`, 403);
     }
 
@@ -1704,5 +1705,4 @@ module.exports = {
   inviteAdminUser,
   processDueEmailJobs,
 };
-
 

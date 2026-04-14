@@ -6,6 +6,7 @@ const { hashToken } = require('../utils/tokenHash');
 const { AppError } = require('../middleware/errorHandler');
 const { sendEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
+const { getEffectiveRole } = require('../utils/primaryAdmin');
 
 const prisma = new PrismaClient();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -86,7 +87,7 @@ const getUserProfile = async (userId) => {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
-    role: user.role,
+    role: getEffectiveRole(user),
     isEmailVerified: user.isEmailVerified,
     createdAt: user.createdAt,
     contact: user.applications[0]?.contact || '',
