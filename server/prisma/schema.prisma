@@ -164,23 +164,35 @@ model ActivityLog {
 }
 
 model CommunicationLog {
-  id            String   @id @default(uuid())
-  applicationId String?  @map("application_id")
-  application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  userId        String?  @map("user_id")
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  channel       String
-  direction     String   @default("OUTBOUND")
+  id            String                  @id @default(uuid())
+  applicationId String?                 @map("application_id")
+  application   Application?            @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  userId        String?                 @map("user_id")
+  user          User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  channel       CommunicationChannel
+  direction     CommunicationDirection  @default(OUTBOUND)
   subject       String?
   message       String?
   metadata      Json?
-  createdById   String?  @map("created_by_id")
-  createdBy     User?    @relation("CommunicationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdById   String?                 @map("created_by_id")
+  createdBy     User?                   @relation("CommunicationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime                @default(now()) @map("created_at")
 
   @@index([applicationId, createdAt])
   @@index([userId, createdAt])
   @@map("communication_logs")
+}
+
+enum CommunicationChannel {
+  EMAIL
+  IN_APP
+  PORTAL_NOTICE
+  SMS
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
 }
 
 enum EmailJobStatus {

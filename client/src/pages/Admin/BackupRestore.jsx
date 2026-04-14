@@ -160,16 +160,12 @@ export default function BackupRestore() {
     }
   }
 
-  // Restore from server-side file
+  // Restore from server-side file (no download/re-upload needed)
   const handleRestoreFromServer = async () => {
     if (!restoreTarget) return
     setRestoring(true)
     try {
-      // Fetch the file as a blob, then re-upload to the restore endpoint
-      const { data: blob } = await adminService.downloadBackup(restoreTarget)
-      const fd = new FormData()
-      fd.append('backup', new File([blob], restoreTarget, { type: 'application/gzip' }))
-      const { data } = await adminService.restoreBackup(fd)
+      const { data } = await adminService.restoreBackupFromServer(restoreTarget)
       toast.success(data.message, { duration: 8000 })
       setRestoreTarget(null)
       load()

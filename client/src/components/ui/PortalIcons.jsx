@@ -51,6 +51,8 @@ export function LogoutIcon(props) { return <IconBase {...props}><path d="M10 4.5
 export function MenuIcon(props) { return <IconBase {...props}><path d="M4 7.5h16" /><path d="M4 12h16" /><path d="M4 16.5h16" /></IconBase> }
 export function ChevronLeftIcon(props) { return <IconBase {...props}><path d="m14.5 6-6 6 6 6" /></IconBase> }
 export function ChevronRightIcon(props) { return <IconBase {...props}><path d="m9.5 6 6 6-6 6" /></IconBase> }
+export function ChevronUpIcon(props) { return <IconBase {...props}><path d="m6 15 6-6 6 6" /></IconBase> }
+export function ChevronDownIcon(props) { return <IconBase {...props}><path d="m6 9 6 6 6-6" /></IconBase> }
 export function ShieldCheckIcon(props) { return <IconBase {...props}><path d="M12 3.5c2 1.6 4.4 2.3 6.5 2.6v5.4c0 4.3-2.6 7.5-6.5 9-3.9-1.5-6.5-4.7-6.5-9V6.1c2.1-.3 4.5-1 6.5-2.6Z" /><path d="m9.5 12.5 1.8 1.8 3.7-3.8" /></IconBase> }
 export function GraduationCapIcon(props) { return <IconBase {...props}><path d="m3.5 9 8.5-4 8.5 4-8.5 4-8.5-4Z" /><path d="M7.5 11.1V15c0 .7 2 2 4.5 2s4.5-1.3 4.5-2v-3.9" /><path d="M20.5 10v4.5" /></IconBase> }
 export function InfoIcon(props) { return <IconBase {...props}><circle cx="12" cy="12" r="8.5" /><path d="M12 10.5v4" /><path d="M12 7.7h.01" /></IconBase> }

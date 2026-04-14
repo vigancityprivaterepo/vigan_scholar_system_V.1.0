@@ -101,6 +101,16 @@ const publishAcceptedScholars = async (req, res, next) => {
       SELECT COUNT(*)::int AS "count" FROM "scholar_posts"
     `;
 
+    if (insertedCount > 0) {
+      await prisma.activityLog.create({
+        data: {
+          performedById: req.user?.id || null,
+          action: 'SCHOLAR_POSTS_PUBLISHED',
+          notes: `Published ${insertedCount} accepted scholar${insertedCount === 1 ? '' : 's'} to the landing page.`,
+        },
+      });
+    }
+
     res.json({
       success: true,
       message: insertedCount > 0
@@ -133,6 +143,14 @@ const deleteScholarPost = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Posted scholar entry not found.' });
     }
 
+    await prisma.activityLog.create({
+      data: {
+        performedById: req.user?.id || null,
+        action: 'SCHOLAR_POST_DELETED',
+        notes: `Removed scholar post for application ${applicationId} from the landing page.`,
+      },
+    });
+
     res.json({ success: true, message: 'Posted scholar removed from the landing page.' });
   } catch (err) {
     next(err);
@@ -157,6 +175,16 @@ const deleteManyScholarPosts = async (req, res, next) => {
       RETURNING "application_id"
     `;
 
+    if (deletedRows.length > 0) {
+      await prisma.activityLog.create({
+        data: {
+          performedById: req.user?.id || null,
+          action: 'SCHOLAR_POSTS_BULK_DELETED',
+          notes: `Removed ${deletedRows.length} selected scholar post${deletedRows.length === 1 ? '' : 's'} from the landing page.`,
+        },
+      });
+    }
+
     res.json({
       success: true,
       message: `${deletedRows.length} posted scholar${deletedRows.length === 1 ? '' : 's'} removed from the landing page.`,
@@ -175,6 +203,16 @@ const deleteAllScholarPosts = async (req, res, next) => {
       DELETE FROM "scholar_posts"
       RETURNING "application_id"
     `;
+
+    if (deletedRows.length > 0) {
+      await prisma.activityLog.create({
+        data: {
+          performedById: req.user?.id || null,
+          action: 'SCHOLAR_POSTS_CLEARED',
+          notes: `Cleared all ${deletedRows.length} scholar post${deletedRows.length === 1 ? '' : 's'} from the landing page.`,
+        },
+      });
+    }
 
     res.json({
       success: true,

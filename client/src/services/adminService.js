@@ -44,6 +44,7 @@ export const adminService = {
     headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   }),
+  restoreBackupFromServer: (filename) => api.post(`/admin/backup/${encodeURIComponent(filename)}/restore`, {}, { timeout: 120000 }),
 
   // Carousel CMS
   getCarouselSlides: () => api.get('/carousel/admin'),

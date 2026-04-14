@@ -6,7 +6,7 @@ import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ConfirmModal from '../../components/shared/ConfirmModal'
 import { formatDate } from '../../utils/formatDate'
-import { ArrowRightIcon, SearchIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, SearchIcon, ChevronUpIcon, ChevronDownIcon } from '../../components/ui/PortalIcons'
 
 const SAVED_VIEWS_KEY = 'adminApplicantList.savedViews.v1'
 
@@ -120,7 +120,12 @@ export default function ApplicantList() {
     else { setSortBy(col); setSortOrder('desc') }
   }
 
-  const sortIcon = (col) => sortBy === col ? (sortOrder === 'asc' ? '^' : 'v') : '*'
+  const sortIcon = (col) => {
+    if (sortBy !== col) return <ChevronUpIcon className="h-3.5 w-3.5 text-slate-300" />
+    return sortOrder === 'asc'
+      ? <ChevronUpIcon className="h-3.5 w-3.5 text-brand-primary" />
+      : <ChevronDownIcon className="h-3.5 w-3.5 text-brand-primary" />
+  }
 
   const toggleSelect = (id) => {
     setSelectedIds((current) => {
@@ -418,7 +423,7 @@ export default function ApplicantList() {
                   <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     {col ? (
                       <button onClick={() => toggleSort(col)} className="flex items-center gap-1 transition-colors hover:text-brand-primary">
-                        {label} <span className="text-slate-400">{sortIcon(col)}</span>
+                        {label} {sortIcon(col)}
                       </button>
                     ) : label}
                   </th>

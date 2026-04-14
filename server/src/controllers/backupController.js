@@ -171,15 +171,16 @@ const deleteBackup = (req, res, next) => {
   }
 }
 
-const restoreBackup = async (req, res, next) => {
-  if (!req.file) return next(new AppError('No backup file uploaded', 400))
-
+// ---------------------------------------------------------------------------
+// Shared restore logic — accepts a Buffer of a compressed backup file
+// ---------------------------------------------------------------------------
+async function runRestoreFromBuffer(buffer, originalName, userEmail, res, next) {
   try {
-    // 1. Decompress uploaded file
+    // 1. Decompress
     const decompressed = await new Promise((resolve, reject) => {
       const chunks = []
       const gunzip = zlib.createGunzip()
-      Readable.from([req.file.buffer]).pipe(gunzip)
+      Readable.from([buffer]).pipe(gunzip)
       gunzip.on('data', chunk => chunks.push(chunk))
       gunzip.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
       gunzip.on('error', reject)
@@ -188,10 +189,10 @@ const restoreBackup = async (req, res, next) => {
     // 2. Parse and validate
     let backup
     try { backup = JSON.parse(decompressed) } catch {
-      throw new AppError('Invalid backup file: could not parse JSON', 400)
+      return next(new AppError('Invalid backup file: could not parse JSON', 400))
     }
     if (!backup.version || !backup.data) {
-      throw new AppError('Invalid backup file: missing version or data fields', 400)
+      return next(new AppError('Invalid backup file: missing version or data fields', 400))
     }
 
     // 3. Auto-snapshot current state before overwriting
@@ -201,8 +202,8 @@ const restoreBackup = async (req, res, next) => {
     try {
       const currentData = await collectAllData()
       await writeBackupFile(snapshotPath, currentData, {
-        createdBy: req.user.email,
-        snapshotReason: `Auto-snapshot before restoring ${req.file.originalname}`,
+        createdBy: userEmail,
+        snapshotReason: `Auto-snapshot before restoring ${originalName}`,
       })
       logger.info('Pre-restore snapshot saved', { filename: snapshotFilename })
     } catch (snapErr) {
@@ -215,12 +216,11 @@ const restoreBackup = async (req, res, next) => {
     logger.info('Starting database restore', {
       backupCreatedAt: backup.createdAt,
       counts: backup.counts,
-      by: req.user.email,
+      by: userEmail,
     })
 
-    // 4. Delete all rows (respect FK order) then re-insert — wrapped in a transaction
+    // 4. Delete all rows (respect FK order) then re-insert
     await prisma.$transaction(async (tx) => {
-      // Delete in reverse FK dependency order
       await tx.refreshToken.deleteMany()
       await tx.notification.deleteMany()
       await tx.activityLog.deleteMany()
@@ -235,22 +235,21 @@ const restoreBackup = async (req, res, next) => {
       await tx.siteSetting.deleteMany()
       await tx.user.deleteMany()
 
-      // Insert in FK dependency order
-      if (data.users?.length)            await tx.user.createMany({ data: data.users })
-      if (data.applications?.length)     await tx.application.createMany({ data: data.applications })
-      if (data.requirementFiles?.length) await tx.requirementFile.createMany({ data: data.requirementFiles })
-      if (data.corFiles?.length)         await tx.corFile.createMany({ data: data.corFiles })
-      if (data.examSchedules?.length)    await tx.examSchedule.createMany({ data: data.examSchedules })
-      if (data.appeals?.length)          await tx.appeal.createMany({ data: data.appeals })
-      if (data.activityLogs?.length)     await tx.activityLog.createMany({ data: data.activityLogs })
+      if (data.users?.length)             await tx.user.createMany({ data: data.users })
+      if (data.applications?.length)      await tx.application.createMany({ data: data.applications })
+      if (data.requirementFiles?.length)  await tx.requirementFile.createMany({ data: data.requirementFiles })
+      if (data.corFiles?.length)          await tx.corFile.createMany({ data: data.corFiles })
+      if (data.examSchedules?.length)     await tx.examSchedule.createMany({ data: data.examSchedules })
+      if (data.appeals?.length)           await tx.appeal.createMany({ data: data.appeals })
+      if (data.activityLogs?.length)      await tx.activityLog.createMany({ data: data.activityLogs })
       if (data.communicationLogs?.length) await tx.communicationLog.createMany({ data: data.communicationLogs })
-      if (data.emailJobs?.length)        await tx.emailJob.createMany({ data: data.emailJobs })
-      if (data.notifications?.length)    await tx.notification.createMany({ data: data.notifications })
-      if (data.carouselSlides?.length)   await tx.carouselSlide.createMany({ data: data.carouselSlides })
-      if (data.siteSettings?.length)     await tx.siteSetting.createMany({ data: data.siteSettings })
+      if (data.emailJobs?.length)         await tx.emailJob.createMany({ data: data.emailJobs })
+      if (data.notifications?.length)     await tx.notification.createMany({ data: data.notifications })
+      if (data.carouselSlides?.length)    await tx.carouselSlide.createMany({ data: data.carouselSlides })
+      if (data.siteSettings?.length)      await tx.siteSetting.createMany({ data: data.siteSettings })
     }, { timeout: 120000 })
 
-    logger.info('Database restore completed successfully', { by: req.user.email })
+    logger.info('Database restore completed successfully', { by: userEmail })
 
     res.json({
       message: 'Database restored successfully. All active sessions have been invalidated — please log in again.',
@@ -263,4 +262,20 @@ const restoreBackup = async (req, res, next) => {
   }
 }
 
-module.exports = { createBackup, listBackups, downloadBackup, deleteBackup, restoreBackup, upload }
+// Restore from uploaded file (multipart/form-data)
+const restoreBackup = (req, res, next) => {
+  if (!req.file) return next(new AppError('No backup file uploaded', 400))
+  return runRestoreFromBuffer(req.file.buffer, req.file.originalname, req.user.email, res, next)
+}
+
+// Restore directly from a server-side backup file — no download/re-upload needed
+const restoreBackupFromServer = (req, res, next) => {
+  const { filename } = req.params
+  if (!FILENAME_RE.test(filename)) return next(new AppError('Invalid backup filename', 400))
+  const filepath = path.join(BACKUP_DIR, filename)
+  if (!fs.existsSync(filepath)) return next(new AppError('Backup file not found', 404))
+  const buffer = fs.readFileSync(filepath)
+  return runRestoreFromBuffer(buffer, filename, req.user.email, res, next)
+}
+
+module.exports = { createBackup, listBackups, downloadBackup, deleteBackup, restoreBackup, restoreBackupFromServer, upload }
