@@ -72,7 +72,7 @@ export default function ApplicantDashboard() {
   return (
     <div className="flex flex-col gap-6">
       <div className="portal-surface overflow-hidden">
-        <div className="border-b border-slate-300 bg-gradient-to-r from-[#0f3d6d] via-[#164f8c] to-[#0f3d6d] px-6 py-6 text-white">
+        <div className="border-b border-slate-300 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-6 py-6 text-white">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-200">Applicant Dashboard</p>
           <h1 className="mt-2 font-display text-3xl font-bold">Welcome back, {user?.fullName?.split(' ')[0]}</h1>
           <p className="mt-2 text-sm leading-7 text-slate-100">Track your scholarship application progress and review the latest updates below.</p>

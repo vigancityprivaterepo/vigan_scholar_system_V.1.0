@@ -736,7 +736,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-[#0c2340]">
 
       {/* TOP UTILITY BAR */}
-      <div className="bg-gradient-to-r from-[#065f46] via-[#047857] to-[#0c2340] border-b border-[#10b981]/30">
+      <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] border-b border-[#10b981]/30">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs md:px-8">
           <p className="uppercase tracking-[0.2em] text-emerald-50/95">Republic of the Philippines</p>
           <div className="flex items-center gap-4 text-emerald-50/95">
@@ -749,7 +749,7 @@ export default function LandingPage() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 shadow-lg">
         {/* Main brand area — blue-to-teal gradient */}
-        <div className="bg-gradient-to-r from-[#065f46] via-[#047857] to-[#0c2340] text-white">
+        <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] text-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:gap-6 md:px-8 md:py-5">
             <div className="flex items-center gap-3 md:gap-5">
               <SealPlaceholder />
@@ -809,7 +809,7 @@ export default function LandingPage() {
         </section>
 
         {/* STATS BAND — deep emerald green */}
-        <section ref={statsRef} className="bg-gradient-to-r from-[#065f46] via-[#047857] to-[#0c2340]">
+        <section ref={statsRef} className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857]">
           <div className="mx-auto max-w-7xl">
             <div className="grid grid-cols-2 divide-x divide-y divide-white/10 lg:grid-cols-4">
               {[
@@ -866,7 +866,7 @@ export default function LandingPage() {
         </section>
 
         {/* BENEFITS — deep navy section */}
-        <section id="benefits" className="bg-gradient-to-br from-[#065f46] via-[#047857] to-[#0c2340] py-20 md:py-28">
+        <section id="benefits" className="bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#047857] py-20 md:py-28">
           <div className="mx-auto max-w-7xl px-4 md:px-8">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#6ee7b7]">Scholarship Benefits</p>
@@ -941,7 +941,7 @@ export default function LandingPage() {
 
         {/* CTA — blue-to-green gradient */}
         <section className="relative overflow-hidden py-20 md:py-28">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#065f46] via-[#047857] to-[#0c2340]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#047857]" />
           {/* Decorative blobs */}
           <div className="pointer-events-none absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[#10b981]/10 blur-3xl" />
           <div className="pointer-events-none absolute -left-40 -bottom-40 h-[500px] w-[500px] rounded-full bg-[#0c2340]/22 blur-3xl" />
@@ -987,7 +987,7 @@ export default function LandingPage() {
 
               <div className="mt-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                 {/* Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#065f46] via-[#047857] to-[#0c2340] px-5 py-3 text-white">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-5 py-3 text-white">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-100/95">Public PDF View</p>
                     <p className="mt-1 text-sm font-medium text-white">Official list of accepted scholars</p>
@@ -1182,7 +1182,7 @@ export default function LandingPage() {
       </main>
 
       {/* FOOTER — deep navy */}
-      <footer className="bg-gradient-to-r from-[#065f46] via-[#047857] to-[#0c2340] py-14 text-white">
+      <footer className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] py-14 text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <SealPlaceholder small />

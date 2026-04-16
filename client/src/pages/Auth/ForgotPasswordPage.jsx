@@ -9,7 +9,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 function BrandingPanel() {
   return (
     <div className="relative hidden w-[42%] flex-col overflow-hidden lg:flex"
-      style={{ background: 'linear-gradient(155deg, #0c2340 0%, #0d4f3c 55%, #064e3b 100%)' }}
+      style={{ background: 'linear-gradient(155deg, #064e3b 0%, #065f46 55%, #047857 100%)' }}
     >
       <div className="absolute -left-16 -top-16 h-72 w-52 rotate-12 rounded-full bg-white/5" />
       <div className="absolute -right-8 top-8 h-80 w-56 -rotate-6 rounded-full bg-white/5" />
@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
       <div className="flex flex-1 flex-col bg-white">
 
         {/* Mobile-only top bar */}
-        <div className="flex items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-[#0c2340] to-[#064e3b] px-5 py-3 lg:hidden">
+        <div className="flex items-center gap-3 border-b border-slate-200 bg-gradient-to-r from-[#064e3b] to-[#047857] px-5 py-3 lg:hidden">
           <img src={logo} alt="Seal" className="h-9 w-9 object-contain" />
           <div>
             <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-300/80">Vigan Scholarship Management System</p>
@@ -297,7 +297,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} 2026 City Government of Vigan · By City Management Information Systems · Vigan City, Ilocos Sur
+          © {new Date().getFullYear()} 2026 City Government of Vigan · By City Management Information System Division · Vigan City, Ilocos Sur
         </div>
       </div>
     </div>
