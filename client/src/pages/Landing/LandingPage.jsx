@@ -293,16 +293,12 @@ function ScholarCarousel() {
             key={i}
             className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             style={{
-              backgroundImage: `linear-gradient(112deg, rgba(6,95,70,0.52) 0%, rgba(4,120,87,0.46) 36%, rgba(6,78,59,0.30) 72%, rgba(12,35,64,0.24) 100%), url('${slide.imageUrl}')`,
+              backgroundImage: `linear-gradient(106deg, rgba(12,35,64,0.62) 0%, rgba(12,35,64,0.52) 38%, rgba(12,35,64,0.34) 66%, rgba(6,95,70,0.22) 84%, rgba(6,95,70,0.16) 100%), url('${slide.imageUrl}')`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-[#064e3b]/30 via-[#065f46]/14 to-[#0c2340]/6" />
-            <div className="pointer-events-none absolute -left-16 -top-16 h-56 w-44 rounded-[38%] bg-emerald-200/6" />
-            <div className="pointer-events-none absolute -right-16 top-10 h-72 w-44 rounded-[36%] bg-[#0c2340]/12" />
-            <div className="pointer-events-none absolute -left-12 bottom-24 h-52 w-40 rounded-[38%] bg-emerald-200/5" />
-            <div className="pointer-events-none absolute right-8 bottom-6 h-44 w-36 rounded-[40%] bg-[#0c2340]/12" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0c2340]/38 via-[#0c2340]/14 to-transparent" />
             <div className="relative z-10 flex h-full flex-col justify-end px-6 py-10 text-white sm:px-10 sm:py-14 md:px-14 md:py-16 lg:px-20 lg:py-20">
               <div className="max-w-3xl">
                 <span className="inline-block rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-300 sm:text-xs">
@@ -339,12 +335,12 @@ function ScholarCarousel() {
         <>
           <button
             onClick={prev}
-            className="absolute left-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0c2340]/35 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#065f46]/85"
+            className="absolute left-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65"
             aria-label="Previous slide"
           >‹</button>
           <button
             onClick={next}
-            className="absolute right-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#0c2340]/35 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#065f46]/85"
+            className="absolute right-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65"
             aria-label="Next slide"
           >›</button>
         </>
