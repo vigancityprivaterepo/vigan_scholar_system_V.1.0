@@ -1,11 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
+import Pagination from '../../components/shared/Pagination'
 import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon, UsersIcon } from '../../components/ui/PortalIcons'
+
+const PAGE_SIZE = 20
 
 export default function ExamInterview() {
   const [apps, setApps] = useState([])
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 })
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [scheduleForm, setScheduleForm] = useState({})
   const [scoreForm, setScoreForm] = useState({})
@@ -16,14 +21,19 @@ export default function ExamInterview() {
   const [bulkForm, setBulkForm] = useState({ scheduledAt: '', location: '', type: 'BOTH' })
   const [bulkActing, setBulkActing] = useState(false)
 
-  const fetchData = () => {
-    adminService.listApplications({ status: 'EXAM_INTERVIEW', limit: 50 })
-      .then(r => { setApps(r.data.applications); setSelected(new Set()) })
+  const fetchData = useCallback(() => {
+    setLoading(true)
+    adminService.listApplications({ status: 'EXAM_INTERVIEW', limit: PAGE_SIZE, page })
+      .then(r => {
+        setApps(r.data.applications)
+        setPagination(r.data.pagination || { total: 0, pages: 1 })
+        setSelected(new Set())
+      })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
-  }
+  }, [page])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -104,14 +114,14 @@ export default function ExamInterview() {
       <div>
         <p className="portal-kicker">Assessment Stage</p>
         <h1 className="portal-page-title mt-2">Exam / Interview</h1>
-        <p className="portal-page-subtitle">{apps.length} applicants at this stage</p>
+        <p className="portal-page-subtitle">{pagination.total} applicants at this stage</p>
       </div>
 
       {loading ? (
         <div className="flex flex-col gap-4">
           {[1, 2, 3].map(i => <div key={i} className="card h-36 animate-pulse bg-gray-100" />)}
         </div>
-      ) : apps.length === 0 ? (
+      ) : apps.length === 0 && page === 1 ? (
         <div className="portal-empty">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-brand-primary">
             <CalendarIcon className="h-6 w-6" />
@@ -179,8 +189,11 @@ export default function ExamInterview() {
               onChange={toggleSelectAll}
             />
             <label htmlFor="select-all" className="cursor-pointer text-xs font-medium text-slate-600">
-              {selected.size === apps.length ? 'Deselect all' : `Select all ${apps.length} applicants`}
+              {selected.size === apps.length && apps.length > 0 ? 'Deselect all on this page' : `Select all ${apps.length} on this page`}
             </label>
+            {pagination.pages > 1 && (
+              <span className="ml-auto text-xs text-slate-400">Page {page} of {pagination.pages}</span>
+            )}
           </div>
 
           {/* ── Applicant cards ── */}
@@ -254,6 +267,17 @@ export default function ExamInterview() {
               </div>
             )
           })}
+
+          <div className="portal-surface overflow-hidden">
+            <Pagination
+              page={page}
+              pages={pagination.pages}
+              total={pagination.total}
+              label="applicants"
+              onPrev={() => setPage(p => p - 1)}
+              onNext={() => setPage(p => p + 1)}
+            />
+          </div>
         </div>
       )}
     </div>

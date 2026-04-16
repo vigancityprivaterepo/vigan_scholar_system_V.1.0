@@ -8,7 +8,7 @@ const initialForm = {
   facebookPageName: '',
   facebookPageUrl: '',
   facebookPageDescription: '',
-  gwaThreshold: '2.0',
+  gwaThreshold: '83',
   applicationOpen: true,
   applicationDeadline: '',
 }
@@ -42,7 +42,7 @@ export default function AdminSettings() {
           facebookPageName: data.settings?.facebookPageName || '',
           facebookPageUrl: data.settings?.facebookPageUrl || '',
           facebookPageDescription: data.settings?.facebookPageDescription || '',
-          gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '2.0',
+          gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
           applicationOpen: data.settings?.applicationOpen !== false,
           applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
         })
@@ -83,8 +83,8 @@ export default function AdminSettings() {
 
   const handleSave = async () => {
     const threshold = parseFloat(form.gwaThreshold)
-    if (isNaN(threshold) || threshold < 1.0 || threshold > 5.0) {
-      toast.error('GWA threshold must be between 1.0 and 5.0.')
+    if (isNaN(threshold) || threshold < 50 || threshold > 99) {
+      toast.error('General Average threshold must be between 50 and 99.')
       return
     }
 
@@ -107,7 +107,7 @@ export default function AdminSettings() {
         facebookPageName: data.settings?.facebookPageName || '',
         facebookPageUrl: data.settings?.facebookPageUrl || '',
         facebookPageDescription: data.settings?.facebookPageDescription || '',
-        gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '2.0',
+        gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
         applicationOpen: data.settings?.applicationOpen !== false,
         applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
       })
@@ -184,17 +184,24 @@ export default function AdminSettings() {
 
           <div className="grid gap-5 lg:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Minimum GWA Threshold</label>
-              <p className="mb-2 text-xs text-slate-500">Applicants must have a GWA equal to or below this value.</p>
-              <input
-                type="number"
-                className="portal-input max-w-xs"
-                value={form.gwaThreshold}
-                onChange={e => setField('gwaThreshold', e.target.value)}
-                step="0.1"
-                min="1.0"
-                max="5.0"
-              />
+              <label className="mb-1 block text-sm font-medium text-slate-700">Minimum General Average (%)</label>
+              <p className="mb-2 text-xs text-slate-500">
+                Applicants must have a General Average of at least this percentage to qualify for eligibility screening.
+                The requirement is ≥ 83% with no grade lower than 80% in both semesters.
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="portal-input max-w-[120px]"
+                  value={form.gwaThreshold}
+                  onChange={e => setField('gwaThreshold', e.target.value)}
+                  step="1"
+                  min="50"
+                  max="99"
+                />
+                <span className="text-sm font-medium text-slate-600">%</span>
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">Valid range: 50 – 99</p>
             </div>
 
             <div>

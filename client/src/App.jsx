@@ -18,6 +18,7 @@ import StatusTracker from './pages/Applicant/StatusTracker'
 import NotificationsPage from './pages/Applicant/Notifications'
 import CORSubmission from './pages/Applicant/CORSubmission'
 import HelpPage from './pages/Applicant/HelpPage'
+import RenewalForm from './pages/Applicant/RenewalForm'
 
 // Admin pages
 import AdminLayout from './components/layout/AdminLayout'
@@ -33,6 +34,8 @@ import AppealsPage from './pages/Admin/Appeals'
 import AdminSettings from './pages/Admin/Settings'
 import CarouselManagement from './pages/Admin/CarouselManagement'
 import BackupRestore from './pages/Admin/BackupRestore'
+import RenewalList from './pages/Admin/RenewalList'
+import RenewalReview from './pages/Admin/RenewalReview'
 
 import NotFoundPage from './pages/NotFoundPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
@@ -73,6 +76,7 @@ export default function App() {
             <Route path="/applicant/notifications" element={<NotificationsPage />} />
             <Route path="/applicant/cor" element={<CORSubmission />} />
             <Route path="/applicant/help" element={<HelpPage />} />
+            <Route path="/applicant/renewal" element={<RenewalForm />} />
           </Route>
         </Route>
 
@@ -91,6 +95,8 @@ export default function App() {
             <Route path="/admin/carousel" element={<CarouselManagement />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/backup" element={<BackupRestore />} />
+            <Route path="/admin/renewals" element={<RenewalList />} />
+            <Route path="/admin/renewals/:id" element={<RenewalReview />} />
           </Route>
         </Route>
 

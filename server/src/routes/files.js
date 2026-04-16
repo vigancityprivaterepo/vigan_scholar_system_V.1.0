@@ -125,4 +125,37 @@ router.delete('/:id', authenticate, async (req, res, next) => {
   }
 });
 
+router.get('/renewals/:id', authenticate, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const file = await prisma.renewalFile.findUnique({
+      where: { id },
+      include: { renewal: { select: { applicantId: true } } },
+    });
+    if (!file) throw new AppError('File not found', 404);
+
+    const isStaff = STAFF_ROLES.includes(req.user.role);
+    if (!isStaff && file.renewal.applicantId !== req.user.id) {
+      throw new AppError('Forbidden', 403);
+    }
+
+    const filePath = resolveExistingFilePath(file.fileUrl);
+    if (!filePath) throw new AppError('File not found', 404);
+
+    logger.info('Renewal file accessed', {
+      fileId: id,
+      fileName: file.fileName,
+      renewalId: file.renewalId,
+      accessedBy: req.user.id,
+      role: req.user.role,
+      ip: req.ip,
+    });
+
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(file.fileName || 'document')}"`);
+    res.sendFile(filePath);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

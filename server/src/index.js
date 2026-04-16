@@ -24,6 +24,7 @@ const fileRoutes = require('./routes/files');
 const carouselRoutes = require('./routes/carousel');
 const settingsRoutes = require('./routes/settings');
 const scholarRoutes = require('./routes/scholars');
+const renewalRoutes = require('./routes/renewals');
 const { errorHandler } = require('./middleware/errorHandler');
 const { processDueEmailJobs } = require('./controllers/adminController');
 const { runAutomatedReminders } = require('./services/reminderService');
@@ -85,6 +86,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/carousel', carouselRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/scholars', scholarRoutes);
+app.use('/api/renewals', renewalRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));

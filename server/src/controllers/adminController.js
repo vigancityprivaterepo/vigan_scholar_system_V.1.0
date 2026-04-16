@@ -185,12 +185,16 @@ const applyStatusUpdate = async ({
     throw new AppError(`Rejection reason is required when setting status to ${status}.`, 400);
   }
 
-  if (status === 'EXAM_INTERVIEW' && application.gwa !== null) {
+  // Check General Average threshold (percentage scale: higher is better)
+  const avgValue = application.generalAverage !== null && application.generalAverage !== undefined
+    ? parseFloat(application.generalAverage)
+    : null;
+  if (status === 'EXAM_INTERVIEW' && avgValue !== null) {
     const settingsRows = await prisma.$queryRaw`SELECT "gwa_threshold" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
-    const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 2.0;
-    if (parseFloat(application.gwa) > threshold) {
+    const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 83;
+    if (avgValue < threshold) {
       throw new AppError(
-        `Applicant GWA (${application.gwa}) does not meet the minimum threshold of ${threshold}.`,
+        `Applicant General Average (${avgValue}%) does not meet the minimum threshold of ${threshold}%.`,
         400
       );
     }

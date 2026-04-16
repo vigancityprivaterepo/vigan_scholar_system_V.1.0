@@ -56,22 +56,56 @@ const submitApplication = async (req, res, next) => {
     const existing = await prisma.application.findFirst({ where: { applicantId } });
     if (existing) throw new AppError('You already have a submitted application', 409);
 
-    const { age, address, contact, school, course, yearLevel, gwa, achievements } = req.body;
+    const {
+      // Personal Info
+      lastName, firstName, middleName, placeOfBirth, birthdate, sex, gender,
+      age, address, contact, school, course, yearLevel,
+      // Family Info
+      fatherName, fatherOccupation, motherName, motherOccupation,
+      numDependents, familyIncome, incomeSource,
+      // Academic
+      schoolAddress, yearGraduated, generalAverage, collegePreferences,
+      priorScholarship, scholarshipType,
+      gwa, achievements,
+    } = req.body;
 
-    if (!age || !address || !contact || !school || !course || !yearLevel || !gwa) {
-      throw new AppError('All personal and academic fields are required', 400);
+    if (!lastName || !firstName || !address || !contact || !sex || !gender) {
+      throw new AppError('All personal information fields are required', 400);
+    }
+    if (!fatherName || !motherName || !numDependents || !familyIncome || !incomeSource) {
+      throw new AppError('All family information fields are required', 400);
+    }
+    if (!school || !yearGraduated || !generalAverage) {
+      throw new AppError('All academic fields are required', 400);
     }
 
     const application = await prisma.application.create({
       data: {
         applicantId,
-        age: parseInt(age),
-        address,
-        contact,
-        school,
-        course,
-        yearLevel: parseInt(yearLevel),
-        gwa: parseFloat(gwa),
+        // Personal
+        lastName, firstName, middleName: middleName || null,
+        placeOfBirth: placeOfBirth || null,
+        birthdate: birthdate ? new Date(birthdate) : null,
+        sex, gender,
+        age: age ? parseInt(age) : null,
+        address, contact,
+        school: school || null,
+        course: course || null,
+        yearLevel: yearLevel ? parseInt(yearLevel) : null,
+        // Family
+        fatherName, fatherOccupation: fatherOccupation || null,
+        motherName, motherOccupation: motherOccupation || null,
+        numDependents: parseInt(numDependents),
+        familyIncome: parseFloat(familyIncome),
+        incomeSource,
+        // Academic
+        schoolAddress: schoolAddress || null,
+        yearGraduated: parseInt(yearGraduated),
+        generalAverage: parseFloat(generalAverage),
+        collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : null,
+        priorScholarship: priorScholarship === 'true' || priorScholarship === true,
+        scholarshipType: scholarshipType || null,
+        gwa: generalAverage ? parseFloat(generalAverage) : (gwa ? parseFloat(gwa) : null),
         achievements: achievements || null,
         status: 'PENDING_REVIEW',
         academicYear: toAcademicYear(new Date()),
@@ -158,19 +192,50 @@ const resubmit = async (req, res, next) => {
       throw new AppError('Only incomplete applications can be resubmitted', 400);
     }
 
-    const { age, address, contact, school, course, yearLevel, gwa, achievements } = req.body;
+    const {
+      lastName, firstName, middleName, placeOfBirth, birthdate, sex, gender,
+      age, address, contact, school, course, yearLevel,
+      fatherName, fatherOccupation, motherName, motherOccupation,
+      numDependents, familyIncome, incomeSource,
+      schoolAddress, yearGraduated, generalAverage, collegePreferences,
+      priorScholarship, scholarshipType,
+      gwa, achievements,
+    } = req.body;
 
     const updated = await prisma.application.update({
       where: { id: application.id },
       data: {
         status: 'PENDING_REVIEW',
+        // Personal
+        lastName: lastName || undefined,
+        firstName: firstName || undefined,
+        middleName: middleName || undefined,
+        placeOfBirth: placeOfBirth || undefined,
+        birthdate: birthdate ? new Date(birthdate) : undefined,
+        sex: sex || undefined,
+        gender: gender || undefined,
         age: age ? parseInt(age) : undefined,
         address: address || undefined,
         contact: contact || undefined,
         school: school || undefined,
         course: course || undefined,
         yearLevel: yearLevel ? parseInt(yearLevel) : undefined,
-        gwa: gwa ? parseFloat(gwa) : undefined,
+        // Family
+        fatherName: fatherName || undefined,
+        fatherOccupation: fatherOccupation || undefined,
+        motherName: motherName || undefined,
+        motherOccupation: motherOccupation || undefined,
+        numDependents: numDependents ? parseInt(numDependents) : undefined,
+        familyIncome: familyIncome ? parseFloat(familyIncome) : undefined,
+        incomeSource: incomeSource || undefined,
+        // Academic
+        schoolAddress: schoolAddress || undefined,
+        yearGraduated: yearGraduated ? parseInt(yearGraduated) : undefined,
+        generalAverage: generalAverage ? parseFloat(generalAverage) : undefined,
+        collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : undefined,
+        priorScholarship: priorScholarship !== undefined ? (priorScholarship === 'true' || priorScholarship === true) : undefined,
+        scholarshipType: scholarshipType || undefined,
+        gwa: generalAverage ? parseFloat(generalAverage) : (gwa ? parseFloat(gwa) : undefined),
         achievements: achievements || undefined,
         adminRemarks: null,
         requirementChecklist: undefined,

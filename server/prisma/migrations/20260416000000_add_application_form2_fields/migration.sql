@@ -1,0 +1,22 @@
+-- AlterTable: Add new fields for APPLICATION FORM 2
+ALTER TABLE "applications"
+  ADD COLUMN IF NOT EXISTS "last_name"          TEXT,
+  ADD COLUMN IF NOT EXISTS "first_name"         TEXT,
+  ADD COLUMN IF NOT EXISTS "middle_name"        TEXT,
+  ADD COLUMN IF NOT EXISTS "place_of_birth"     TEXT,
+  ADD COLUMN IF NOT EXISTS "birthdate"          TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "sex"                TEXT,
+  ADD COLUMN IF NOT EXISTS "gender"             TEXT,
+  ADD COLUMN IF NOT EXISTS "father_name"        TEXT,
+  ADD COLUMN IF NOT EXISTS "father_occupation"  TEXT,
+  ADD COLUMN IF NOT EXISTS "mother_name"        TEXT,
+  ADD COLUMN IF NOT EXISTS "mother_occupation"  TEXT,
+  ADD COLUMN IF NOT EXISTS "num_dependents"     INTEGER,
+  ADD COLUMN IF NOT EXISTS "family_income"      DECIMAL(12,2),
+  ADD COLUMN IF NOT EXISTS "income_source"      TEXT,
+  ADD COLUMN IF NOT EXISTS "school_address"     TEXT,
+  ADD COLUMN IF NOT EXISTS "year_graduated"     INTEGER,
+  ADD COLUMN IF NOT EXISTS "general_average"    DECIMAL(5,2),
+  ADD COLUMN IF NOT EXISTS "college_preferences" JSONB,
+  ADD COLUMN IF NOT EXISTS "prior_scholarship"  BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "scholarship_type"   TEXT;

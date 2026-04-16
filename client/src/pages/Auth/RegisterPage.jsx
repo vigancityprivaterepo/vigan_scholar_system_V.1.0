@@ -342,7 +342,7 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} City Government of Vigan · Vigan City, Ilocos Sur
+          © {new Date().getFullYear()} 2026 City Government of Vigan · By City Management Information Systems · Vigan City, Ilocos Sur
         </div>
       </div>
 

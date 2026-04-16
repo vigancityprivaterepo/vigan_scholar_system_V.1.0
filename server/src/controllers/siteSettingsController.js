@@ -31,7 +31,7 @@ const serializeSettings = (settings) => ({
   facebookPageName: settings?.facebook_page_name || '',
   facebookPageUrl: settings?.facebook_page_url || '',
   facebookPageDescription: settings?.facebook_page_description || '',
-  gwaThreshold: settings?.gwa_threshold != null ? parseFloat(settings.gwa_threshold) : 2.0,
+  gwaThreshold: settings?.gwa_threshold != null ? parseFloat(settings.gwa_threshold) : 83,
   applicationOpen: settings?.application_open != null ? Boolean(settings.application_open) : true,
   applicationDeadline: settings?.application_deadline ? new Date(settings.application_deadline).toISOString() : null,
 });
@@ -106,12 +106,12 @@ const updateAdminSiteSettings = async (req, res, next) => {
       throw new AppError('Facebook page URL is required when a page name is provided.', 400);
     }
 
-    // GWA threshold
-    let gwaThreshold = 2.0;
+    // General Average threshold (percentage scale, 50–99)
+    let gwaThreshold = 83;
     if (req.body.gwaThreshold !== undefined) {
       gwaThreshold = parseFloat(req.body.gwaThreshold);
-      if (isNaN(gwaThreshold) || gwaThreshold < 1.0 || gwaThreshold > 5.0) {
-        throw new AppError('GWA threshold must be a number between 1.0 and 5.0.', 400);
+      if (isNaN(gwaThreshold) || gwaThreshold < 50 || gwaThreshold > 99) {
+        throw new AppError('General Average threshold must be a number between 50 and 99.', 400);
       }
     }
 

@@ -791,7 +791,7 @@ export default function LandingPage() {
               {[
                 { value: `₱${awarded.toFixed(1)}M+`, label: 'Total Awarded', sub: 'Disbursed to scholars' },
                 { value: `${Math.round(scholars)}+`, label: 'Active Scholars', sub: 'Currently enrolled' },
-                { value: `${Math.round(schools)}`, label: 'Partner Schools', sub: 'Across Ilocos Sur' },
+                { value: `${Math.round(schools)}`, label: 'Partner Schools', sub: 'Across Vigan City Ilocos Sur' },
                 { value: `${Math.round(successRate)}%`, label: 'Success Rate', sub: 'Academic completion' },
               ].map(({ value, label, sub }) => (
                 <div key={label} className="px-6 py-10 md:px-10 md:py-12">

@@ -25,6 +25,7 @@ const navItems = [
   { to: '/admin/eligibility', label: 'Eligibility', Icon: ShieldCheckIcon },
   { to: '/admin/exam', label: 'Exam / Interview', Icon: ClipboardIcon },
   { to: '/admin/cor', label: 'COR Review', Icon: DocumentIcon },
+  { to: '/admin/renewals', label: 'Renewals', Icon: DocumentIcon },
   { to: '/admin/appeals', label: 'Appeals', Icon: FileTextIcon },
   { to: '/admin/bulk-email', label: 'Bulk Email', Icon: MailIcon },
   { to: '/admin/scholar-posts', label: 'Scholar Posts', Icon: FileTextIcon },

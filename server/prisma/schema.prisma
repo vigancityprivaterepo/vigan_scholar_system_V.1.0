@@ -26,6 +26,7 @@ model User {
   createdEmailJobs EmailJob[] @relation("EmailJobCreatedBy")
   appeals Appeal[]
   reviewedAppeals Appeal[] @relation("AppealReviewedBy")
+  scholarshipRenewals ScholarshipRenewal[]
 
   @@map("users")
 }
@@ -45,16 +46,38 @@ model Application {
   status      ApplicationStatus @default(PENDING_REVIEW)
 
   // Personal Info
-  age       Int?
-  address   String?
-  contact   String?
-  school    String?
-  course    String?
-  yearLevel Int?    @map("year_level")
+  lastName     String?  @map("last_name")
+  firstName    String?  @map("first_name")
+  middleName   String?  @map("middle_name")
+  placeOfBirth String?  @map("place_of_birth")
+  birthdate    DateTime? @map("birthdate")
+  sex          String?
+  gender       String?
+  age          Int?
+  address      String?
+  contact      String?
+  school       String?
+  course       String?
+  yearLevel    Int?    @map("year_level")
+
+  // Family Info
+  fatherName       String?  @map("father_name")
+  fatherOccupation String?  @map("father_occupation")
+  motherName       String?  @map("mother_name")
+  motherOccupation String?  @map("mother_occupation")
+  numDependents    Int?     @map("num_dependents")
+  familyIncome     Decimal? @db.Decimal(12, 2) @map("family_income")
+  incomeSource     String?  @map("income_source")
 
   // Academic
-  gwa             Decimal?  @db.Decimal(4, 2)
-  achievements    String?
+  schoolAddress      String?  @map("school_address")
+  yearGraduated      Int?     @map("year_graduated")
+  generalAverage     Decimal? @db.Decimal(5, 2) @map("general_average")
+  collegePreferences Json?    @map("college_preferences")
+  priorScholarship   Boolean? @map("prior_scholarship")
+  scholarshipType    String?  @map("scholarship_type")
+  gwa                Decimal?  @db.Decimal(4, 2)
+  achievements       String?
 
   // Admin
   adminRemarks   String?   @map("admin_remarks")
@@ -69,13 +92,14 @@ model Application {
   submittedAt DateTime  @default(now()) @map("submitted_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  requirementFiles RequirementFile[]
-  corFiles         CorFile[]
-  notifications    Notification[]
-  activityLogs     ActivityLog[]
-  examSchedules    ExamSchedule[]
-  communicationLogs CommunicationLog[]
-  appeals Appeal[]
+  requirementFiles    RequirementFile[]
+  corFiles            CorFile[]
+  notifications       Notification[]
+  activityLogs        ActivityLog[]
+  examSchedules       ExamSchedule[]
+  communicationLogs   CommunicationLog[]
+  appeals             Appeal[]
+  scholarshipRenewals ScholarshipRenewal[]
 
   @@unique([applicantId])
   @@index([status])
@@ -289,7 +313,7 @@ model SiteSetting {
   facebookPageName        String?  @map("facebook_page_name")
   facebookPageUrl         String?  @map("facebook_page_url")
   facebookPageDescription String?  @map("facebook_page_description")
-  gwaThreshold            Decimal  @default(2.0) @db.Decimal(4, 2) @map("gwa_threshold")
+  gwaThreshold            Decimal  @default(83) @db.Decimal(4, 2) @map("gwa_threshold")
   applicationOpen         Boolean  @default(true) @map("application_open")
   applicationDeadline     DateTime? @map("application_deadline")
   createdAt               DateTime @default(now()) @map("created_at")
@@ -307,4 +331,41 @@ model RefreshToken {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("refresh_tokens")
+}
+
+enum RenewalStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model ScholarshipRenewal {
+  id            String        @id @default(uuid())
+  applicantId   String        @map("applicant_id")
+  applicant     User          @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  applicationId String        @map("application_id")
+  application   Application   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  status        RenewalStatus @default(PENDING_REVIEW)
+  academicYear  String?       @map("academic_year")
+  adminRemarks  String?       @map("admin_remarks")
+  submittedAt   DateTime      @default(now()) @map("submitted_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  renewalFiles  RenewalFile[]
+
+  @@index([applicantId, status])
+  @@map("scholarship_renewals")
+}
+
+model RenewalFile {
+  id         String             @id @default(uuid())
+  renewalId  String             @map("renewal_id")
+  renewal    ScholarshipRenewal @relation(fields: [renewalId], references: [id], onDelete: Cascade)
+  fileName   String             @map("file_name")
+  fileUrl    String             @map("file_url")
+  fileType   String?            @map("file_type")
+  docType    String             @map("doc_type")
+  uploadedAt DateTime           @default(now()) @map("uploaded_at")
+
+  @@map("renewal_files")
 }

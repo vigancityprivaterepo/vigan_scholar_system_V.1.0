@@ -51,4 +51,9 @@ export const adminService = {
   createCarouselSlide: (formData) => api.post('/carousel/admin', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateCarouselSlide: (id, formData) => api.patch(`/carousel/admin/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   deleteCarouselSlide: (id) => api.delete(`/carousel/admin/${id}`),
+
+  // Scholarship renewals
+  listRenewals: (params) => api.get('/renewals/list', { params }),
+  getRenewal: (id) => api.get(`/renewals/${id}`),
+  updateRenewalStatus: (id, data) => api.patch(`/renewals/${id}/status`, data),
 }

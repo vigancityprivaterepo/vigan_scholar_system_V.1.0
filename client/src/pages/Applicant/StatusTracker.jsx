@@ -12,6 +12,7 @@ export default function StatusTracker() {
   const [loading, setLoading] = useState(true)
   const [communications, setCommunications] = useState([])
   const [appeals, setAppeals] = useState([])
+  const [renewal, setRenewal] = useState(null)
   const [appealReason, setAppealReason] = useState('')
   const [appealLoading, setAppealLoading] = useState(false)
 
@@ -20,11 +21,13 @@ export default function StatusTracker() {
       applicationService.getMine(),
       applicationService.getCommunications(),
       applicationService.getAppeals(),
+      applicationService.getMyRenewal().catch(() => ({ data: { renewal: null } })),
     ])
-      .then(([appRes, commRes, appealRes]) => {
+      .then(([appRes, commRes, appealRes, renewalRes]) => {
         setApplication(appRes.data.application)
         setCommunications(commRes.data.timeline || [])
         setAppeals(appealRes.data.appeals || [])
+        setRenewal(renewalRes.data.renewal || null)
       })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load status data.'))
       .finally(() => setLoading(false))
@@ -169,7 +172,43 @@ export default function StatusTracker() {
         )}
 
         {application.status === 'ACCEPTED' && (
-          <p className="text-sm text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You will receive further instructions via email.</p>
+          <>
+            <p className="mb-4 text-sm text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You may submit a renewal application for the next academic year below.</p>
+            {/* Renewal status card */}
+            {!renewal ? (
+              <div className="rounded-md border border-slate-200 bg-white p-4">
+                <p className="mb-2 text-sm font-medium text-brand-primary">Scholarship Renewal</p>
+                <p className="mb-3 text-sm text-slate-600">Ready to renew? Submit your COR and latest grades to continue your scholarship.</p>
+                <Link to="/applicant/renewal" className="portal-button-primary inline-flex text-sm">
+                  Submit Renewal Application
+                </Link>
+              </div>
+            ) : renewal.status === 'PENDING_REVIEW' ? (
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-800">Renewal Under Review</p>
+                <p className="mt-1 text-xs text-amber-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
+                <p className="mt-2 text-sm text-slate-700">Your renewal application is being reviewed by the scholarship office.</p>
+              </div>
+            ) : renewal.status === 'APPROVED' ? (
+              <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-800">Renewal Approved</p>
+                <p className="mt-1 text-xs text-emerald-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
+                <p className="mt-2 text-sm text-slate-700">Your scholarship renewal has been approved. Congratulations!</p>
+              </div>
+            ) : renewal.status === 'REJECTED' ? (
+              <div className="rounded-md border border-red-300 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-800">Renewal Rejected</p>
+                {renewal.adminRemarks && (
+                  <div className="mt-2 rounded border border-slate-200 bg-white p-2 text-sm text-slate-700">
+                    <strong>Remarks:</strong> {renewal.adminRemarks}
+                  </div>
+                )}
+                <Link to="/applicant/renewal" className="portal-button-primary mt-3 inline-flex text-sm">
+                  Submit New Renewal
+                </Link>
+              </div>
+            ) : null}
+          </>
         )}
 
         {['PENDING_REVIEW', 'ELIGIBILITY_SCREENING', 'COR_SUBMITTED'].includes(application.status) && (

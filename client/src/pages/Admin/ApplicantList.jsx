@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState, useCallback } from 'react'
+﻿import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -28,14 +28,14 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
     const r = await adminService.listApplications(params)
     const apps = r.data.applications
 
-    const headers = ['Name', 'Email', 'School', 'Course', 'Year Level', 'GWA', 'Status', 'Contact', 'Submitted']
+    const headers = ['Name', 'Email', 'School', 'Course', 'Year Level', 'Gen. Average (%)', 'Status', 'Contact', 'Submitted']
     const rows = apps.map(a => [
       a.applicant?.fullName || '',
       a.applicant?.email || '',
       a.school || '',
       a.course || '',
       a.yearLevel || '',
-      a.gwa ? parseFloat(a.gwa).toFixed(2) : '',
+      a.generalAverage ? parseFloat(a.generalAverage).toFixed(1) : '',
       a.status || '',
       a.contact || '',
       a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '',
@@ -415,7 +415,7 @@ export default function ApplicantList() {
                 {[
                   { label: 'Name', col: 'applicant' },
                   { label: 'School', col: null },
-                  { label: 'GWA', col: 'gwa' },
+                  { label: 'Gen. Avg', col: 'gwa' },
                   { label: 'Status', col: 'status' },
                   { label: 'Submitted', col: 'submittedAt' },
                   { label: 'Action', col: null },
@@ -467,8 +467,8 @@ export default function ApplicantList() {
                       <p className="max-w-32 truncate text-xs text-slate-400">{app.course || ''}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={clsx('font-mono text-sm font-bold', app.gwa && parseFloat(app.gwa) <= 2.0 ? 'text-green-600' : app.gwa ? 'text-red-500' : 'text-slate-400')}>
-                        {app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}
+                      <span className={clsx('font-mono text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400')}>
+                        {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(1)}%` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} size="sm" /></td>
@@ -511,9 +511,9 @@ export default function ApplicantList() {
                   <p className="mt-1 truncate text-xs text-slate-500">{app.school || '-'}{app.course ? ` • ${app.course}` : ''}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge status={app.status} size="sm" />
-                    {app.gwa && (
-                      <span className={clsx('font-mono text-xs font-bold', parseFloat(app.gwa) <= 2.0 ? 'text-green-600' : 'text-red-500')}>
-                        GWA {parseFloat(app.gwa).toFixed(2)}
+                    {app.generalAverage && (
+                      <span className={clsx('font-mono text-xs font-bold', parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>
+                        {parseFloat(app.generalAverage).toFixed(1)}%
                       </span>
                     )}
                     <span className="text-xs text-slate-400">{formatDate(app.submittedAt)}</span>

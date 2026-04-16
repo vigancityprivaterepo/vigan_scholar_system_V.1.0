@@ -10,13 +10,13 @@ import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon } from
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
 const REQUIREMENT_CHECKLIST_ITEMS = [
-  'Letter of Application',
-  'Barangay Residency Certificate',
-  'Form 138 / Grades',
-  'Good Moral Certificate',
-  'College Admission Test Result',
-  'Passport-size Photo',
-  'Affidavit of Income and Property',
+  'Personal Letter of Application addressed to City Mayor',
+  'Certificate of Residency from the Punong Barangay',
+  'Form 138 (General Average at least 83%, no grade lower than 80%)',
+  'Certification from High School Principal (Good Moral Character)',
+  'Result of College Admission Test (CAT)',
+  'Picture (Passport Size with Printed Name)',
+  'Affidavit of Income and Property (Annual income < P84,204 / Property < P250,000)',
 ]
 
 export default function ApplicationReview() {
@@ -115,14 +115,16 @@ export default function ApplicationReview() {
   }
 
   const availableActions = ACTIONS[app.status] || []
-  const TABS = ['personal', 'academic', 'requirements', 'history']
+  const TABS = ['personal', 'family', 'academic', 'requirements', 'history']
 
   return (
     <div className="flex max-w-6xl flex-col gap-6">
       <div className="flex flex-wrap items-start gap-3">
         <button onClick={() => navigate(-1)} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Back</button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold text-brand-primary sm:text-2xl">{app.applicant?.fullName}</h1>
+          <h1 className="text-xl font-bold text-brand-primary sm:text-2xl">
+            {app.lastName ? `${app.lastName}, ${app.firstName}${app.middleName ? ' ' + app.middleName : ''}` : app.applicant?.fullName}
+          </h1>
           <p className="truncate font-mono text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()} • {app.applicant?.email}</p>
         </div>
         <StatusBadge status={app.status} />
@@ -152,11 +154,16 @@ export default function ApplicationReview() {
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Personal Information</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  ['Full Name', app.applicant?.fullName],
-                  ['Email', app.applicant?.email],
+                  ['Last Name', app.lastName],
+                  ['First Name', app.firstName],
+                  ['Middle Name', app.middleName],
+                  ['Sex', app.sex],
+                  ['Gender', app.gender],
                   ['Age', app.age],
+                  ['Birthdate', app.birthdate ? formatDate(app.birthdate) : null],
+                  ['Place of Birth', app.placeOfBirth],
                   ['Contact', app.contact],
-                  ['Year Level', app.yearLevel ? `Year ${app.yearLevel}` : '-'],
+                  ['Email', app.applicant?.email],
                   ['Submitted', formatDate(app.submittedAt)],
                 ].map(([l, v]) => (
                   <div key={l}>
@@ -172,14 +179,37 @@ export default function ApplicationReview() {
             </div>
           )}
 
-          {activeTab === 'academic' && (
+          {activeTab === 'family' && (
             <div className="portal-surface p-6">
-              <h3 className="mb-4 text-lg font-semibold text-brand-primary">Academic Records</h3>
+              <h3 className="mb-4 text-lg font-semibold text-brand-primary">Family Information</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  ['School / University', app.school],
-                  ['Course / Program', app.course],
-                  ['Year Level', app.yearLevel ? `Year ${app.yearLevel}` : '-'],
+                  ['Name of Father', app.fatherName],
+                  ['Father\'s Occupation', app.fatherOccupation],
+                  ['Name of Mother', app.motherName],
+                  ['Mother\'s Occupation', app.motherOccupation],
+                  ['No. of Dependents', app.numDependents],
+                  ['Combined Monthly Income', app.familyIncome ? `₱${parseFloat(app.familyIncome).toLocaleString()}` : null],
+                  ['Main Source of Income', app.incomeSource],
+                ].map(([l, v]) => (
+                  <div key={l}>
+                    <p className="text-xs font-medium text-slate-500">{l}</p>
+                    <p className="mt-0.5 text-sm font-medium text-brand-primary">{v ?? '-'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'academic' && (
+            <div className="portal-surface p-6">
+              <h3 className="mb-4 text-lg font-semibold text-brand-primary">Academic Information</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  ['SHS Attended', app.school],
+                  ['School Address', app.schoolAddress],
+                  ['Year Graduated (SHS)', app.yearGraduated],
+                  ['Prior Scholarship', app.priorScholarship === true ? `Yes — ${app.scholarshipType || 'unspecified'}` : app.priorScholarship === false ? 'No' : null],
                 ].map(([l, v]) => (
                   <div key={l}>
                     <p className="text-xs font-medium text-slate-500">{l}</p>
@@ -187,9 +217,9 @@ export default function ApplicationReview() {
                   </div>
                 ))}
                 <div>
-                  <p className="text-xs font-medium text-slate-500">GWA</p>
-                  <p className={clsx('mt-0.5 font-mono text-2xl font-bold', app.gwa && parseFloat(app.gwa) <= 2.0 ? 'text-green-600' : 'text-red-500')}>
-                    {app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}
+                  <p className="text-xs font-medium text-slate-500">General Average (SHS)</p>
+                  <p className={clsx('mt-0.5 font-mono text-2xl font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>
+                    {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                   </p>
                 </div>
                 {app.examScore && (
@@ -199,10 +229,38 @@ export default function ApplicationReview() {
                   </div>
                 )}
               </div>
-              {app.achievements && (
+
+              {app.collegePreferences?.length > 0 && (
                 <div className="mt-4 border-t border-slate-200 pt-4">
-                  <p className="mb-1 text-xs font-medium text-slate-500">Academic Achievements</p>
-                  <p className="text-sm leading-relaxed text-slate-700">{app.achievements}</p>
+                  <p className="mb-2 text-xs font-medium text-slate-500">College Preferences (in order)</p>
+                  <div className="overflow-x-auto rounded-md border border-slate-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">#</th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">School</th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Location</th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Course</th>
+                          <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">Accepted</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {app.collegePreferences.map((p, i) => (
+                          <tr key={i} className="border-b border-slate-100 last:border-0">
+                            <td className="px-3 py-2 text-slate-500">{i + 1}</td>
+                            <td className="px-3 py-2 text-slate-700">{p.name || '-'}</td>
+                            <td className="px-3 py-2 text-slate-700">{p.location || '-'}</td>
+                            <td className="px-3 py-2 text-slate-700">{p.course || '-'}</td>
+                            <td className="px-3 py-2">
+                              <span className={clsx('rounded-full px-2 py-0.5 text-xs font-medium', p.accepted === 'Y' ? 'bg-green-100 text-green-700' : p.accepted === 'N' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500')}>
+                                {p.accepted || '—'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -405,8 +463,8 @@ export default function ApplicationReview() {
             <h4 className="mb-3 font-semibold text-brand-primary">Quick Info</h4>
             <div className="flex flex-col gap-2 text-slate-600">
               <div className="flex justify-between"><span>Files</span><span className="font-medium">{app.requirementFiles?.length || 0}</span></div>
-              <div className="flex justify-between"><span>GWA</span><span className={clsx('font-mono font-bold', app.gwa && parseFloat(app.gwa) <= 2.0 ? 'text-green-600' : 'text-red-500')}>{app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}</span></div>
-              {app.examScore && <div className="flex justify-between"><span>Exam</span><span className="font-mono font-bold">{app.examScore}</span></div>}
+              <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('font-mono font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
+              {app.examScore && <div className="flex justify-between"><span>Exam Score</span><span className="font-mono font-bold">{app.examScore}</span></div>}
               <div className="flex justify-between"><span>Submitted</span><span>{formatDate(app.submittedAt)}</span></div>
             </div>
           </div>

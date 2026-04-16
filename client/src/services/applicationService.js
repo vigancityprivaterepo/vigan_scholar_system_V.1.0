@@ -11,4 +11,6 @@ export const applicationService = {
   getNotifications: () => api.get('/applications/notifications'),
   markRead: (id) => api.patch(`/applications/notifications/${id}/read`),
   markAllRead: () => api.patch('/applications/notifications/read-all'),
+  submitRenewal: (formData) => api.post('/renewals/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getMyRenewal: () => api.get('/renewals/mine'),
 }
