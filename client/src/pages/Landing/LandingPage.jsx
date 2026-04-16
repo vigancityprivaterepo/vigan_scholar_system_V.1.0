@@ -287,7 +287,7 @@ function ScholarCarousel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative min-h-[420px] sm:min-h-[480px] md:min-h-[580px]">
+      <div className="relative min-h-[500px] sm:min-h-[520px] md:min-h-[580px]">
         {slides.map((slide, i) => (
           <div
             key={i}
@@ -299,27 +299,27 @@ function ScholarCarousel() {
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-[#0c2340]/38 via-[#0c2340]/14 to-transparent" />
-            <div className="relative z-10 flex h-full flex-col justify-end px-6 py-10 text-white sm:px-10 sm:py-14 md:px-14 md:py-16 lg:px-20 lg:py-20">
-              <div className="max-w-3xl">
+            <div className="relative z-10 flex h-full flex-col justify-end px-4 py-8 text-white sm:px-10 sm:py-14 md:px-14 md:py-16 lg:px-20 lg:py-20">
+              <div className="max-w-full sm:max-w-3xl">
                 <span className="inline-block rounded-full border border-emerald-300/60 bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-100 sm:text-xs">
                   Academic Year 2026
                 </span>
-                <h2 className="mt-4 font-display text-2xl font-bold leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
+                <h2 className="mt-3 font-display text-[clamp(1.6rem,8.4vw,3.25rem)] font-bold leading-[1.08] sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">
                   {slide.label}
                 </h2>
-                <p className="mt-4 max-w-xl text-sm leading-7 text-slate-100/95 sm:text-base sm:leading-8 md:text-lg">
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-100/95 sm:mt-4 sm:text-base sm:leading-8 md:text-lg">
                   {slide.caption}
                 </p>
-                <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+                <div className="mt-5 flex flex-wrap gap-2.5 sm:mt-8 sm:gap-3">
                   <Link
                     to="/register"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#10b981] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-[#059669] hover:-translate-y-0.5 sm:px-6 sm:py-3"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#10b981] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-[#059669] hover:-translate-y-0.5 sm:px-6 sm:py-3"
                   >
                     Apply Now <ArrowRightIcon />
                   </Link>
                   <a
                     href="#how-it-works"
-                    className="inline-flex items-center justify-center rounded-lg border border-white/55 bg-white/15 px-5 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-6 sm:py-3"
+                    className="inline-flex items-center justify-center rounded-lg border border-white/55 bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-6 sm:py-3"
                   >
                     View Application Process
                   </a>
@@ -335,12 +335,12 @@ function ScholarCarousel() {
         <>
           <button
             onClick={prev}
-            className="absolute left-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65"
+            className="absolute left-4 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65 sm:flex"
             aria-label="Previous slide"
           >‹</button>
           <button
             onClick={next}
-            className="absolute right-4 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65"
+            className="absolute right-4 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-[#0c2340]/42 text-xl text-white backdrop-blur-sm transition-all hover:bg-[#0c2340]/65 sm:flex"
             aria-label="Next slide"
           >›</button>
         </>
@@ -1196,7 +1196,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-7xl border-t border-white/20 px-4 pt-6 text-xs text-slate-200/95 md:px-8">
-          © {new Date().getFullYear()} City Government of Vigan · By City Management Information Systems · All rights reserved.
+          © {new Date().getFullYear()} City Government of Vigan · By City Management Information Systems Division· All rights reserved.
         </div>
       </footer>
     </div>
