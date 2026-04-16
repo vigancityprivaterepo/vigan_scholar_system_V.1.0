@@ -7,6 +7,7 @@ const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
 const { getPrimaryAdminEmail, isPrimaryAdminEmail, getEffectiveRole } = require('../utils/primaryAdmin');
+const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
@@ -1599,7 +1600,8 @@ const inviteAdminUser = async (req, res, next) => {
       { expiresIn: '48h' }
     );
 
-    const inviteUrl = `${process.env.CLIENT_URL}/forgot-password?token=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(user.email)}`;
+    const baseUrl = getClientBaseUrl(req);
+    const inviteUrl = `${baseUrl}/forgot-password?token=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(user.email)}`;
 
     await sendEmail({
       to: user.email,

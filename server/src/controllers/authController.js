@@ -7,6 +7,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { sendEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
 const { getEffectiveRole } = require('../utils/primaryAdmin');
+const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 
 const prisma = new PrismaClient();
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,12 +56,13 @@ const buildEmailVerificationToken = (user) =>
     { expiresIn: '24h' }
   );
 
-const buildEmailVerificationUrl = (user) => {
+const buildEmailVerificationUrl = (user, req) => {
   const token = buildEmailVerificationToken(user);
+  const baseUrl = getClientBaseUrl(req);
   // The token payload already contains userId; the backend no longer needs
   // the email as a query param. It is omitted here to avoid leaking it into
   // server/proxy logs and browser history.
-  return `${process.env.CLIENT_URL}/verify-email?token=${encodeURIComponent(token)}`;
+  return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
 };
 
 const getUserProfile = async (userId) => {
@@ -128,7 +130,7 @@ const register = async (req, res, next) => {
     });
 
     try {
-      const verificationUrl = buildEmailVerificationUrl(user);
+      const verificationUrl = buildEmailVerificationUrl(user, req);
       await sendEmail({
         to: user.email,
         subject: 'Confirm Your Scholarship Portal Email',
@@ -169,7 +171,8 @@ const forgotPassword = async (req, res, next) => {
         { expiresIn: '30m' }
       );
 
-      const resetUrl = `${process.env.CLIENT_URL}/forgot-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+      const baseUrl = getClientBaseUrl(req);
+      const resetUrl = `${baseUrl}/forgot-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
 
       await sendEmail({
         to: user.email,
