@@ -47,6 +47,12 @@ const BLANK_PREFS = [
 
 const SAVED_KEY = 'scholarship_form_draft_v2'
 
+const roundToTwoDecimals = (value) => {
+  const parsed = Number(value)
+  if (Number.isNaN(parsed)) return null
+  return Math.round((parsed + Number.EPSILON) * 100) / 100
+}
+
 const INITIAL_FORM = {
   // Personal
   lastName: '', firstName: '', middleName: '',
@@ -309,7 +315,7 @@ export default function ApplicationForm() {
     if (step === 2) {
       if (!form.school.trim()) e.school = 'Required'
       if (!form.yearGraduated || parseInt(form.yearGraduated) < 2000 || parseInt(form.yearGraduated) > new Date().getFullYear() + 1) e.yearGraduated = 'Enter a valid graduation year'
-      const avg = parseFloat(form.generalAverage)
+      const avg = roundToTwoDecimals(form.generalAverage)
       if (!form.generalAverage || isNaN(avg) || avg < 75 || avg > 100) e.generalAverage = 'General average must be between 75 and 100'
       const hasOnePref = form.collegePreferences.some(p => p.name.trim())
       if (!hasOnePref) e.collegePreferences = 'Please list at least one college preference'
@@ -362,10 +368,11 @@ export default function ApplicationForm() {
       fd.append('familyIncome', form.familyIncome)
       fd.append('incomeSource', form.incomeSource === 'Others' ? `Others - ${form.incomeSourceOther}` : form.incomeSource)
       // Academic
+      const normalizedGeneralAverage = roundToTwoDecimals(form.generalAverage)
       fd.append('school', form.school)
       fd.append('schoolAddress', form.schoolAddress)
       fd.append('yearGraduated', form.yearGraduated)
-      fd.append('generalAverage', form.generalAverage)
+      fd.append('generalAverage', normalizedGeneralAverage?.toFixed(2) || form.generalAverage)
       fd.append('collegePreferences', JSON.stringify(form.collegePreferences.filter(p => p.name.trim())))
       fd.append('priorScholarship', form.priorScholarship)
       if (form.priorScholarship === 'true') fd.append('scholarshipType', form.scholarshipType)
@@ -643,7 +650,24 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">General Average (SHS) <span className="text-red-500">*</span></label>
-                <input type="number" step="0.01" min="75" max="100" className={inputClass('generalAverage')} value={form.generalAverage} onChange={e => set('generalAverage', e.target.value)} placeholder="e.g. 87.50" />
+                <input
+                  type="number"
+                  step="0.01"
+                  min="75"
+                  max="100"
+                  className={inputClass('generalAverage')}
+                  value={form.generalAverage}
+                  onChange={e => set('generalAverage', e.target.value)}
+                  onBlur={() => {
+                    const normalized = roundToTwoDecimals(form.generalAverage)
+                    if (normalized !== null) set('generalAverage', normalized.toFixed(2))
+                  }}
+                  onWheel={e => e.currentTarget.blur()}
+                  onKeyDown={e => {
+                    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault()
+                  }}
+                  placeholder="e.g. 87.50"
+                />
                 <p className="mt-1 text-xs text-slate-500">Minimum of 83% required (no grade lower than 80% per semester)</p>
                 {err('generalAverage')}
               </div>

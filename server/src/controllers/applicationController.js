@@ -8,6 +8,13 @@ const { toAcademicYear } = require('../utils/academicYear');
 
 const prisma = new PrismaClient();
 
+const roundToTwoDecimals = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.round((parsed + Number.EPSILON) * 100) / 100;
+};
+
 const getApplicationWindow = async () => {
   let rows = [];
   try {
@@ -75,7 +82,10 @@ const submitApplication = async (req, res, next) => {
     if (!fatherName || !motherName || !numDependents || !familyIncome || !incomeSource) {
       throw new AppError('All family information fields are required', 400);
     }
-    if (!school || !yearGraduated || !generalAverage) {
+    const normalizedGeneralAverage = roundToTwoDecimals(generalAverage);
+    const normalizedGwa = normalizedGeneralAverage ?? roundToTwoDecimals(gwa);
+
+    if (!school || !yearGraduated || normalizedGeneralAverage === null) {
       throw new AppError('All academic fields are required', 400);
     }
 
@@ -101,11 +111,11 @@ const submitApplication = async (req, res, next) => {
         // Academic
         schoolAddress: schoolAddress || null,
         yearGraduated: parseInt(yearGraduated),
-        generalAverage: parseFloat(generalAverage),
+        generalAverage: normalizedGeneralAverage,
         collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : null,
         priorScholarship: priorScholarship === 'true' || priorScholarship === true,
         scholarshipType: scholarshipType || null,
-        gwa: generalAverage ? parseFloat(generalAverage) : (gwa ? parseFloat(gwa) : null),
+        gwa: normalizedGwa,
         achievements: achievements || null,
         status: 'PENDING_REVIEW',
         academicYear: toAcademicYear(new Date()),
@@ -202,6 +212,9 @@ const resubmit = async (req, res, next) => {
       gwa, achievements,
     } = req.body;
 
+    const normalizedGeneralAverage = roundToTwoDecimals(generalAverage);
+    const normalizedGwa = normalizedGeneralAverage ?? roundToTwoDecimals(gwa);
+
     const updated = await prisma.application.update({
       where: { id: application.id },
       data: {
@@ -231,11 +244,11 @@ const resubmit = async (req, res, next) => {
         // Academic
         schoolAddress: schoolAddress || undefined,
         yearGraduated: yearGraduated ? parseInt(yearGraduated) : undefined,
-        generalAverage: generalAverage ? parseFloat(generalAverage) : undefined,
+        generalAverage: normalizedGeneralAverage !== null ? normalizedGeneralAverage : undefined,
         collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : undefined,
         priorScholarship: priorScholarship !== undefined ? (priorScholarship === 'true' || priorScholarship === true) : undefined,
         scholarshipType: scholarshipType || undefined,
-        gwa: generalAverage ? parseFloat(generalAverage) : (gwa ? parseFloat(gwa) : undefined),
+        gwa: normalizedGwa !== null ? normalizedGwa : undefined,
         achievements: achievements || undefined,
         adminRemarks: null,
         requirementChecklist: undefined,

@@ -1180,7 +1180,10 @@ export default function LandingPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400/80">Portal Links</p>
               <div className="mt-4 flex flex-col gap-2.5 text-slate-400">
                 <Link to="/login" className="transition-colors hover:text-[#6ee7b7]">Login</Link>
+                
                 <Link to="/register" className="transition-colors hover:text-[#6ee7b7]">Apply for Scholarship</Link>
+                <Link to="/register" className="transition-colors hover:text-[#6ee7b7]">Vigan City Official Website</Link>
+              
               </div>
             </div>
             <div>
