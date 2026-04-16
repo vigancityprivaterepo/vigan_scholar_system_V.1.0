@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 
 function useCounter(end, duration = 2000, start = false) {
@@ -317,12 +317,12 @@ function ScholarCarousel() {
                   >
                     Apply Now <ArrowRightIcon />
                   </Link>
-                  <a
-                    href="#how-it-works"
+                  <Link
+                    to="/how-it-works"
                     className="inline-flex items-center justify-center rounded-lg border border-white/55 bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-6 sm:py-3"
                   >
                     View Application Process
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -470,6 +470,7 @@ function escapeHtml(value = '') {
 }
 
 export default function LandingPage() {
+  const location = useLocation()
   const [statsVisible, setStatsVisible] = useState(false)
   const [activeFaq, setActiveFaq] = useState(null)
   const [siteSettings, setSiteSettings] = useState({
@@ -519,6 +520,29 @@ export default function LandingPage() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const sectionByPath = {
+      '/overview': 'overview',
+      '/how-it-works': 'how-it-works',
+      '/benefits': 'benefits',
+      '/faq': 'faq',
+    }
+
+    const sectionId = sectionByPath[location.pathname] || (location.hash ? location.hash.slice(1) : '')
+    if (!sectionId) return
+
+    const timer = window.setTimeout(() => {
+      const section = document.getElementById(sectionId)
+      if (!section) return
+
+      // Account for sticky header height when jumping to a section route.
+      const targetY = section.getBoundingClientRect().top + window.scrollY - 132
+      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [location.pathname, location.hash])
 
   const totalScholarPages = Math.max(1, Math.ceil(postedScholars.length / SCHOLARS_PER_PAGE))
   const currentScholarPage = Math.min(scholarPage, totalScholarPages - 1)
@@ -716,7 +740,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs md:px-8">
           <p className="uppercase tracking-[0.2em] text-emerald-50/95">Republic of the Philippines</p>
           <div className="flex items-center gap-4 text-emerald-50/95">
-            <a href="#faq" className="hidden transition-colors hover:text-[#10b981] md:block">Scholarship Guidelines</a>
+            <Link to="/faq" className="hidden transition-colors hover:text-[#10b981] md:block">Scholarship Guidelines</Link>
             <Link to="/login" className="transition-colors hover:text-[#10b981]">Applicant Login</Link>
           </div>
         </div>
@@ -755,10 +779,10 @@ export default function LandingPage() {
         <nav className="border-b-2 border-[#10b981] bg-white">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 md:px-8 md:py-2.5">
             <div className="hidden flex-wrap items-center text-sm font-medium text-slate-600 md:flex">
-              <a href="#overview" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</a>
-              <a href="#how-it-works" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</a>
-              <a href="#benefits" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Benefits</a>
-              <a href="#faq" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</a>
+              <Link to="/overview" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</Link>
+              <Link to="/how-it-works" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</Link>
+              <Link to="/benefits" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Benefits</Link>
+              <Link to="/faq" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</Link>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Link
@@ -1189,8 +1213,8 @@ export default function LandingPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">Information</p>
               <div className="mt-4 flex flex-col gap-2.5 text-slate-100/90">
-                <a href="#how-it-works" className="transition-colors hover:text-white">Application Process</a>
-                <a href="#faq" className="transition-colors hover:text-white">Frequently Asked Questions</a>
+                <Link to="/how-it-works" className="transition-colors hover:text-white">Application Process</Link>
+                <Link to="/faq" className="transition-colors hover:text-white">Frequently Asked Questions</Link>
               </div>
             </div>
           </div>
