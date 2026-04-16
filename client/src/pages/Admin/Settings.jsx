@@ -30,7 +30,9 @@ export default function AdminSettings() {
   const [users, setUsers] = useState([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [userSearch, setUserSearch] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState('')
   const [roleUpdatingId, setRoleUpdatingId] = useState('')
+  const [deletingUserId, setDeletingUserId] = useState('')
   const [inviteForm, setInviteForm] = useState({ fullName: '', email: '' })
   const [inviteLoading, setInviteLoading] = useState(false)
 
@@ -55,7 +57,7 @@ export default function AdminSettings() {
     loadSettings()
   }, [])
 
-  const loadUsers = async (search = '') => {
+  const loadUsers = async (search = '', role = userRoleFilter) => {
     if (!isPrimaryAdmin) {
       setUsers([])
       setUsersLoading(false)
@@ -66,6 +68,7 @@ export default function AdminSettings() {
     try {
       const params = {}
       if (search) params.search = search
+      if (role) params.role = role
       const { data } = await adminService.listUsers(params)
       setUsers(data.users || [])
     } catch (err) {
@@ -76,8 +79,8 @@ export default function AdminSettings() {
   }
 
   useEffect(() => {
-    loadUsers()
-  }, [isPrimaryAdmin])
+    loadUsers('', userRoleFilter)
+  }, [isPrimaryAdmin, userRoleFilter])
 
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }))
 
@@ -120,6 +123,7 @@ export default function AdminSettings() {
   }
 
   const [pendingRoleChange, setPendingRoleChange] = useState(null) // { user, role }
+  const [pendingUserDelete, setPendingUserDelete] = useState(null) // user
 
   const handleRoleChange = (targetUser, targetRole) => {
     if (targetRole === targetUser.role) return
@@ -134,11 +138,27 @@ export default function AdminSettings() {
     try {
       const { data } = await adminService.updateUserRole(targetUser.id, targetRole)
       toast.success(data.message || 'User role updated.')
-      loadUsers(userSearch.trim())
+      loadUsers(userSearch.trim(), userRoleFilter)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update role.')
     } finally {
       setRoleUpdatingId('')
+    }
+  }
+
+  const confirmUserDelete = async () => {
+    if (!pendingUserDelete) return
+    const targetUser = pendingUserDelete
+    setDeletingUserId(targetUser.id)
+    try {
+      const { data } = await adminService.deleteUser(targetUser.id)
+      toast.success(data.message || 'User deleted successfully.')
+      loadUsers(userSearch.trim(), userRoleFilter)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete user.')
+    } finally {
+      setDeletingUserId('')
+      setPendingUserDelete(null)
     }
   }
 
@@ -160,7 +180,7 @@ export default function AdminSettings() {
       })
       toast.success(data.message || 'Invitation sent.')
       setInviteForm({ fullName: '', email: '' })
-      loadUsers(userSearch.trim())
+      loadUsers(userSearch.trim(), userRoleFilter)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send invite.')
     } finally {
@@ -312,11 +332,11 @@ export default function AdminSettings() {
 
       <div className="portal-surface mt-6 p-6">
         <h2 className="mb-2 text-lg font-semibold text-brand-primary">User Control</h2>
-        <p className="mb-4 text-sm text-slate-500">Manage existing admin accounts only. Applicants are excluded from this panel.</p>
+        <p className="mb-4 text-sm text-slate-500">Manage user accounts. Deleting a user permanently removes their linked application data.</p>
 
         {!isPrimaryAdmin && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            Only <strong>data@vigancity.gov.ph</strong> can modify admin users.
+            Only <strong>data@vigancity.gov.ph</strong> can manage user accounts.
           </div>
         )}
 
@@ -350,6 +370,19 @@ export default function AdminSettings() {
         </div>
 
         <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+          <select
+            className="portal-input sm:max-w-[220px]"
+            value={userRoleFilter}
+            onChange={(e) => setUserRoleFilter(e.target.value)}
+            disabled={!isPrimaryAdmin}
+          >
+            <option value="">Staff Accounts</option>
+            <option value="APPLICANT">Applicants</option>
+            <option value="SUPER_ADMIN">Super Admin</option>
+            <option value="ADMIN">Admin</option>
+            <option value="REVIEWER">Reviewer</option>
+            <option value="SCHEDULER">Scheduler</option>
+          </select>
           <input
             className="portal-input"
             placeholder="Search by full name or email"
@@ -360,7 +393,7 @@ export default function AdminSettings() {
           <button
             type="button"
             className="portal-button-secondary whitespace-nowrap"
-            onClick={() => loadUsers(userSearch.trim())}
+            onClick={() => loadUsers(userSearch.trim(), userRoleFilter)}
             disabled={!isPrimaryAdmin}
           >
             Search Users
@@ -389,6 +422,7 @@ export default function AdminSettings() {
               ) : (
                 users.map((u) => {
                   const isSelf = u.id === user?.id
+                  const isDeleting = deletingUserId === u.id
                   return (
                     <tr key={u.id} className="border-t border-slate-100">
                       <td className="px-3 py-3 text-sm font-medium text-brand-primary">
@@ -402,7 +436,7 @@ export default function AdminSettings() {
                           <select
                             className="portal-input !py-1.5 text-xs"
                             value={u.role}
-                            disabled={!isPrimaryAdmin || isSelf || roleUpdatingId === u.id}
+                            disabled={!isPrimaryAdmin || isSelf || roleUpdatingId === u.id || isDeleting}
                             onChange={(e) => handleRoleChange(u, e.target.value)}
                           >
                             <option value="SUPER_ADMIN">SUPER_ADMIN</option>
@@ -411,7 +445,16 @@ export default function AdminSettings() {
                             <option value="SCHEDULER">SCHEDULER</option>
                             <option value="APPLICANT">APPLICANT</option>
                           </select>
+                          <button
+                            type="button"
+                            className="rounded border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 transition-colors hover:border-red-500 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            onClick={() => setPendingUserDelete(u)}
+                            disabled={!isPrimaryAdmin || isSelf || roleUpdatingId === u.id || isDeleting}
+                          >
+                            Delete
+                          </button>
                           {roleUpdatingId === u.id && <span className="text-xs text-slate-500">Updating...</span>}
+                          {isDeleting && <span className="text-xs text-red-600">Deleting...</span>}
                         </div>
                       </td>
                     </tr>
@@ -432,6 +475,18 @@ export default function AdminSettings() {
           loading={roleUpdatingId === pendingRoleChange.user.id}
           onConfirm={confirmRoleChange}
           onCancel={() => setPendingRoleChange(null)}
+        />
+      )}
+
+      {pendingUserDelete && (
+        <ConfirmModal
+          title="Delete User Account"
+          message={`Delete ${pendingUserDelete.fullName} (${pendingUserDelete.email}) and all related data? This action cannot be undone.`}
+          confirmLabel="Delete User"
+          danger
+          loading={deletingUserId === pendingUserDelete.id}
+          onConfirm={confirmUserDelete}
+          onCancel={() => setPendingUserDelete(null)}
         />
       )}
     </div>

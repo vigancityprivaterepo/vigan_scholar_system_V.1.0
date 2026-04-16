@@ -22,6 +22,7 @@ const {
   markAllAdminNotificationsRead,
   listUsers,
   updateUserRole,
+  deleteUser,
   inviteAdminUser,
   listAppeals,
   resolveAppeal,
@@ -64,6 +65,7 @@ router.patch('/notifications/:id/read', markAdminNotificationRead);
 router.post('/users/invite', requireSuperAdmin, inviteAdminUser);
 router.get('/users', requireSuperAdmin, listUsers);
 router.patch('/users/:id/role', requireSuperAdmin, updateUserRole);
+router.delete('/users/:id', requireSuperAdmin, deleteUser);
 router.get('/settings', getAdminSiteSettings);
 router.patch('/settings', updateAdminSiteSettings);
 router.get('/scholars/posts', getAdminScholarPosts);

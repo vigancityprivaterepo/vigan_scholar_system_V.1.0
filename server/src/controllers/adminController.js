@@ -1,6 +1,8 @@
 ﻿const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const { AppError } = require('../middleware/errorHandler');
 const { isValidTransition, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
@@ -29,6 +31,65 @@ const EMAIL_JOB_DEFAULT_MAX_ATTEMPTS = (() => {
   const parsed = parseInt(process.env.BULK_EMAIL_JOB_MAX_ATTEMPTS || '3', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
 })();
+const privateUploadsDir = path.join(__dirname, '../../private_uploads');
+const legacyUploadsDir = path.join(__dirname, '../../uploads');
+
+const resolveUserFilePath = (fileUrl) => {
+  const baseName = path.basename(String(fileUrl || ''));
+  if (!baseName || baseName === '.' || baseName === '..') return null;
+
+  const candidates = [
+    path.join(privateUploadsDir, baseName),
+    path.join(legacyUploadsDir, baseName),
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+};
+
+const collectUserFileUrls = async (userId) => {
+  const [applications, renewals] = await Promise.all([
+    prisma.application.findMany({
+      where: { applicantId: userId },
+      select: {
+        requirementFiles: { select: { fileUrl: true } },
+        corFiles: { select: { fileUrl: true } },
+      },
+    }),
+    prisma.scholarshipRenewal.findMany({
+      where: { applicantId: userId },
+      select: {
+        renewalFiles: { select: { fileUrl: true } },
+      },
+    }),
+  ]);
+
+  return [
+    ...applications.flatMap((application) => [
+      ...application.requirementFiles.map((file) => file.fileUrl),
+      ...application.corFiles.map((file) => file.fileUrl),
+    ]),
+    ...renewals.flatMap((renewal) => renewal.renewalFiles.map((file) => file.fileUrl)),
+  ].filter(Boolean);
+};
+
+const deleteUserUploadedFiles = (fileUrls) => {
+  const uniqueUrls = [...new Set(fileUrls)];
+  let deletedCount = 0;
+
+  uniqueUrls.forEach((fileUrl) => {
+    try {
+      const filePath = resolveUserFilePath(fileUrl);
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        deletedCount += 1;
+      }
+    } catch (err) {
+      console.warn(`[adminController] Failed to delete uploaded file (${fileUrl}):`, err.message);
+    }
+  });
+
+  return deletedCount;
+};
 
 const ensureAdminDailyCap = async (adminId, requestedCount) => {
   const start = new Date();
@@ -1556,6 +1617,43 @@ const updateUserRole = async (req, res, next) => {
   }
 };
 
+const deleteUser = async (req, res, next) => {
+  try {
+    if (!isPrimaryAdminEmail(req.user.email)) {
+      throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can delete users.`, 403);
+    }
+
+    const { id } = req.params;
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, fullName: true, email: true, role: true },
+    });
+    if (!target) throw new AppError('User not found.', 404);
+
+    if (target.id === req.user.id) {
+      throw new AppError('You cannot delete your own account.', 400);
+    }
+
+    const normalizedPrimaryEmail = String(PRIMARY_ADMIN_EMAIL || '').trim().toLowerCase();
+    if (normalizedPrimaryEmail && String(target.email || '').trim().toLowerCase() === normalizedPrimaryEmail) {
+      throw new AppError('Primary admin account cannot be deleted.', 400);
+    }
+
+    const fileUrls = await collectUserFileUrls(target.id);
+    await prisma.user.delete({ where: { id: target.id } });
+    const deletedFileCount = deleteUserUploadedFiles(fileUrls);
+
+    res.json({
+      success: true,
+      message: `${target.fullName} and related records have been deleted.`,
+      user: { ...target, role: getEffectiveRole(target) },
+      deletedFileCount,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const inviteAdminUser = async (req, res, next) => {
   try {
     if (!isPrimaryAdminEmail(req.user.email)) {
@@ -1729,6 +1827,7 @@ module.exports = {
   markAllAdminNotificationsRead,
   listUsers,
   updateUserRole,
+  deleteUser,
   inviteAdminUser,
   processDueEmailJobs,
 };
