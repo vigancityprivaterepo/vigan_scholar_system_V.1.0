@@ -388,7 +388,7 @@ const benefits = [
   },
   {
     title: 'Book & Clothing',
-    desc: 'Scholars shall received three thousand pesos (₱ 3,000.00) as clothing and book allowance every school year.',
+    desc: 'Scholars shall received Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.',
     Icon: BanknoteIcon,
   },
   {
@@ -414,7 +414,7 @@ const faqs = [
   },
   { q: 'When is the application deadline?', a: 'Applications are accepted during the announced scholarship period for each semester. Please refer to the latest announcements for the current cycle.' },
   { q: 'How long does the process take?', a: 'The full review process typically (takes 3 to 5 Days) depending on application volume and schedule of assessments.' },
-  { q: 'Is there a monetary benefit?', a: 'Yes. Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester, scholars shall received three thousand pesos (₱ 3,000.00) as clothing and book allowance every school year.' },
+  { q: 'Is there a monetary benefit?', a: 'Yes. Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester, scholars shall received Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.' },
   { q: 'Can I reapply if I was not accepted?', a: 'Yes. Applicants who were not selected may apply again in the next application period if they still meet the program requirements.' },
 ]
 
