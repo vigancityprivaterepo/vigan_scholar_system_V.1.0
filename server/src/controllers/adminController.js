@@ -330,12 +330,14 @@ const listApplications = async (req, res, next) => {
       where.status = { in: statuses };
     }
     if (search) {
-      where.applicant = {
-        OR: [
-          { fullName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+      const trimmed = search.replace(/^#/, '').trim();
+      where.OR = [
+        { id: { startsWith: trimmed, mode: 'insensitive' } },
+        { lastName: { contains: trimmed, mode: 'insensitive' } },
+        { firstName: { contains: trimmed, mode: 'insensitive' } },
+        { applicant: { fullName: { contains: trimmed, mode: 'insensitive' } } },
+        { applicant: { email: { contains: trimmed, mode: 'insensitive' } } },
+      ];
     }
     const submittedAtFilter = buildSubmittedAtWhere(submittedFrom, submittedTo);
     if (submittedAtFilter) where.submittedAt = submittedAtFilter;
@@ -435,6 +437,67 @@ const updateStatus = async (req, res, next) => {
     });
 
     res.json({ success: true, message: 'Status updated', application: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateApplicationFields = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const application = await prisma.application.findUnique({ where: { id } });
+    if (!application) throw new AppError('Application not found', 404);
+
+    const {
+      lastName, firstName, middleName, placeOfBirth, birthdate, sex, gender,
+      age, address, contact,
+      fatherName, fatherOccupation, motherName, motherOccupation,
+      numDependents, familyIncome, incomeSource,
+      school, schoolAddress, yearGraduated, generalAverage,
+      collegePreferences, soloParent, fourPs, priorScholarship, scholarshipType,
+    } = req.body;
+
+    const data = {};
+    if (lastName !== undefined) data.lastName = lastName;
+    if (firstName !== undefined) data.firstName = firstName;
+    if (middleName !== undefined) data.middleName = middleName || null;
+    if (placeOfBirth !== undefined) data.placeOfBirth = placeOfBirth || null;
+    if (birthdate !== undefined) data.birthdate = birthdate ? new Date(birthdate) : null;
+    if (sex !== undefined) data.sex = sex;
+    if (gender !== undefined) data.gender = gender;
+    if (age !== undefined) data.age = age ? parseInt(age) : null;
+    if (address !== undefined) data.address = address;
+    if (contact !== undefined) data.contact = contact;
+    if (fatherName !== undefined) data.fatherName = fatherName;
+    if (fatherOccupation !== undefined) data.fatherOccupation = fatherOccupation || null;
+    if (motherName !== undefined) data.motherName = motherName;
+    if (motherOccupation !== undefined) data.motherOccupation = motherOccupation || null;
+    if (numDependents !== undefined) data.numDependents = numDependents !== '' ? parseInt(numDependents) : null;
+    if (familyIncome !== undefined) data.familyIncome = familyIncome !== '' ? parseFloat(familyIncome) : null;
+    if (incomeSource !== undefined) data.incomeSource = incomeSource || null;
+    if (school !== undefined) data.school = school;
+    if (schoolAddress !== undefined) data.schoolAddress = schoolAddress || null;
+    if (yearGraduated !== undefined) data.yearGraduated = yearGraduated ? parseInt(yearGraduated) : null;
+    if (generalAverage !== undefined) data.generalAverage = generalAverage !== '' ? parseFloat(generalAverage) : null;
+    if (collegePreferences !== undefined) data.collegePreferences = collegePreferences;
+    if (soloParent !== undefined) data.soloParent = soloParent === true || soloParent === 'true';
+    if (fourPs !== undefined) data.fourPs = fourPs === true || fourPs === 'true';
+    if (priorScholarship !== undefined) data.priorScholarship = priorScholarship === true || priorScholarship === 'true';
+    if (scholarshipType !== undefined) data.scholarshipType = scholarshipType || null;
+
+    const updated = await prisma.application.update({ where: { id }, data });
+
+    await prisma.activityLog.create({
+      data: {
+        applicationId: id,
+        performedById: req.user.id,
+        action: 'Application fields updated by admin',
+        fromStatus: application.status,
+        toStatus: application.status,
+      },
+    });
+
+    res.json({ success: true, message: 'Application updated', application: updated });
   } catch (err) {
     next(err);
   }
@@ -1122,7 +1185,18 @@ const getDashboardStats = async (req, res, next) => {
   try {
     const academicYear = String(req.query.academicYear || '').trim() || toAcademicYear(new Date());
     const where = academicYear ? { academicYear } : {};
-    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats] = await Promise.all([
+    const VIGAN_BARANGAYS = [
+      'Ayusan Norte','Ayusan Sur','Barangay I (Poblacion)','Barangay II (Poblacion)',
+      'Barangay III (Poblacion)','Barangay IV (Poblacion)','Barangay V (Poblacion)',
+      'Barangay VI (Poblacion)','Barangay VII (Poblacion)','Barangay VIII (Poblacion)',
+      'Barangay IX (Poblacion)','Barraca','Beddeng Daya','Beddeng Laud','Bongtolan',
+      'Bulala','Cabalangegan','Cabaroan Daya','Cabaroan Laud','Camangaan','Capangpangan',
+      'Mindoro','Nagsangalan','Pantay Daya','Pantay Fatima','Pantay Laud','Paoa',
+      'Paratong','Pong-ol','Purok-a-bassit','Purok-a-dakkel','Raois','Rugsuanan',
+      'Salindeg','San Jose','San Julian Norte','San Julian Sur','San Pedro','Tamag',
+    ];
+
+    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats, barangayAddresses] = await Promise.all([
       prisma.application.count({ where }),
       prisma.application.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.activityLog.findMany({
@@ -1162,7 +1236,21 @@ const getDashboardStats = async (req, res, next) => {
         by: ['status'],
         _count: { _all: true },
       }),
+      prisma.application.findMany({
+        where: { ...where, address: { not: null } },
+        select: { address: true },
+      }),
     ]);
+
+    const barangayCounts = {};
+    for (const { address } of barangayAddresses) {
+      const match = VIGAN_BARANGAYS.find((b) => address.toLowerCase().includes(b.toLowerCase()));
+      if (match) barangayCounts[match] = (barangayCounts[match] || 0) + 1;
+    }
+    const topBarangays = Object.entries(barangayCounts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
 
     const statusCounts = Object.fromEntries(byStatus.map((s) => [s.status, s._count._all]));
     const stats = {
@@ -1184,6 +1272,7 @@ const getDashboardStats = async (req, res, next) => {
       trends: {
         schools: topSchoolsRaw.map((row) => ({ label: row.school || 'Unknown', count: row._count._all })),
         courses: topCoursesRaw.map((row) => ({ label: row.course || 'Unknown', count: row._count._all })),
+        barangays: topBarangays,
       },
       rejectionReasons: rejectionRaw.map((row) => ({ reason: row.rejectionReason || 'Unspecified', count: row._count._all })),
       appeals: Object.fromEntries(appealStats.map((item) => [item.status, item._count._all])),
@@ -1807,6 +1896,7 @@ module.exports = {
   listApplications,
   getApplication,
   updateStatus,
+  updateApplicationFields,
   batchUpdateStatus,
   previewBulkEmailRecipients,
   sendBulkEmailTest,

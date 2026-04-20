@@ -4,6 +4,7 @@ const {
   listApplications,
   getApplication,
   updateStatus,
+  updateApplicationFields,
   batchUpdateStatus,
   previewBulkEmailRecipients,
   sendBulkEmailTest,
@@ -54,6 +55,7 @@ router.get('/applications/bulk-email/jobs', requireScheduler, listEmailJobs);
 router.get('/applications/bulk-email/logs', listBulkEmailLogs);
 router.get('/applications/:id', getApplication);
 router.patch('/applications/:id/status', requireReviewer, updateStatus);
+router.patch('/applications/:id/fields', requireReviewer, updateApplicationFields);
 router.post('/applications/bulk-schedule', requireScheduler, bulkScheduleExam);
 router.post('/applications/:id/schedule', requireScheduler, scheduleExam);
 router.patch('/applications/:id/cor', requireReviewer, reviewCOR);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
@@ -36,6 +36,62 @@ export default function AdminDashboard() {
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
+
+  const barangayChartRef = useRef(null)
+  const schoolsChartRef = useRef(null)
+  const coursesChartRef = useRef(null)
+
+  const svgToCanvas = (ref, callback) => {
+    const svg = ref.current?.querySelector('svg')
+    if (!svg) return
+    const { width, height } = svg.getBoundingClientRect()
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      const scale = 2
+      canvas.width = width * scale
+      canvas.height = height * scale
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      callback(canvas.toDataURL('image/png'))
+    }
+    img.src = url
+  }
+
+  const downloadChartAsPng = (ref, filename) => {
+    svgToCanvas(ref, (dataUrl) => {
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = filename
+      a.click()
+    })
+  }
+
+  const downloadChartAsPdf = (ref, title) => {
+    svgToCanvas(ref, (dataUrl) => {
+      const win = window.open('', '_blank', 'width=860,height=640')
+      if (!win) return
+      win.document.write(
+        `<!DOCTYPE html><html><head><title>${title}</title>` +
+        `<style>body{margin:0;padding:28px 32px;font-family:DM Sans,sans-serif}` +
+        `h2{font-size:15px;font-weight:600;margin:0 0 14px;color:#1e293b}` +
+        `img{max-width:100%;display:block;border:1px solid #e2e8f0;border-radius:6px}` +
+        `p{font-size:11px;color:#94a3b8;margin:10px 0 0}` +
+        `@media print{body{padding:16px}}</style></head>` +
+        `<body><h2>${title}</h2><img src="${dataUrl}"/>` +
+        `<p>Vigan City Scholarship System &mdash; Generated ${new Date().toLocaleDateString('en-PH', { year:'numeric',month:'long',day:'numeric' })}</p>` +
+        `<script>window.onload=function(){window.print()}<\/script></body></html>`
+      )
+      win.document.close()
+    })
+  }
 
   useEffect(() => {
     adminService.getStats()
@@ -248,30 +304,81 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="portal-surface p-6">
-          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Top Schools</h2>
-          {stats?.trends?.schools?.length ? (
-            <div className="flex flex-col gap-2">
-              {stats.trends.schools.map((item) => (
-                <div key={item.label} className="flex justify-between text-sm">
-                  <span className="truncate text-slate-600">{item.label}</span>
-                  <strong className="text-brand-primary">{item.count}</strong>
-                </div>
-              ))}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="portal-surface overflow-hidden p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-brand-primary">Top Barangays</h2>
+            {stats?.trends?.barangays?.length > 0 && (
+              <div className="flex gap-1">
+                <button onClick={() => downloadChartAsPng(barangayChartRef, 'top-barangays.png')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PNG</button>
+                <button onClick={() => downloadChartAsPdf(barangayChartRef, 'Top Barangays')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PDF</button>
+              </div>
+            )}
+          </div>
+          {loading ? (
+            <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
+          ) : stats?.trends?.barangays?.length ? (
+            <div ref={barangayChartRef}>
+              <ResponsiveContainer width="100%" height={Math.max(stats.trends.barangays.length * 36, 80)}>
+                <BarChart data={stats.trends.barangays} layout="vertical" margin={{ left: 0, right: 12, top: 2, bottom: 2 }}>
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={115} />
+                  <Tooltip formatter={(val) => [val, 'Applicants']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
+                  <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : <p className="text-sm text-slate-500">No barangay data yet.</p>}
+        </div>
+
+        <div className="portal-surface overflow-hidden p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-brand-primary">Top Schools</h2>
+            {stats?.trends?.schools?.length > 0 && (
+              <div className="flex gap-1">
+                <button onClick={() => downloadChartAsPng(schoolsChartRef, 'top-schools.png')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PNG</button>
+                <button onClick={() => downloadChartAsPdf(schoolsChartRef, 'Top Schools')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PDF</button>
+              </div>
+            )}
+          </div>
+          {loading ? (
+            <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
+          ) : stats?.trends?.schools?.length ? (
+            <div ref={schoolsChartRef}>
+              <ResponsiveContainer width="100%" height={Math.max(stats.trends.schools.length * 36, 80)}>
+                <BarChart data={stats.trends.schools} layout="vertical" margin={{ left: 0, right: 12, top: 2, bottom: 2 }}>
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={115} />
+                  <Tooltip formatter={(val) => [val, 'Applicants']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : <p className="text-sm text-slate-500">No school trend data.</p>}
         </div>
-        <div className="portal-surface p-6">
-          <h2 className="mb-3 text-lg font-semibold text-brand-primary">Top Courses</h2>
-          {stats?.trends?.courses?.length ? (
-            <div className="flex flex-col gap-2">
-              {stats.trends.courses.map((item) => (
-                <div key={item.label} className="flex justify-between text-sm">
-                  <span className="truncate text-slate-600">{item.label}</span>
-                  <strong className="text-brand-primary">{item.count}</strong>
-                </div>
-              ))}
+
+        <div className="portal-surface overflow-hidden p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-brand-primary">Top Courses</h2>
+            {stats?.trends?.courses?.length > 0 && (
+              <div className="flex gap-1">
+                <button onClick={() => downloadChartAsPng(coursesChartRef, 'top-courses.png')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PNG</button>
+                <button onClick={() => downloadChartAsPdf(coursesChartRef, 'Top Courses')} className="portal-button-secondary shrink-0 px-2 py-1 text-xs">⬇ PDF</button>
+              </div>
+            )}
+          </div>
+          {loading ? (
+            <div className="h-48 animate-pulse rounded-xl bg-gray-100" />
+          ) : stats?.trends?.courses?.length ? (
+            <div ref={coursesChartRef}>
+              <ResponsiveContainer width="100%" height={Math.max(stats.trends.courses.length * 36, 80)}>
+                <BarChart data={stats.trends.courses} layout="vertical" margin={{ left: 0, right: 12, top: 2, bottom: 2 }}>
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={115} />
+                  <Tooltip formatter={(val) => [val, 'Applicants']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 8 }} />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : <p className="text-sm text-slate-500">No course trend data.</p>}
         </div>

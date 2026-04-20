@@ -5,6 +5,7 @@ export const adminService = {
   listApplications: (params) => api.get('/admin/applications', { params }),
   getApplication: (id) => api.get(`/admin/applications/${id}`),
   updateStatus: (id, data) => api.patch(`/admin/applications/${id}/status`, data),
+  updateApplicationFields: (id, data) => api.patch(`/admin/applications/${id}/fields`, data),
   batchUpdateStatus: (data) => api.patch('/admin/applications/batch-status', data),
   previewBulkEmailRecipients: (data) => api.post('/admin/applications/bulk-email/preview', data),
   sendBulkEmailTest: (data) => api.post('/admin/applications/bulk-email/test', data),

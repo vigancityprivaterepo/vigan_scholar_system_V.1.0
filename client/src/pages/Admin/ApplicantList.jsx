@@ -285,7 +285,7 @@ export default function ApplicantList() {
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               className="portal-input pl-10"
-              placeholder="Search by name, email, school..."
+              placeholder="Search by name, email, or Ref. ID (e.g. #A1B2C3D4)..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
@@ -293,12 +293,12 @@ export default function ApplicantList() {
           <button onClick={fetchData} className="portal-button-primary whitespace-nowrap">Search</button>
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-xs text-slate-500 whitespace-nowrap">Filter:</span>
           <select
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            className="portal-input w-auto"
+            className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
           >
             <option value="">All Statuses</option>
             {ALL_STATUSES.map(s => (
@@ -308,7 +308,7 @@ export default function ApplicantList() {
           <select
             value={academicYear}
             onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
-            className="portal-input w-auto"
+            className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
           >
             <option value="">All Academic Years</option>
             {academicYearOptions.map((year) => (
@@ -460,6 +460,7 @@ export default function ApplicantList() {
                       <div>
                         <p className="text-sm font-medium text-brand-primary">{app.applicant?.fullName}</p>
                         <p className="text-xs text-slate-500">{app.applicant?.email}</p>
+                        <p className="mt-0.5 font-mono text-[10px] font-semibold tracking-wider text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-700">
@@ -506,7 +507,10 @@ export default function ApplicantList() {
                   aria-label={`Select ${app.applicant?.fullName || app.id}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                    <span className="shrink-0 font-mono text-[10px] font-semibold tracking-wider text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</span>
+                  </div>
                   <p className="truncate text-xs text-slate-500">{app.applicant?.email}</p>
                   <p className="mt-1 truncate text-xs text-slate-500">{app.school || '-'}{app.course ? ` • ${app.course}` : ''}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">

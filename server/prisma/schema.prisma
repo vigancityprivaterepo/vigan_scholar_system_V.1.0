@@ -74,6 +74,8 @@ model Application {
   yearGraduated      Int?     @map("year_graduated")
   generalAverage     Decimal? @db.Decimal(5, 2) @map("general_average")
   collegePreferences Json?    @map("college_preferences")
+  soloParent         Boolean? @map("solo_parent")
+  fourPs             Boolean? @map("four_ps")
   priorScholarship   Boolean? @map("prior_scholarship")
   scholarshipType    String?  @map("scholarship_type")
   gwa                Decimal?  @db.Decimal(4, 2)

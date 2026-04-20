@@ -91,6 +91,7 @@ const INITIAL_FORM = {
   // Academic
   school: '', schoolAddress: '', yearGraduated: '', generalAverage: '',
   collegePreferences: BLANK_PREFS,
+  soloParent: '', fourPs: '',
   priorScholarship: '', scholarshipType: '',
 }
 
@@ -167,6 +168,8 @@ export default function ApplicationForm() {
             yearGraduated: application.yearGraduated?.toString() || '',
             generalAverage: application.generalAverage?.toString() || '',
             collegePreferences: application.collegePreferences || BLANK_PREFS,
+            soloParent: application.soloParent === true ? 'true' : application.soloParent === false ? 'false' : '',
+            fourPs: application.fourPs === true ? 'true' : application.fourPs === false ? 'false' : '',
             priorScholarship: application.priorScholarship === true ? 'true' : application.priorScholarship === false ? 'false' : '',
             scholarshipType: application.scholarshipType || '',
           }))
@@ -344,6 +347,8 @@ export default function ApplicationForm() {
       if (!form.generalAverage || isNaN(avg) || avg < 75 || avg > 100) e.generalAverage = 'General average must be between 75 and 100'
       const hasOnePref = form.collegePreferences.some(p => p.name.trim())
       if (!hasOnePref) e.collegePreferences = 'Please list at least one college preference'
+      if (!form.soloParent) e.soloParent = 'Required'
+      if (!form.fourPs) e.fourPs = 'Required'
       if (!form.priorScholarship) e.priorScholarship = 'Required'
       if (form.priorScholarship === 'true' && !form.scholarshipType) e.scholarshipType = 'Please specify the scholarship type'
     }
@@ -399,6 +404,8 @@ export default function ApplicationForm() {
       fd.append('yearGraduated', form.yearGraduated)
       fd.append('generalAverage', normalizedGeneralAverage?.toFixed(2) || form.generalAverage)
       fd.append('collegePreferences', JSON.stringify(form.collegePreferences.filter(p => p.name.trim())))
+      fd.append('soloParent', form.soloParent)
+      fd.append('fourPs', form.fourPs)
       fd.append('priorScholarship', form.priorScholarship)
       if (form.priorScholarship === 'true') fd.append('scholarshipType', form.scholarshipType)
       // Files — in slot order (0→6)
@@ -703,7 +710,37 @@ export default function ApplicationForm() {
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 List of Colleges/Universities in Order of Preference <span className="text-red-500">*</span>
               </label>
-              <div className="overflow-x-auto rounded-md border border-slate-200">
+              {/* Mobile: stacked cards */}
+              <div className="space-y-3 sm:hidden">
+                {form.collegePreferences.map((pref, i) => (
+                  <div key={i} className="rounded-md border border-slate-200 p-3 space-y-2 bg-slate-50">
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Choice #{i + 1}</p>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Name of School</label>
+                      <input className="portal-input text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Location</label>
+                      <input className="portal-input text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Course of Study</label>
+                      <input className="portal-input text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">Accepted (Y/N)</label>
+                      <select className="portal-input text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
+                        <option value=""></option>
+                        <option value="Y">Y</option>
+                        <option value="N">N</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block overflow-x-auto rounded-md border border-slate-200">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50">
                     <tr>
@@ -740,6 +777,38 @@ export default function ApplicationForm() {
                 </table>
               </div>
               {err('collegePreferences')}
+            </div>
+
+            {/* Solo Parent */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Does your Mother/Father a Solo Parent? <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-6">
+                {[['true', 'Yes'], ['false', 'No']].map(([val, label]) => (
+                  <label key={val} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input type="radio" name="soloParent" value={val} checked={form.soloParent === val} onChange={() => set('soloParent', val)} className="accent-brand-primary" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              {err('soloParent')}
+            </div>
+
+            {/* 4Ps Membership */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Are you a member of the Pantawid Pamilyang Pilipino Program (4Ps)? <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-6">
+                {[['true', 'Yes'], ['false', 'No']].map(([val, label]) => (
+                  <label key={val} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input type="radio" name="fourPs" value={val} checked={form.fourPs === val} onChange={() => set('fourPs', val)} className="accent-brand-primary" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              {err('fourPs')}
             </div>
 
             {/* Prior Scholarship */}
@@ -940,6 +1009,8 @@ export default function ApplicationForm() {
                   {form.schoolAddress && <div><span className="text-slate-500">School Address:</span> <span className="font-medium text-brand-primary">{form.schoolAddress}</span></div>}
                   <div><span className="text-slate-500">Year Graduated:</span> <span className="font-medium text-brand-primary">{form.yearGraduated}</span></div>
                   <div><span className="text-slate-500">General Average:</span> <span className="font-medium text-brand-primary">{form.generalAverage}%</span></div>
+                  <div><span className="text-slate-500">Solo Parent:</span> <span className="font-medium text-brand-primary">{form.soloParent === 'true' ? 'Yes' : 'No'}</span></div>
+                  <div><span className="text-slate-500">4Ps Member:</span> <span className="font-medium text-brand-primary">{form.fourPs === 'true' ? 'Yes' : 'No'}</span></div>
                   <div><span className="text-slate-500">Prior Scholarship:</span> <span className="font-medium text-brand-primary">{form.priorScholarship === 'true' ? `Yes (${form.scholarshipType})` : 'No'}</span></div>
                 </div>
                 <p className="mb-1 mt-3 text-xs font-medium text-slate-500">College Preferences:</p>

@@ -72,7 +72,7 @@ const submitApplication = async (req, res, next) => {
       numDependents, familyIncome, incomeSource,
       // Academic
       schoolAddress, yearGraduated, generalAverage, collegePreferences,
-      priorScholarship, scholarshipType,
+      soloParent, fourPs, priorScholarship, scholarshipType,
       gwa, achievements,
     } = req.body;
 
@@ -113,6 +113,8 @@ const submitApplication = async (req, res, next) => {
         yearGraduated: parseInt(yearGraduated),
         generalAverage: normalizedGeneralAverage,
         collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : null,
+        soloParent: soloParent !== undefined ? (soloParent === 'true' || soloParent === true) : null,
+        fourPs: fourPs !== undefined ? (fourPs === 'true' || fourPs === true) : null,
         priorScholarship: priorScholarship === 'true' || priorScholarship === true,
         scholarshipType: scholarshipType || null,
         gwa: normalizedGwa,
@@ -208,7 +210,7 @@ const resubmit = async (req, res, next) => {
       fatherName, fatherOccupation, motherName, motherOccupation,
       numDependents, familyIncome, incomeSource,
       schoolAddress, yearGraduated, generalAverage, collegePreferences,
-      priorScholarship, scholarshipType,
+      soloParent, fourPs, priorScholarship, scholarshipType,
       gwa, achievements,
     } = req.body;
 
@@ -246,6 +248,8 @@ const resubmit = async (req, res, next) => {
         yearGraduated: yearGraduated ? parseInt(yearGraduated) : undefined,
         generalAverage: normalizedGeneralAverage !== null ? normalizedGeneralAverage : undefined,
         collegePreferences: collegePreferences ? JSON.parse(collegePreferences) : undefined,
+        soloParent: soloParent !== undefined ? (soloParent === 'true' || soloParent === true) : undefined,
+        fourPs: fourPs !== undefined ? (fourPs === 'true' || fourPs === true) : undefined,
         priorScholarship: priorScholarship !== undefined ? (priorScholarship === 'true' || priorScholarship === true) : undefined,
         scholarshipType: scholarshipType || undefined,
         gwa: normalizedGwa !== null ? normalizedGwa : undefined,
