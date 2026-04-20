@@ -223,6 +223,7 @@ enum CommunicationDirection {
 
 enum EmailJobStatus {
   PENDING
+  PROCESSING
   RETRY
   FAILED
   COMPLETED
