@@ -383,7 +383,7 @@ const processSteps = [
 const benefits = [
   {
     title: 'Semestral Allowance',
-    desc: 'Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00 per Semester.',
+    desc: 'Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester.',
     Icon: GraduationCapIcon,
   },
   {
@@ -404,7 +404,7 @@ const faqs = [
     q: 'What documents are required?',
     items: [
       'Personal Letter of Application addressed to City Mayor.',
-      'Certificated of Residency from the Punong Barangay (certifying that the applicant is a bonafide resident of the barangay for at least one (1) year and has no derogatory records).',
+      'Certificate of Residency from the Punong Barangay (certifying that the applicant is a bonafide resident of the barangay for at least one (1) year and has no derogatory records).',
       'Form 138 (General Average of at least 83% and no grade lower than 80% for the 1st and 2nd Semester).',
       'Certification from High School Principal that the applicant is eligible for college education and of Good Moral Character.',
       'Result of College Admission Test(CAT)',
@@ -414,7 +414,7 @@ const faqs = [
   },
   { q: 'When is the application deadline?', a: 'Applications are accepted during the announced scholarship period for each semester. Please refer to the latest announcements for the current cycle.' },
   { q: 'How long does the process take?', a: 'The full review process typically (takes 3 to 5 Days) depending on application volume and schedule of assessments.' },
-  { q: 'Is there a monetary benefit?', a: 'Yes. The scholarship includes tuition support and a monthly stipend, subject to the rules and conditions of the program.' },
+  { q: 'Is there a monetary benefit?', a: 'Yes. Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester, scholars shall received three thousand pesos (₱ 3,000.00) as clothing and book allowance every school year.' },
   { q: 'Can I reapply if I was not accepted?', a: 'Yes. Applicants who were not selected may apply again in the next application period if they still meet the program requirements.' },
 ]
 
