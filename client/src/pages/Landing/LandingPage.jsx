@@ -402,13 +402,13 @@ const processSteps = [
 
 const benefits = [
   {
-    title: 'Full Tuition Coverage',
-    desc: 'Qualified scholars receive tuition support so they can focus on academic performance and completion.',
+    title: 'Semestral Allowance',
+    desc: 'Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00 per Semester.',
     Icon: GraduationCapIcon,
   },
   {
-    title: 'Monthly Stipend',
-    desc: 'The program provides financial assistance for transportation, materials, and daily study needs.',
+    title: 'Book & Clothing',
+    desc: 'Scholars shall received three thousand pesos (₱ 3,000.00) as clothing and book allowance every school year.',
     Icon: BanknoteIcon,
   },
   {
@@ -419,7 +419,7 @@ const benefits = [
 ]
 
 const faqs = [
-  { q: 'Who is eligible to apply?', a: 'Any Filipino student currently enrolled or planning to enroll in a 4-year college course with a GWA of 2.0 or higher, or 85% and above, may apply.' },
+  { q: 'Who is eligible to apply?', a: 'Bonafide residents of Vigan City, who graduated from a duly recognized public high school, may apply for the scholarship grants from the board under following conditions. Any Bigueno student currently enrolled or planning to enroll in a 4-year college course with a General Average of at least 83% and no grade lower than 80% for the 1st and 2nd Semester.' },
   {
     q: 'What documents are required?',
     items: [
@@ -433,7 +433,7 @@ const faqs = [
     ],
   },
   { q: 'When is the application deadline?', a: 'Applications are accepted during the announced scholarship period for each semester. Please refer to the latest announcements for the current cycle.' },
-  { q: 'How long does the process take?', a: 'The full review process typically takes four to eight weeks depending on application volume and schedule of assessments.' },
+  { q: 'How long does the process take?', a: 'The full review process typically (takes 3 to 5 Days) depending on application volume and schedule of assessments.' },
   { q: 'Is there a monetary benefit?', a: 'Yes. The scholarship includes tuition support and a monthly stipend, subject to the rules and conditions of the program.' },
   { q: 'Can I reapply if I was not accepted?', a: 'Yes. Applicants who were not selected may apply again in the next application period if they still meet the program requirements.' },
 ]
@@ -482,9 +482,9 @@ export default function LandingPage() {
   const [scholarPage, setScholarPage] = useState(0)
   const statsRef = useRef(null)
 
-  const awarded = useCounter(2.4, 2000, statsVisible)
+  const awarded = useCounter(7, 2000, statsVisible)
   const scholars = useCounter(882, 2000, statsVisible)
-  const schools = useCounter(12, 2000, statsVisible)
+  const schools = useCounter(5, 2000, statsVisible)
   const successRate = useCounter(94, 2000, statsVisible)
 
   useEffect(() => {
