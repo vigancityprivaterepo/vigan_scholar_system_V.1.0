@@ -11,6 +11,10 @@ const initialForm = {
   gwaThreshold: '83',
   applicationOpen: true,
   applicationDeadline: '',
+  statsAwarded: '₱7.0M+',
+  statsScholars: '882+',
+  statsSchools: '5',
+  statsSuccessRate: '94%',
 }
 
 const toDateTimeInput = (value) => {
@@ -47,6 +51,10 @@ export default function AdminSettings() {
           gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
           applicationOpen: data.settings?.applicationOpen !== false,
           applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
+          statsAwarded: data.settings?.statsAwarded || '₱7.0M+',
+          statsScholars: data.settings?.statsScholars || '882+',
+          statsSchools: data.settings?.statsSchools || '5',
+          statsSuccessRate: data.settings?.statsSuccessRate || '94%',
         })
       } catch (err) {
         toast.error(err.response?.data?.message || 'Unable to load settings.')
@@ -113,6 +121,10 @@ export default function AdminSettings() {
         gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
         applicationOpen: data.settings?.applicationOpen !== false,
         applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
+        statsAwarded: data.settings?.statsAwarded || '₱7.0M+',
+        statsScholars: data.settings?.statsScholars || '882+',
+        statsSchools: data.settings?.statsSchools || '5',
+        statsSuccessRate: data.settings?.statsSuccessRate || '94%',
       })
       toast.success(data.message || 'Settings saved.')
     } catch (err) {
@@ -304,6 +316,36 @@ export default function AdminSettings() {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="portal-surface p-6">
+          <div className="mb-5">
+            <p className="portal-kicker">Landing Page</p>
+            <h2 className="mt-1 text-lg font-semibold text-brand-primary">Statistics Banner</h2>
+            <p className="mt-2 text-sm text-slate-500">Update the highlight numbers shown in the stats band on the landing page.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Total Awarded</label>
+              <input type="text" className="portal-input" placeholder="₱7.0M+" value={form.statsAwarded} onChange={e => setField('statsAwarded', e.target.value)} />
+              <p className="mt-1 text-xs text-slate-400">e.g. ₱7.0M+</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Active Scholars</label>
+              <input type="text" className="portal-input" placeholder="882+" value={form.statsScholars} onChange={e => setField('statsScholars', e.target.value)} />
+              <p className="mt-1 text-xs text-slate-400">e.g. 882+</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Partner Schools</label>
+              <input type="text" className="portal-input" placeholder="5" value={form.statsSchools} onChange={e => setField('statsSchools', e.target.value)} />
+              <p className="mt-1 text-xs text-slate-400">e.g. 5</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Success Rate</label>
+              <input type="text" className="portal-input" placeholder="94%" value={form.statsSuccessRate} onChange={e => setField('statsSuccessRate', e.target.value)} />
+              <p className="mt-1 text-xs text-slate-400">e.g. 94%</p>
+            </div>
+          </div>
         </section>
 
         <section className="portal-surface p-6">

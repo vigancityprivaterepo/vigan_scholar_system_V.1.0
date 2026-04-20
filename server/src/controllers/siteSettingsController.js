@@ -34,6 +34,10 @@ const serializeSettings = (settings) => ({
   gwaThreshold: settings?.gwa_threshold != null ? parseFloat(settings.gwa_threshold) : 83,
   applicationOpen: settings?.application_open != null ? Boolean(settings.application_open) : true,
   applicationDeadline: settings?.application_deadline ? new Date(settings.application_deadline).toISOString() : null,
+  statsAwarded: settings?.stats_awarded || '₱7.0M+',
+  statsScholars: settings?.stats_scholars || '882+',
+  statsSchools: settings?.stats_schools || '5',
+  statsSuccessRate: settings?.stats_success_rate || '94%',
 });
 
 const ensureSiteSettingsTable = async () => {
@@ -56,7 +60,11 @@ const ensureSiteSettingsTable = async () => {
     ALTER TABLE "site_settings"
       ADD COLUMN IF NOT EXISTS "gwa_threshold" DECIMAL(4,2) NOT NULL DEFAULT 2.0,
       ADD COLUMN IF NOT EXISTS "application_open" BOOLEAN NOT NULL DEFAULT true,
-      ADD COLUMN IF NOT EXISTS "application_deadline" TIMESTAMP(3)
+      ADD COLUMN IF NOT EXISTS "application_deadline" TIMESTAMP(3),
+      ADD COLUMN IF NOT EXISTS "stats_awarded" TEXT DEFAULT '₱7.0M+',
+      ADD COLUMN IF NOT EXISTS "stats_scholars" TEXT DEFAULT '882+',
+      ADD COLUMN IF NOT EXISTS "stats_schools" TEXT DEFAULT '5',
+      ADD COLUMN IF NOT EXISTS "stats_success_rate" TEXT DEFAULT '94%'
   `);
 };
 
@@ -69,7 +77,11 @@ const getSettingsRow = async () => {
       "facebook_page_description",
       "gwa_threshold",
       "application_open",
-      "application_deadline"
+      "application_deadline",
+      "stats_awarded",
+      "stats_scholars",
+      "stats_schools",
+      "stats_success_rate"
     FROM "site_settings"
     WHERE "id" = ${SETTINGS_ID}
     LIMIT 1
@@ -134,6 +146,11 @@ const updateAdminSiteSettings = async (req, res, next) => {
       }
     }
 
+    const statsAwarded = normalizeOptionalText(req.body.statsAwarded) || '₱7.0M+';
+    const statsScholars = normalizeOptionalText(req.body.statsScholars) || '882+';
+    const statsSchools = normalizeOptionalText(req.body.statsSchools) || '5';
+    const statsSuccessRate = normalizeOptionalText(req.body.statsSuccessRate) || '94%';
+
     await ensureSiteSettingsTable();
 
     const rows = await prisma.$queryRaw`
@@ -145,6 +162,10 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "gwa_threshold",
         "application_open",
         "application_deadline",
+        "stats_awarded",
+        "stats_scholars",
+        "stats_schools",
+        "stats_success_rate",
         "updated_at"
       )
       VALUES (
@@ -155,6 +176,10 @@ const updateAdminSiteSettings = async (req, res, next) => {
         ${gwaThreshold},
         ${applicationOpen},
         ${applicationDeadline},
+        ${statsAwarded},
+        ${statsScholars},
+        ${statsSchools},
+        ${statsSuccessRate},
         CURRENT_TIMESTAMP
       )
       ON CONFLICT ("id") DO UPDATE SET
@@ -164,6 +189,10 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "gwa_threshold" = EXCLUDED."gwa_threshold",
         "application_open" = EXCLUDED."application_open",
         "application_deadline" = EXCLUDED."application_deadline",
+        "stats_awarded" = EXCLUDED."stats_awarded",
+        "stats_scholars" = EXCLUDED."stats_scholars",
+        "stats_schools" = EXCLUDED."stats_schools",
+        "stats_success_rate" = EXCLUDED."stats_success_rate",
         "updated_at" = CURRENT_TIMESTAMP
       RETURNING
         "facebook_page_name",
@@ -171,7 +200,11 @@ const updateAdminSiteSettings = async (req, res, next) => {
         "facebook_page_description",
         "gwa_threshold",
         "application_open",
-        "application_deadline"
+        "application_deadline",
+        "stats_awarded",
+        "stats_scholars",
+        "stats_schools",
+        "stats_success_rate"
     `;
 
     res.json({

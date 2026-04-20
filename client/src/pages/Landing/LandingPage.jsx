@@ -1,27 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 
-function useCounter(end, duration = 2000, start = false) {
-  const [count, setCount] = useState(0)
-
-  useEffect(() => {
-    if (!start) return
-
-    let startTime = null
-
-    const step = (timestamp) => {
-      if (!startTime) startTime = timestamp
-      const progress = Math.min((timestamp - startTime) / duration, 1)
-      setCount(progress * end)
-      if (progress < 1) requestAnimationFrame(step)
-    }
-
-    requestAnimationFrame(step)
-  }, [end, duration, start])
-
-  return count
-}
 
 function IconBase({ children, className = 'h-6 w-6' }) {
   return (
@@ -471,34 +451,20 @@ function escapeHtml(value = '') {
 
 export default function LandingPage() {
   const location = useLocation()
-  const [statsVisible, setStatsVisible] = useState(false)
   const [activeFaq, setActiveFaq] = useState(null)
   const [siteSettings, setSiteSettings] = useState({
     facebookPageName: '',
     facebookPageUrl: '',
     facebookPageDescription: '',
+    statsAwarded: '₱7.0M+',
+    statsScholars: '882+',
+    statsSchools: '5',
+    statsSuccessRate: '94%',
   })
   const [postedScholars, setPostedScholars] = useState([])
   const [scholarPage, setScholarPage] = useState(0)
-  const statsRef = useRef(null)
 
-  const awarded = useCounter(7, 2000, statsVisible)
-  const scholars = useCounter(882, 2000, statsVisible)
-  const schools = useCounter(5, 2000, statsVisible)
-  const successRate = useCounter(94, 2000, statsVisible)
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setStatsVisible(true)
-      },
-      { threshold: 0.35 }
-    )
-
-    if (statsRef.current) observer.observe(statsRef.current)
-
-    return () => observer.disconnect()
-  }, [])
 
   useEffect(() => {
     fetch('/api/settings')
@@ -809,14 +775,14 @@ export default function LandingPage() {
         </section>
 
         {/* STATS BAND — deep emerald green */}
-        <section ref={statsRef} className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857]">
+        <section className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857]">
           <div className="mx-auto max-w-7xl">
             <div className="grid grid-cols-2 divide-x divide-y divide-white/10 lg:grid-cols-4">
               {[
-                { value: `₱${awarded.toFixed(1)}M+`, label: 'Total Awarded', sub: 'Disbursed to scholars' },
-                { value: `${Math.round(scholars)}+`, label: 'Active Scholars', sub: 'Currently enrolled' },
-                { value: `${Math.round(schools)}`, label: 'Partner Schools', sub: 'Across Vigan City Ilocos Sur' },
-                { value: `${Math.round(successRate)}%`, label: 'Success Rate', sub: 'Academic completion' },
+                { value: siteSettings.statsAwarded, label: 'Total Awarded', sub: 'Disbursed to scholars' },
+                { value: siteSettings.statsScholars, label: 'Active Scholars', sub: 'Currently enrolled' },
+                { value: siteSettings.statsSchools, label: 'Partner Schools', sub: 'Across Vigan City Ilocos Sur' },
+                { value: siteSettings.statsSuccessRate, label: 'Success Rate', sub: 'Academic completion' },
               ].map(({ value, label, sub }) => (
                 <div key={label} className="px-6 py-10 md:px-10 md:py-12">
                   <p className="font-display text-4xl font-bold text-[#6ee7b7] md:text-5xl">{value}</p>
