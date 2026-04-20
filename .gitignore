@@ -6,3 +6,8 @@ dist/
 uploads/
 .DS_Store
 Thumbs.db
+# SSL certificates — never commit private keys
+certs/*.pem
+certs/*.crt
+certs/*.key
+certs/*.p7b
