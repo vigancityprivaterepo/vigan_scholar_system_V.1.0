@@ -21,12 +21,12 @@ import logo from '../../assets/logo.png'
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard', Icon: ChartIcon },
-  { to: '/admin/applicants', label: 'Applicants', Icon: UsersIcon },
-  { to: '/admin/eligibility', label: 'Eligibility', Icon: ShieldCheckIcon },
-  { to: '/admin/exam', label: 'Exam / Interview', Icon: ClipboardIcon },
-  { to: '/admin/cor', label: 'COR Review', Icon: DocumentIcon },
-  { to: '/admin/renewals', label: 'Renewals', Icon: DocumentIcon },
-  { to: '/admin/appeals', label: 'Appeals', Icon: FileTextIcon },
+  { to: '/admin/applicants', label: 'Applicants', Icon: UsersIcon, badgeKey: 'applicants' },
+  { to: '/admin/eligibility', label: 'Eligibility', Icon: ShieldCheckIcon, badgeKey: 'eligibility' },
+  { to: '/admin/exam', label: 'Exam / Interview', Icon: ClipboardIcon, badgeKey: 'exam' },
+  { to: '/admin/cor', label: 'COR Review', Icon: DocumentIcon, badgeKey: 'cor' },
+  { to: '/admin/renewals', label: 'Renewals', Icon: DocumentIcon, badgeKey: 'renewals' },
+  { to: '/admin/appeals', label: 'Appeals', Icon: FileTextIcon, badgeKey: 'appeals' },
   { to: '/admin/bulk-email', label: 'Bulk Email', Icon: MailIcon },
   { to: '/admin/scholar-posts', label: 'Scholar Posts', Icon: FileTextIcon },
   { to: '/admin/carousel', label: 'Carousel', Icon: PhotoIcon },
@@ -43,6 +43,7 @@ export default function AdminLayout() {
   const notifRef = useRef(null)
 
   const unreadCount = notifications.filter((n) => !n.isRead).length
+  const [navBadges, setNavBadges] = useState({})
 
   const fetchNotifications = () => {
     adminService.getNotifications()
@@ -50,10 +51,30 @@ export default function AdminLayout() {
       .catch(() => {})
   }
 
+  const fetchNavBadges = () => {
+    adminService.getStats()
+      .then((r) => {
+        const { stats } = r.data
+        setNavBadges({
+          applicants: stats.byStatus?.PENDING_REVIEW || 0,
+          eligibility: stats.byStatus?.ELIGIBILITY_SCREENING || 0,
+          exam: stats.byStatus?.EXAM_INTERVIEW || 0,
+          cor: stats.byStatus?.COR_SUBMITTED || 0,
+          renewals: stats.pendingRenewals || 0,
+          appeals: stats.appeals?.PENDING || 0,
+        })
+      })
+      .catch(() => {})
+  }
+
   useEffect(() => {
     fetchNotifications()
+    fetchNavBadges()
     const interval = setInterval(() => {
-      if (!document.hidden) fetchNotifications()
+      if (!document.hidden) {
+        fetchNotifications()
+        fetchNavBadges()
+      }
     }, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -177,20 +198,28 @@ export default function AdminLayout() {
         <div className="border-t border-slate-300 bg-white">
           <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 md:px-8 lg:flex-row lg:items-center lg:justify-between">
             <nav className="hidden flex-wrap items-center gap-2 md:flex">
-              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive ? 'bg-brand-primary text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-brand-primary'
-                    }`
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
+              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon, badgeKey }) => {
+                const badge = badgeKey ? (navBadges[badgeKey] || 0) : 0
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      `inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive ? 'bg-brand-primary text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-brand-primary'
+                      }`
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                    {badge > 0 && (
+                      <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </NavLink>
+                )
+              })}
             </nav>
             <p className="hidden text-sm text-slate-500 lg:block">Review applications, schedules, and scholar records.</p>
           </div>
@@ -199,21 +228,29 @@ export default function AdminLayout() {
         {menuOpen && (
           <div className="border-t border-slate-300 bg-white md:hidden">
             <div className="mx-auto flex max-w-7xl flex-col px-4 py-2">
-              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-2 py-3 text-sm ${
-                      isActive ? 'font-semibold text-brand-primary' : 'text-slate-700'
-                    }`
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
+              {navItems.filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN').map(({ to, label, Icon, badgeKey }) => {
+                const badge = badgeKey ? (navBadges[badgeKey] || 0) : 0
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-2 py-3 text-sm ${
+                        isActive ? 'font-semibold text-brand-primary' : 'text-slate-700'
+                      }`
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                    {badge > 0 && (
+                      <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                        {badge > 99 ? '99+' : badge}
+                      </span>
+                    )}
+                  </NavLink>
+                )
+              })}
               <button
                 onClick={handleLogout}
                 className="mt-2 flex items-center gap-3 border-t border-slate-200 px-2 py-3 text-sm font-medium text-slate-700"

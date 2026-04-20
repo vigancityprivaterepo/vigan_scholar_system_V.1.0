@@ -1196,7 +1196,7 @@ const getDashboardStats = async (req, res, next) => {
       'Salindeg','San Jose','San Julian Norte','San Julian Sur','San Pedro','Tamag',
     ];
 
-    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats, barangayAddresses] = await Promise.all([
+    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats, barangayAddresses, pendingRenewals] = await Promise.all([
       prisma.application.count({ where }),
       prisma.application.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.activityLog.findMany({
@@ -1240,6 +1240,7 @@ const getDashboardStats = async (req, res, next) => {
         where: { ...where, address: { not: null } },
         select: { address: true },
       }),
+      prisma.scholarshipRenewal.count({ where: { status: 'PENDING_REVIEW' } }),
     ]);
 
     const barangayCounts = {};
@@ -1276,6 +1277,7 @@ const getDashboardStats = async (req, res, next) => {
       },
       rejectionReasons: rejectionRaw.map((row) => ({ reason: row.rejectionReason || 'Unspecified', count: row._count._all })),
       appeals: Object.fromEntries(appealStats.map((item) => [item.status, item._count._all])),
+      pendingRenewals,
     };
 
     res.json({ success: true, academicYear, stats, recentActivity: recentLogs });
