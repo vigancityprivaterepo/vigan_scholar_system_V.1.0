@@ -55,7 +55,6 @@ const allowedOrigins = parseAllowedOrigins();
 
 // Rate limiters
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many login attempts. Please try again later.' } });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many registration attempts. Please try again later.' } });
 const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many password reset requests. Please try again in an hour.' } });
 
 // Security & parsing middleware
@@ -77,7 +76,7 @@ app.use('/public-uploads', express.static(path.join(__dirname, '..', 'public_upl
 
 // Routes
 app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth/register', registerLimiter);
+
 app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/auth/reset-password', forgotPasswordLimiter);
 app.use('/api/auth', authRoutes);
