@@ -15,7 +15,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const applicationRoutes = require('./routes/applications');
@@ -53,9 +52,6 @@ const parseAllowedOrigins = () => {
 };
 const allowedOrigins = parseAllowedOrigins();
 
-// Rate limiters
-const forgotPasswordLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many password reset requests. Please try again in an hour.' } });
-
 // Security & parsing middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
@@ -75,8 +71,6 @@ app.use('/public-uploads', express.static(path.join(__dirname, '..', 'public_upl
 
 // Routes
 
-app.use('/api/auth/forgot-password', forgotPasswordLimiter);
-app.use('/api/auth/reset-password', forgotPasswordLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
