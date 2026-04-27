@@ -16,7 +16,6 @@ const REQUIREMENT_CHECKLIST_ITEMS = [
   'Certification from High School Principal (Good Moral Character)',
   'Result of College Admission Test (CAT)',
   'Picture (Passport Size with Printed Name)',
-  'Affidavit of Income and Property (Annual income < P84,204 / Property < P250,000)',
 ]
 
 export default function ApplicationReview() {

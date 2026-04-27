@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import api from '../../services/api'
-import { UploadIcon, DocumentIcon, XIcon, ArrowRightIcon } from '../../components/ui/PortalIcons'
+import { UploadIcon, DocumentIcon, XIcon, ArrowRightIcon, ChevronDownIcon } from '../../components/ui/PortalIcons'
 
 const STEPS = ['Personal Info', 'Family Info', 'Academic', 'Documents', 'Review']
 
@@ -15,10 +15,24 @@ const REQUIRED_DOCS = [
   'Certification from High School Principal that the applicant is eligible for college education and of Good Moral Character',
   'Result of College Admission Test (CAT)',
   'Picture (Passport Size with Printed Name)',
-  'Affidavit executed by one of the applicant\'s parents or legal guardian that their combined annual income is less than Eighty Four Thousand Two Hundred Four Pesos (P 84,204.00) and they do not have any real estate property with fair value of not more than Two Hundred Fifty Thousand Pesos (P 250,000.00)',
 ]
 
 const INCOME_SOURCES = ['Salary', 'Pension', 'Business', 'Government Grants', 'Others']
+
+const SCHOOLS = [
+  'Ilocos Sur National High School',
+  'Vigan National High School East',
+  'Vigan National High School West',
+  'STI College Vigan',
+  'University of Northern Philippines - Laboratory School',
+  'Divine World College of Vigan',
+  'Saint Paul College of Vigan',
+  'Lyceum de Ylocos',
+  'Data Center Vigan',
+  'Immaculate Conception Minor Seminary Vigan',
+  'Alternative Learning System',
+  'Others',
+]
 const GENDER_OPTIONS = ['Cis Gender/Straight', 'Lesbian', 'Gay', 'Bisexual', 'Transgender', 'Prefer not to Say']
 
 const VIGAN_BARANGAYS = [
@@ -89,7 +103,7 @@ const INITIAL_FORM = {
   numDependents: '', familyIncome: '',
   incomeSource: '', incomeSourceOther: '',
   // Academic
-  school: '', schoolAddress: '', yearGraduated: '', generalAverage: '',
+  school: '', schoolOther: '', schoolAddress: '', yearGraduated: '', generalAverage: '',
   collegePreferences: BLANK_PREFS,
   soloParent: '', fourPs: '',
   priorScholarship: '', scholarshipType: '',
@@ -107,6 +121,18 @@ export default function ApplicationForm() {
   const [settings, setSettings] = useState({ applicationOpen: true, applicationDeadline: null })
   const [countdownNow, setCountdownNow] = useState(Date.now())
   const [qualityWarnings, setQualityWarnings] = useState([])
+  const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false)
+  const schoolDropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (schoolDropdownRef.current && !schoolDropdownRef.current.contains(e.target)) {
+        setSchoolDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(SAVED_KEY)
@@ -163,7 +189,8 @@ export default function ApplicationForm() {
             numDependents: application.numDependents?.toString() || '',
             familyIncome: application.familyIncome?.toString() || '',
             incomeSource: application.incomeSource || '',
-            school: application.school || '',
+            school: SCHOOLS.includes(application.school) ? application.school : (application.school ? 'Others' : ''),
+            schoolOther: SCHOOLS.includes(application.school) ? '' : (application.school || ''),
             schoolAddress: application.schoolAddress || '',
             yearGraduated: application.yearGraduated?.toString() || '',
             generalAverage: application.generalAverage?.toString() || '',
@@ -341,7 +368,8 @@ export default function ApplicationForm() {
     }
 
     if (step === 2) {
-      if (!form.school.trim()) e.school = 'Required'
+      if (!form.school) e.school = 'Required'
+      if (form.school === 'Others' && !form.schoolOther.trim()) e.schoolOther = 'Please specify your school'
       if (!form.yearGraduated || parseInt(form.yearGraduated) < 2000 || parseInt(form.yearGraduated) > new Date().getFullYear() + 1) e.yearGraduated = 'Enter a valid graduation year'
       const avg = roundToTwoDecimals(form.generalAverage)
       if (!form.generalAverage || isNaN(avg) || avg < 75 || avg > 100) e.generalAverage = 'General average must be between 75 and 100'
@@ -399,7 +427,7 @@ export default function ApplicationForm() {
       fd.append('incomeSource', form.incomeSource === 'Others' ? `Others - ${form.incomeSourceOther}` : form.incomeSource)
       // Academic
       const normalizedGeneralAverage = roundToTwoDecimals(form.generalAverage)
-      fd.append('school', form.school)
+      fd.append('school', form.school === 'Others' ? form.schoolOther : form.school)
       fd.append('schoolAddress', form.schoolAddress)
       fd.append('yearGraduated', form.yearGraduated)
       fd.append('generalAverage', normalizedGeneralAverage?.toFixed(2) || form.generalAverage)
@@ -663,12 +691,48 @@ export default function ApplicationForm() {
             <h2 className="text-xl font-semibold text-brand-primary">Academic Information</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
+              <div className="min-w-0" ref={schoolDropdownRef}>
                 <label className="mb-1 block text-sm font-medium text-slate-700">School Attended (SHS) <span className="text-red-500">*</span></label>
-                <input className={inputClass('school')} value={form.school} onChange={e => set('school', e.target.value)} placeholder="Name of high school" />
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={`${inputClass('school')} flex w-full items-center justify-between text-left`}
+                    onClick={() => setSchoolDropdownOpen(o => !o)}
+                  >
+                    <span className="truncate">{form.school || <span className="text-slate-400">Select school</span>}</span>
+                    <ChevronDownIcon className={`ml-2 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${schoolDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {schoolDropdownOpen && (
+                    <ul className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                      {SCHOOLS.map(s => (
+                        <li key={s}>
+                          <button
+                            type="button"
+                            className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 ${form.school === s ? 'bg-slate-100 font-medium text-brand-primary' : 'text-slate-700'}`}
+                            onClick={() => { set('school', s); if (s !== 'Others') set('schoolOther', ''); setSchoolDropdownOpen(false) }}
+                          >
+                            {s}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 {err('school')}
+                {form.school === 'Others' && (
+                  <div className="mt-2">
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Please specify <span className="text-red-500">*</span></label>
+                    <input
+                      className={inputClass('schoolOther')}
+                      value={form.schoolOther}
+                      onChange={e => set('schoolOther', e.target.value)}
+                      placeholder="Enter your school name"
+                    />
+                    {err('schoolOther')}
+                  </div>
+                )}
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1 block text-sm font-medium text-slate-700">School Address</label>
                 <input className="portal-input" value={form.schoolAddress} onChange={e => set('schoolAddress', e.target.value)} placeholder="City / Municipality, Province" />
               </div>

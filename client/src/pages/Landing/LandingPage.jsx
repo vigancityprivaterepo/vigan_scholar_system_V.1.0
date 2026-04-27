@@ -399,7 +399,7 @@ const benefits = [
 ]
 
 const faqs = [
-  { q: 'Who is eligible to apply?', a: 'Bonafide residents of Vigan City, who graduated from a duly recognized public high school, may apply for the scholarship grants from the board under following conditions. Any Bigueno student currently enrolled or planning to enroll in a 4-year college course with a General Average of at least 83% and no grade lower than 80% for the 1st and 2nd Semester.' },
+  { q: 'Who is eligible to apply?', a: 'Bonafide residents of Vigan City, who graduated from a duly recognized public high school, may apply for the scholarship grants from the board under following conditions: any Bigueno student currently enrolled or planning to enroll in a 4-year college course with a General Average of at least 83% and no grade lower than 80% for the 1st and 2nd Semester.' },
   {
     q: 'What documents are required?',
     items: [
@@ -409,7 +409,6 @@ const faqs = [
       'Certification from High School Principal that the applicant is eligible for college education and of Good Moral Character.',
       'Result of College Admission Test(CAT)',
       'Picture (Passport Size with Printed Name).',
-      'Affidavit executed by one of the applicants parents or legal guardian that their combined annual income is less than eighty Four Thousand Two Hundred Four Pesos (P 84, 204.00) and they do not have any real estate property with fair value of not more than Two Hundred Fifty thousand Peses (P 250, 000.00)',
     ],
   },
   { q: 'When is the application deadline?', a: 'Applications are accepted during the announced scholarship period for each semester. Please refer to the latest announcements for the current cycle.' },
