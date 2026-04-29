@@ -829,8 +829,8 @@ export default function BulkEmail() {
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} size="sm" /></td>
                     <td className="px-4 py-3">
-                      <span className={clsx('font-mono text-sm font-bold', app.gwa && parseFloat(app.gwa) <= 2.0 ? 'text-green-600' : app.gwa ? 'text-red-500' : 'text-slate-400')}>
-                        {app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}
+                      <span className={clsx('font-mono text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400')}>
+                        {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-500">{formatDate(app.submittedAt)}</td>

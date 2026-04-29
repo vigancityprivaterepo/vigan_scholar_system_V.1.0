@@ -143,6 +143,7 @@ export default function ApplicationReview() {
       fourPs: app.fourPs === true ? 'true' : app.fourPs === false ? 'false' : '',
       priorScholarship: app.priorScholarship === true ? 'true' : app.priorScholarship === false ? 'false' : '',
       scholarshipType: app.scholarshipType || '',
+      yearLevel: app.yearLevel || '',
       collegePreferences: app.collegePreferences ? JSON.parse(JSON.stringify(app.collegePreferences)) : [],
     })
     setEditMode(true)
@@ -256,6 +257,7 @@ export default function ApplicationReview() {
   <div class="field"><div class="label">School Address</div><div class="value">${app.schoolAddress || ''}</div></div>
   <div class="field"><div class="label">Year Graduated (SHS)</div><div class="value">${app.yearGraduated || ''}</div></div>
   <div class="field"><div class="label">General Average (SHS)</div><div class="value">${app.generalAverage ? parseFloat(app.generalAverage).toFixed(2) + '%' : ''}</div></div>
+  <div class="field"><div class="label">Year Level Applying For</div><div class="value">${app.yearLevel || ''}</div></div>
   <div class="field"><div class="label">Does Mother/Father a Solo Parent?</div><div class="value">${app.soloParent === true ? 'Yes' : app.soloParent === false ? 'No' : ''}</div></div>
   <div class="field"><div class="label">4Ps Member</div><div class="value">${app.fourPs === true ? 'Yes' : app.fourPs === false ? 'No' : ''}</div></div>
   <div class="field"><div class="label">Prior Scholarship</div><div class="value">${app.priorScholarship === true ? 'Yes — ' + (app.scholarshipType || '') : app.priorScholarship === false ? 'No' : ''}</div></div>
@@ -457,6 +459,13 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                         </select>
                       </div>
                     )}
+                    <div>
+                      <p className="mb-1 text-xs font-medium text-slate-500">Year Level Applying For</p>
+                      <select className="portal-input text-sm" value={editData.yearLevel || ''} onChange={e => ed('yearLevel', e.target.value)}>
+                        <option value="">—</option>
+                        {['1st Year','2nd Year','3rd Year','4th Year'].map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
                   </div>
                   <div className="border-t border-slate-200 pt-4">
                     <p className="mb-2 text-xs font-medium text-slate-500">College Preferences</p>
@@ -498,6 +507,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                     {[
                       ['SHS Attended', app.school], ['School Address', app.schoolAddress],
                       ['Year Graduated (SHS)', app.yearGraduated],
+                      ['Year Level Applying For', app.yearLevel],
                       ['Solo Parent', app.soloParent === true ? 'Yes' : app.soloParent === false ? 'No' : null],
                       ['4Ps Member', app.fourPs === true ? 'Yes' : app.fourPs === false ? 'No' : null],
                       ['Prior Scholarship', app.priorScholarship === true ? `Yes — ${app.scholarshipType || 'unspecified'}` : app.priorScholarship === false ? 'No' : null],

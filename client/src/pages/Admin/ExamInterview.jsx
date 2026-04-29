@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon, UsersIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon, UsersIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
 const PAGE_SIZE = 20
 
@@ -12,6 +12,7 @@ export default function ExamInterview() {
   const [pagination, setPagination] = useState({ total: 0, pages: 1 })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
   const [scheduleForm, setScheduleForm] = useState({})
   const [scoreForm, setScoreForm] = useState({})
   const [acting, setActing] = useState({})
@@ -23,7 +24,9 @@ export default function ExamInterview() {
 
   const fetchData = useCallback(() => {
     setLoading(true)
-    adminService.listApplications({ status: 'EXAM_INTERVIEW', limit: PAGE_SIZE, page })
+    const params = { status: 'EXAM_INTERVIEW', limit: PAGE_SIZE, page }
+    if (search.trim()) params.search = search.trim()
+    adminService.listApplications(params)
       .then(r => {
         setApps(r.data.applications)
         setPagination(r.data.pagination || { total: 0, pages: 1 })
@@ -31,7 +34,7 @@ export default function ExamInterview() {
       })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load applicants.'))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, search])
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -115,6 +118,18 @@ export default function ExamInterview() {
         <p className="portal-kicker">Assessment Stage</p>
         <h1 className="portal-page-title mt-2">Exam / Interview</h1>
         <p className="portal-page-subtitle">{pagination.total} applicants at this stage</p>
+      </div>
+
+      <div className="portal-surface p-4">
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            className="portal-input pl-10"
+            placeholder="Search by name, email, or Ref. ID..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
+          />
+        </div>
       </div>
 
       {loading ? (
@@ -216,7 +231,7 @@ export default function ExamInterview() {
                     />
                     <div>
                       <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="font-mono font-bold">{app.gwa ? parseFloat(app.gwa).toFixed(2) : '-'}</span></p>
+                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="font-mono font-bold">{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></p>
                     </div>
                   </div>
                   <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">

@@ -36,6 +36,8 @@ import CarouselManagement from './pages/Admin/CarouselManagement'
 import BackupRestore from './pages/Admin/BackupRestore'
 import RenewalList from './pages/Admin/RenewalList'
 import RenewalReview from './pages/Admin/RenewalReview'
+import Masterlist from './pages/Admin/Masterlist'
+import TopExamScores from './pages/Admin/TopExamScores'
 
 import NotFoundPage from './pages/NotFoundPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
@@ -101,6 +103,8 @@ export default function App() {
             <Route path="/admin/backup" element={<BackupRestore />} />
             <Route path="/admin/renewals" element={<RenewalList />} />
             <Route path="/admin/renewals/:id" element={<RenewalReview />} />
+            <Route path="/admin/masterlist" element={<Masterlist />} />
+            <Route path="/admin/top-scores" element={<TopExamScores />} />
           </Route>
         </Route>
 

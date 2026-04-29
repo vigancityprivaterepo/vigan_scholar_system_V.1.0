@@ -15,6 +15,7 @@ import {
   MenuIcon,
   PhotoIcon,
   DatabaseIcon,
+  GraduationCapIcon,
 } from '../ui/PortalIcons'
 import { adminService } from '../../services/adminService'
 import logo from '../../assets/logo.png'
@@ -27,6 +28,8 @@ const navItems = [
   { to: '/admin/cor', label: 'COR Review', Icon: DocumentIcon, badgeKey: 'cor' },
   { to: '/admin/renewals', label: 'Renewals', Icon: DocumentIcon, badgeKey: 'renewals' },
   { to: '/admin/appeals', label: 'Appeals', Icon: FileTextIcon, badgeKey: 'appeals' },
+  { to: '/admin/masterlist', label: 'Masterlist', Icon: GraduationCapIcon },
+  { to: '/admin/top-scores', label: 'Top Scores', Icon: ChartIcon },
   { to: '/admin/bulk-email', label: 'Bulk Email', Icon: MailIcon },
   { to: '/admin/scholar-posts', label: 'Scholar Posts', Icon: FileTextIcon },
   { to: '/admin/carousel', label: 'Carousel', Icon: PhotoIcon },

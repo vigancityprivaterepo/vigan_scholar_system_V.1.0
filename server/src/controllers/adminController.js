@@ -214,7 +214,7 @@ const buildBulkEmailWhere = ({
         where.submittedAt = { gte: ayRange.from, lte: ayRange.to };
       }
       // Match records with an explicit academicYear OR legacy records (NULL) within the date range
-      where.OR = [{ academicYear: normalizedAy }, { academicYear: null }];
+      where.AND = [...(where.AND || []), { OR: [{ academicYear: normalizedAy }, { academicYear: null }] }];
     } else {
       where.academicYear = normalizedAy;
     }
@@ -307,7 +307,7 @@ const applyStatusUpdate = async ({
 
 const listApplications = async (req, res, next) => {
   try {
-    const ALLOWED_SORT_FIELDS = ['submittedAt', 'updatedAt', 'gwa', 'status'];
+    const ALLOWED_SORT_FIELDS = ['submittedAt', 'updatedAt', 'gwa', 'status', 'examScore'];
   const {
     page = 1,
     limit = 20,
@@ -318,6 +318,8 @@ const listApplications = async (req, res, next) => {
     academicYear: rawAcademicYear,
     sortBy: rawSortBy = 'submittedAt',
     sortOrder: rawSortOrder = 'desc',
+    hasExamScore,
+    yearLevel,
   } = req.query;
   const sortBy = ALLOWED_SORT_FIELDS.includes(rawSortBy) ? rawSortBy : 'submittedAt';
   const sortOrder = rawSortOrder === 'asc' ? 'asc' : 'desc';
@@ -331,14 +333,18 @@ const listApplications = async (req, res, next) => {
     }
     if (search) {
       const trimmed = search.replace(/^#/, '').trim();
-      where.OR = [
-        { id: { startsWith: trimmed, mode: 'insensitive' } },
-        { lastName: { contains: trimmed, mode: 'insensitive' } },
-        { firstName: { contains: trimmed, mode: 'insensitive' } },
-        { applicant: { fullName: { contains: trimmed, mode: 'insensitive' } } },
-        { applicant: { email: { contains: trimmed, mode: 'insensitive' } } },
-      ];
+      where.AND = [...(where.AND || []), {
+        OR: [
+          { id: { startsWith: trimmed, mode: 'insensitive' } },
+          { lastName: { contains: trimmed, mode: 'insensitive' } },
+          { firstName: { contains: trimmed, mode: 'insensitive' } },
+          { applicant: { fullName: { contains: trimmed, mode: 'insensitive' } } },
+          { applicant: { email: { contains: trimmed, mode: 'insensitive' } } },
+        ],
+      }];
     }
+    if (hasExamScore === 'true') where.examScore = { not: null };
+    if (yearLevel) where.yearLevel = yearLevel;
     const submittedAtFilter = buildSubmittedAtWhere(submittedFrom, submittedTo);
     if (submittedAtFilter) where.submittedAt = submittedAtFilter;
     if (academicYear) {
@@ -348,7 +354,7 @@ const listApplications = async (req, res, next) => {
           where.submittedAt = { gte: ayRange.from, lte: ayRange.to };
         }
         // Match records with an explicit academicYear OR legacy records (NULL) within the date range
-        where.OR = [{ academicYear }, { academicYear: null }];
+        where.AND = [...(where.AND || []), { OR: [{ academicYear }, { academicYear: null }] }];
       } else {
         where.academicYear = academicYear;
       }

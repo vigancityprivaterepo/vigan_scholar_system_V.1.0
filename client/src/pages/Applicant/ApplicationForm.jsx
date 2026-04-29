@@ -105,6 +105,7 @@ const INITIAL_FORM = {
   // Academic
   school: '', schoolOther: '', schoolAddress: '', yearGraduated: '', generalAverage: '',
   collegePreferences: BLANK_PREFS,
+  yearLevel: '',
   soloParent: '', fourPs: '',
   priorScholarship: '', scholarshipType: '',
 }
@@ -195,6 +196,7 @@ export default function ApplicationForm() {
             yearGraduated: application.yearGraduated?.toString() || '',
             generalAverage: application.generalAverage?.toString() || '',
             collegePreferences: application.collegePreferences || BLANK_PREFS,
+            yearLevel: application.yearLevel || '',
             soloParent: application.soloParent === true ? 'true' : application.soloParent === false ? 'false' : '',
             fourPs: application.fourPs === true ? 'true' : application.fourPs === false ? 'false' : '',
             priorScholarship: application.priorScholarship === true ? 'true' : application.priorScholarship === false ? 'false' : '',
@@ -375,6 +377,7 @@ export default function ApplicationForm() {
       if (!form.generalAverage || isNaN(avg) || avg < 75 || avg > 100) e.generalAverage = 'General average must be between 75 and 100'
       const hasOnePref = form.collegePreferences.some(p => p.name.trim())
       if (!hasOnePref) e.collegePreferences = 'Please list at least one college preference'
+      if (!form.yearLevel) e.yearLevel = 'Please select a year level'
       if (!form.soloParent) e.soloParent = 'Required'
       if (!form.fourPs) e.fourPs = 'Required'
       if (!form.priorScholarship) e.priorScholarship = 'Required'
@@ -432,6 +435,7 @@ export default function ApplicationForm() {
       fd.append('yearGraduated', form.yearGraduated)
       fd.append('generalAverage', normalizedGeneralAverage?.toFixed(2) || form.generalAverage)
       fd.append('collegePreferences', JSON.stringify(form.collegePreferences.filter(p => p.name.trim())))
+      fd.append('yearLevel', form.yearLevel)
       fd.append('soloParent', form.soloParent)
       fd.append('fourPs', form.fourPs)
       fd.append('priorScholarship', form.priorScholarship)
@@ -843,6 +847,29 @@ export default function ApplicationForm() {
               {err('collegePreferences')}
             </div>
 
+            {/* Year Level */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Year Level Applying For <span className="text-red-500">*</span>
+              </label>
+              <div className="flex flex-wrap gap-4">
+                {['1st Year', '2nd Year', '3rd Year', '4th Year'].map(level => (
+                  <label key={level} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="yearLevel"
+                      value={level}
+                      checked={form.yearLevel === level}
+                      onChange={() => set('yearLevel', level)}
+                      className="accent-brand-primary"
+                    />
+                    {level}
+                  </label>
+                ))}
+              </div>
+              {err('yearLevel')}
+            </div>
+
             {/* Solo Parent */}
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -1073,6 +1100,7 @@ export default function ApplicationForm() {
                   {form.schoolAddress && <div><span className="text-slate-500">School Address:</span> <span className="font-medium text-brand-primary">{form.schoolAddress}</span></div>}
                   <div><span className="text-slate-500">Year Graduated:</span> <span className="font-medium text-brand-primary">{form.yearGraduated}</span></div>
                   <div><span className="text-slate-500">General Average:</span> <span className="font-medium text-brand-primary">{form.generalAverage}%</span></div>
+                  <div><span className="text-slate-500">Year Level Applying For:</span> <span className="font-medium text-brand-primary">{form.yearLevel || '—'}</span></div>
                   <div><span className="text-slate-500">Solo Parent:</span> <span className="font-medium text-brand-primary">{form.soloParent === 'true' ? 'Yes' : 'No'}</span></div>
                   <div><span className="text-slate-500">4Ps Member:</span> <span className="font-medium text-brand-primary">{form.fourPs === 'true' ? 'Yes' : 'No'}</span></div>
                   <div><span className="text-slate-500">Prior Scholarship:</span> <span className="font-medium text-brand-primary">{form.priorScholarship === 'true' ? `Yes (${form.scholarshipType})` : 'No'}</span></div>
