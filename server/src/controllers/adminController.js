@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { AppError } = require('../middleware/errorHandler');
-const { isValidTransition, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = require('../utils/statusTransitions');
+const { isValidTransition, STATUS_LABELS, APPEAL_REVERT_STATUS: APPEAL_REVERT_STATUS_MAP } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
@@ -223,6 +223,22 @@ const buildBulkEmailWhere = ({
   return where;
 };
 
+const getLatestPreviousStatus = async (applicationId, currentStatus) => {
+  const latestStatusChange = await prisma.activityLog.findFirst({
+    where: {
+      applicationId,
+      toStatus: currentStatus,
+      fromStatus: { not: null },
+      action: { startsWith: 'Status ' },
+      NOT: { fromStatus: currentStatus },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { fromStatus: true },
+  });
+
+  return latestStatusChange?.fromStatus || null;
+};
+
 const applyStatusUpdate = async ({
   application,
   status,
@@ -234,16 +250,23 @@ const applyStatusUpdate = async ({
   performedById,
 }) => {
   const normalizedRejectionReason = String(rejectionReason || '').trim();
+  let isRollback = false;
 
   if (application.status === status) {
     return application;
   }
 
   if (!isValidTransition(application.status, status)) {
-    throw new AppError(`Invalid status transition from ${application.status} to ${status}`, 400);
+    const previousStatus = await getLatestPreviousStatus(application.id, application.status);
+    if (previousStatus !== status) {
+      throw new AppError(`Invalid status transition from ${application.status} to ${status}`, 400);
+    }
+    isRollback = true;
   }
 
-  if (REJECTION_REQUIRED_STATUSES.includes(status) && !normalizedRejectionReason) {
+  const effectiveRejectionReason = normalizedRejectionReason || (isRollback ? String(application.rejectionReason || '').trim() : '');
+
+  if (REJECTION_REQUIRED_STATUSES.includes(status) && !effectiveRejectionReason) {
     throw new AppError(`Rejection reason is required when setting status to ${status}.`, 400);
   }
 
@@ -272,7 +295,7 @@ const applyStatusUpdate = async ({
   const updateData = { status };
   if (remarks) updateData.adminRemarks = remarks;
   if (REJECTION_REQUIRED_STATUSES.includes(status)) {
-    updateData.rejectionReason = normalizedRejectionReason;
+    updateData.rejectionReason = effectiveRejectionReason;
   } else {
     updateData.rejectionReason = null;
   }
@@ -290,10 +313,10 @@ const applyStatusUpdate = async ({
       data: {
         applicationId: application.id,
         performedById,
-        action: `Status changed to ${status}`,
+        action: isRollback ? `Status rolled back to ${status}` : `Status changed to ${status}`,
         fromStatus: application.status,
         toStatus: status,
-        notes: remarks || rejectionReason || null,
+        notes: remarks || effectiveRejectionReason || null,
       },
     });
     return result;
@@ -301,7 +324,7 @@ const applyStatusUpdate = async ({
 
   // Notifications and emails run after the transaction commits — they are
   // intentionally outside the transaction since they cannot be rolled back.
-  await handleStatusNotification(application, status, remarks, rejectionReason);
+  await handleStatusNotification(application, status, remarks, effectiveRejectionReason, { isRollback });
   return updated;
 };
 
@@ -861,9 +884,33 @@ const listEmailJobs = async (req, res, next) => {
   }
 };
 
-const handleStatusNotification = async (application, newStatus, remarks, rejectionReason) => {
+const handleStatusNotification = async (application, newStatus, remarks, rejectionReason, options = {}) => {
   const user = application.applicant;
   const refId = application.id.slice(0, 8).toUpperCase();
+  const isRollback = options.isRollback === true;
+
+  if (isRollback) {
+    const label = STATUS_LABELS[newStatus] || newStatus.replace(/_/g, ' ');
+    const message = `An administrator corrected your application status. It is now set back to ${label}.${remarks ? ` Remarks: ${remarks}` : ''}`;
+
+    await createNotification({
+      userId: user.id,
+      applicationId: application.id,
+      title: 'Application Status Corrected',
+      message,
+      type: 'INFO',
+    });
+    await recordCommunication({
+      applicationId: application.id,
+      userId: user.id,
+      channel: 'PORTAL_NOTICE',
+      subject: 'Application Status Corrected',
+      message,
+      metadata: { status: newStatus, rollback: true },
+      createdById: null,
+    });
+    return;
+  }
 
   const notificationMap = {
     INCOMPLETE: {

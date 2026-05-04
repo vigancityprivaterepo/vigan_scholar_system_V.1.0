@@ -6,6 +6,7 @@ import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate, formatDateTime } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
+import { STATUS_CONFIG } from '../../utils/statusConfig'
 import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon } from '../../components/ui/PortalIcons'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
@@ -178,6 +179,24 @@ export default function ApplicationReview() {
   }
 
   const availableActions = ACTIONS[app.status] || []
+  const latestStatusEntry = (app.activityLogs || []).find((log) => (
+    log.toStatus === app.status &&
+    log.fromStatus &&
+    log.fromStatus !== log.toStatus
+  ))
+  const previousStatus = latestStatusEntry?.fromStatus || ''
+  const previousStatusLabel = previousStatus
+    ? (STATUS_CONFIG[previousStatus]?.label || previousStatus.replace(/_/g, ' '))
+    : ''
+  const rollbackAction = previousStatus
+    ? {
+        label: `Return to ${previousStatusLabel}`,
+        status: previousStatus,
+        color: 'portal-button-secondary',
+        hint: 'Use this if the current status was selected by mistake.',
+      }
+    : null
+  const visibleActions = rollbackAction ? [...availableActions, rollbackAction] : availableActions
   const TABS = ['personal', 'family', 'academic', 'requirements', 'history']
 
   const downloadApplication = () => {
@@ -698,7 +717,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
           <div className="portal-surface p-6 lg:sticky lg:top-6">
             <h3 className="mb-4 text-lg font-semibold text-brand-primary">Actions</h3>
 
-            {availableActions.length === 0 ? (
+            {visibleActions.length === 0 ? (
               <div className="py-4 text-center">
                 <p className="text-sm text-slate-500">No actions available</p>
                 <p className="mt-1 text-xs text-slate-400">Status: {app.status.replace(/_/g, ' ')}</p>
@@ -712,29 +731,31 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                   </div>
                 )}
 
-                {availableActions.some(a => a.needsRemarks) && (
+                {visibleActions.some(a => a.needsRemarks) && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Admin Remarks</label>
                     <textarea className="portal-input" rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Explain action to applicant..." />
                   </div>
                 )}
 
-                {availableActions.some(a => a.needsReason) && (
+                {visibleActions.some(a => a.needsReason) && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Rejection Reason</label>
                     <textarea className="portal-input" rows={2} value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason for rejection..." />
                   </div>
                 )}
 
-                {availableActions.map(action => (
-                  <button
-                    key={action.status}
-                    onClick={() => requestAction(action)}
-                    disabled={actionLoading}
-                    className={clsx(action.color || 'portal-button-primary', 'w-full justify-center py-2.5 text-sm')}
-                  >
-                    {action.label}
-                  </button>
+                {visibleActions.map(action => (
+                  <div key={`${action.status}-${action.label}`} className="flex flex-col gap-1">
+                    <button
+                      onClick={() => requestAction(action)}
+                      disabled={actionLoading}
+                      className={clsx(action.color || 'portal-button-primary', 'w-full justify-center py-2.5 text-sm')}
+                    >
+                      {action.label}
+                    </button>
+                    {action.hint && <p className="text-xs text-slate-400">{action.hint}</p>}
+                  </div>
                 ))}
               </div>
             )}
