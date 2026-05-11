@@ -19,7 +19,6 @@ RUN tr -d '\r' < entrypoint.sh > entrypoint.tmp \
 
 EXPOSE 5000
 
-# entrypoint.sh: waits for Postgres, runs idempotent enum migrations that
-# prisma db push cannot apply on its own (text→enum casts via USING clause),
-# then calls prisma db push and starts the server.
+# entrypoint.sh: waits for Postgres and starts the server.
+# Database updates are opt-in only via AUTO_APPLY_DB_CHANGES=true.
 CMD ["sh", "/app/entrypoint.sh"]

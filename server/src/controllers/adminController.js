@@ -72,6 +72,34 @@ const collectUserFileUrls = async (userId) => {
   ].filter(Boolean);
 };
 
+const collectApplicationFileUrls = async (applicationId) => {
+  const [application, renewals] = await Promise.all([
+    prisma.application.findUnique({
+      where: { id: applicationId },
+      select: {
+        requirementFiles: { select: { fileUrl: true } },
+        corFiles: { select: { fileUrl: true } },
+      },
+    }),
+    prisma.scholarshipRenewal.findMany({
+      where: { applicationId },
+      select: {
+        renewalFiles: { select: { fileUrl: true } },
+      },
+    }),
+  ]);
+
+  return [
+    ...(application
+      ? [
+          ...application.requirementFiles.map((file) => file.fileUrl),
+          ...application.corFiles.map((file) => file.fileUrl),
+        ]
+      : []),
+    ...renewals.flatMap((renewal) => renewal.renewalFiles.map((file) => file.fileUrl)),
+  ].filter(Boolean);
+};
+
 const deleteUserUploadedFiles = (fileUrls) => {
   const uniqueUrls = [...new Set(fileUrls)];
   let deletedCount = 0;
@@ -1798,6 +1826,53 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+const deleteApplicant = async (req, res, next) => {
+  try {
+    if (!isPrimaryAdminEmail(req.user.email)) {
+      throw new AppError(`Only ${PRIMARY_ADMIN_EMAIL} can delete applicants.`, 403);
+    }
+
+    const { id } = req.params;
+    const application = await prisma.application.findUnique({
+      where: { id },
+      include: {
+        applicant: {
+          select: { id: true, fullName: true, email: true, role: true },
+        },
+      },
+    });
+    if (!application) throw new AppError('Application not found.', 404);
+    if (!application.applicant) throw new AppError('Applicant account not found.', 404);
+
+    const fileUrls = await collectApplicationFileUrls(application.id);
+    await prisma.$transaction(async (tx) => {
+      await tx.notification.updateMany({
+        where: { applicationId: application.id },
+        data: { applicationId: null },
+      });
+
+      await tx.activityLog.updateMany({
+        where: { applicationId: application.id },
+        data: { applicationId: null },
+      });
+
+      await tx.application.delete({ where: { id: application.id } });
+    });
+
+    const deletedFileCount = deleteUserUploadedFiles(fileUrls);
+
+    res.json({
+      success: true,
+      message: `${application.applicant.fullName}'s application has been deleted. The applicant account was kept.`,
+      applicant: application.applicant,
+      applicationId: application.id,
+      deletedFileCount,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const inviteAdminUser = async (req, res, next) => {
   try {
     if (!isPrimaryAdminEmail(req.user.email)) {
@@ -1973,6 +2048,7 @@ module.exports = {
   listUsers,
   updateUserRole,
   deleteUser,
+  deleteApplicant,
   inviteAdminUser,
   processDueEmailJobs,
 };

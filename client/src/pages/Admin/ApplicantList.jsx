@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
+import { useAuthStore } from '../../store/authStore'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ConfirmModal from '../../components/shared/ConfirmModal'
 import { formatDate } from '../../utils/formatDate'
@@ -58,6 +59,7 @@ const ALL_STATUSES = ['PENDING_REVIEW', 'INCOMPLETE', 'ELIGIBILITY_SCREENING', '
 const DESTRUCTIVE_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED']
 
 export default function ApplicantList() {
+  const { user } = useAuthStore()
   const [searchParams] = useSearchParams()
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
@@ -79,6 +81,9 @@ export default function ApplicantList() {
   const [batchExamScore, setBatchExamScore] = useState('')
   const [batchLoading, setBatchLoading] = useState(false)
   const [confirm, setConfirm] = useState(null) // { message, label, action }
+  const [pendingApplicantDelete, setPendingApplicantDelete] = useState(null)
+  const [deletingApplicantId, setDeletingApplicantId] = useState('')
+  const canDeleteApplicants = user?.role === 'SUPER_ADMIN'
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -248,6 +253,25 @@ export default function ApplicantList() {
     executeBatch()
   }
 
+  const confirmApplicantDelete = async () => {
+    if (!pendingApplicantDelete) return
+    const target = pendingApplicantDelete
+    setDeletingApplicantId(target.id)
+    try {
+      const { data: response } = await adminService.deleteApplicant(target.id)
+      toast.success(response.message || 'Application deleted successfully.')
+      if (selectedSet.has(target.id)) {
+        setSelectedIds((current) => current.filter((id) => id !== target.id))
+      }
+      fetchData()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete applicant.')
+    } finally {
+      setDeletingApplicantId('')
+      setPendingApplicantDelete(null)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {confirm && (
@@ -258,6 +282,17 @@ export default function ApplicantList() {
           danger
           onConfirm={() => { confirm.action(); setConfirm(null) }}
           onCancel={() => setConfirm(null)}
+        />
+      )}
+      {pendingApplicantDelete && (
+        <ConfirmModal
+          title="Delete Application"
+          message={`Delete the application of ${pendingApplicantDelete.applicant?.fullName || 'this applicant'} (${pendingApplicantDelete.applicant?.email || 'no email'})? The applicant account will remain. This action cannot be undone.`}
+          confirmLabel="Delete Application"
+          danger
+          loading={deletingApplicantId === pendingApplicantDelete.id}
+          onConfirm={confirmApplicantDelete}
+          onCancel={() => setPendingApplicantDelete(null)}
         />
       )}
       <div className="flex items-start justify-between gap-4">
@@ -418,7 +453,8 @@ export default function ApplicantList() {
                   { label: 'Gen. Avg', col: 'gwa' },
                   { label: 'Status', col: 'status' },
                   { label: 'Submitted', col: 'submittedAt' },
-                  { label: 'Action', col: null },
+                  { label: 'Review', col: null },
+                  { label: 'Delete', col: null },
                 ].map(({ label, col }) => (
                   <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     {col ? (
@@ -441,7 +477,7 @@ export default function ApplicantList() {
                 ))
               ) : data.applications.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <p>No applications found</p>
                   </td>
                 </tr>
@@ -478,6 +514,20 @@ export default function ApplicantList() {
                       <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
                         Review <ArrowRightIcon className="h-4 w-4" />
                       </Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      {canDeleteApplicants ? (
+                        <button
+                          type="button"
+                          onClick={() => setPendingApplicantDelete(app)}
+                          disabled={deletingApplicantId === app.id}
+                          className="rounded border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:border-red-500 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingApplicantId === app.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-300">-</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -523,9 +573,21 @@ export default function ApplicantList() {
                     <span className="text-xs text-slate-400">{formatDate(app.submittedAt)}</span>
                   </div>
                 </div>
-                <Link to={`/admin/applicants/${app.id}`} className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
-                  Review <ArrowRightIcon className="h-4 w-4" />
-                </Link>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
+                    Review <ArrowRightIcon className="h-4 w-4" />
+                  </Link>
+                  {canDeleteApplicants && (
+                    <button
+                      type="button"
+                      onClick={() => setPendingApplicantDelete(app)}
+                      disabled={deletingApplicantId === app.id}
+                      className="rounded border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:border-red-500 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deletingApplicantId === app.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}

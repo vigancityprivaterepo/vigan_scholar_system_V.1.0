@@ -24,6 +24,7 @@ const {
   listUsers,
   updateUserRole,
   deleteUser,
+  deleteApplicant,
   inviteAdminUser,
   listAppeals,
   resolveAppeal,
@@ -54,6 +55,7 @@ router.post('/applications/bulk-email/schedule', requireScheduler, scheduleBulkE
 router.get('/applications/bulk-email/jobs', requireScheduler, listEmailJobs);
 router.get('/applications/bulk-email/logs', listBulkEmailLogs);
 router.get('/applications/:id', getApplication);
+router.delete('/applications/:id/applicant', requireSuperAdmin, deleteApplicant);
 router.patch('/applications/:id/status', requireReviewer, updateStatus);
 router.patch('/applications/:id/fields', requireReviewer, updateApplicationFields);
 router.post('/applications/bulk-schedule', requireScheduler, bulkScheduleExam);
