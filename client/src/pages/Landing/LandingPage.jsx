@@ -341,6 +341,117 @@ function ScholarCarousel() {
   )
 }
 
+function useCountdown(deadline) {
+  const [remaining, setRemaining] = useState(() => deadline ? deadline - Date.now() : null)
+  useEffect(() => {
+    if (!deadline) { setRemaining(null); return }
+    const tick = () => setRemaining(deadline - Date.now())
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [deadline])
+  return remaining
+}
+
+function DeadlineBanner({ deadline }) {
+  const ts = deadline ? new Date(deadline).getTime() : null
+  const remaining = useCountdown(ts)
+
+  if (!ts || remaining === null) return null
+
+  const passed = remaining <= 0
+  const urgent = !passed && remaining <= 24 * 60 * 60 * 1000
+
+  const totalSec = Math.max(0, Math.floor(remaining / 1000))
+  const days  = Math.floor(totalSec / 86400)
+  const hours = Math.floor((totalSec % 86400) / 3600)
+  const mins  = Math.floor((totalSec % 3600) / 60)
+  const secs  = totalSec % 60
+  const pad   = (n) => String(n).padStart(2, '0')
+
+  const deadlineLabel = new Date(ts).toLocaleString('en-PH', {
+    month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+
+  if (passed) {
+    return (
+      <div role="alert" className="z-40 w-full bg-red-600 text-white">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 md:px-8">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p className="text-sm font-semibold">
+            Applications are now closed. The deadline has passed ({deadlineLabel}).
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (urgent) {
+    return (
+      <div role="alert" className="z-40 w-full bg-red-600 text-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 md:px-8">
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 animate-pulse" aria-hidden="true">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span className="text-sm font-bold">Application deadline is almost here!</span>
+          </div>
+          <div className="flex items-baseline gap-1 font-mono text-sm font-bold">
+            {days > 0 && <><span>{days}d</span><span className="text-white/60">:</span></>}
+            <span>{pad(hours)}h</span>
+            <span className="text-white/60">:</span>
+            <span>{pad(mins)}m</span>
+            <span className="text-white/60">:</span>
+            <span>{pad(secs)}s</span>
+            <span className="ml-1 text-xs font-normal text-red-100">remaining</span>
+          </div>
+          <span className="text-xs text-red-100">Deadline: {deadlineLabel}</span>
+          <a
+            href="/register"
+            className="ml-auto shrink-0 rounded bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50"
+          >
+            Apply Now
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  // Normal warning (>24 h)
+  return (
+    <div role="alert" className="z-40 w-full bg-slate-800 border-b border-slate-700">
+      <div className="mx-auto flex max-w-7xl flex-col gap-1.5 px-4 py-3 md:flex-row md:items-center md:gap-3 md:px-8">
+        <div className="flex items-start gap-2.5 md:items-center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 md:mt-0" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <p className="text-sm leading-snug text-slate-100">
+            <span className="font-semibold">Application Deadline:</span> {deadlineLabel}
+            {days > 0
+              ? <span className="ml-1 text-slate-300">— {days} day{days !== 1 ? 's' : ''} and {hours} hour{hours !== 1 ? 's' : ''} remaining.</span>
+              : <span className="ml-1 text-slate-300">— {hours} hour{hours !== 1 ? 's' : ''} and {mins} minute{mins !== 1 ? 's' : ''} remaining.</span>}
+          </p>
+        </div>
+        <a
+          href="/register"
+          className="self-start rounded bg-white px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 md:ml-auto md:shrink-0"
+        >
+          Apply before the deadline →
+        </a>
+      </div>
+    </div>
+  )
+}
+
 const processSteps = [
   {
     n: '01',
@@ -459,6 +570,7 @@ export default function LandingPage() {
     statsScholars: '882+',
     statsSchools: '5',
     statsSuccessRate: '94%',
+    applicationDeadline: null,
   })
   const [postedScholars, setPostedScholars] = useState([])
   const [scholarPage, setScholarPage] = useState(0)
@@ -766,6 +878,8 @@ export default function LandingPage() {
           </div>
         </nav>
       </header>
+
+      <DeadlineBanner deadline={siteSettings.applicationDeadline} />
 
       <main>
         {/* HERO — full-width tall carousel */}
