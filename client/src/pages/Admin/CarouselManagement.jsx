@@ -29,7 +29,6 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!isEdit && !file) { toast.error('Please select an image'); return }
-    if (!form.label.trim() || !form.caption.trim()) { toast.error('Label and caption are required'); return }
 
     const fd = new FormData()
     if (file) fd.append('image', file)
@@ -77,7 +76,6 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
           placeholder="e.g. Scholar Recognition Day"
           value={form.label}
           onChange={e => setField('label', e.target.value)}
-          required
         />
       </div>
 
@@ -86,10 +84,9 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Caption / Description</label>
         <textarea
           className="portal-input min-h-[80px] resize-y"
-          placeholder="Short description shown below the title…"
+          placeholder="Optional short description shown below the title"
           value={form.caption}
           onChange={e => setField('caption', e.target.value)}
-          required
         />
       </div>
 
@@ -258,7 +255,7 @@ export default function CarouselManagement() {
                 {/* Thumbnail */}
                 <img
                   src={slide.imageUrl}
-                  alt={slide.label}
+                  alt={slide.label || 'Carousel slide'}
                   className="h-16 w-24 shrink-0 rounded border border-slate-200 object-cover"
                   onError={e => {
                     e.target.style.display = 'none'
@@ -274,7 +271,7 @@ export default function CarouselManagement() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-brand-primary truncate">{slide.label}</p>
+                    {slide.label ? <p className="font-semibold text-brand-primary truncate">{slide.label}</p> : <p className="font-semibold italic text-slate-400">Untitled slide</p>}
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${slide.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                       {slide.isActive ? 'Active' : 'Hidden'}
                     </span>
@@ -282,7 +279,7 @@ export default function CarouselManagement() {
                       Order: {slide.sortOrder}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500 line-clamp-2">{slide.caption}</p>
+                  {slide.caption ? <p className="mt-1 text-sm text-slate-500 line-clamp-2">{slide.caption}</p> : null}
                 </div>
                 {/* Actions */}
                 <div className="flex shrink-0 gap-2">
@@ -295,7 +292,7 @@ export default function CarouselManagement() {
                   </button>
                   <button
                     onClick={() => {
-                      if (window.confirm(`Delete "${slide.label}"? This cannot be undone.`)) handleDelete(slide.id)
+                      if (window.confirm(`Delete "${slide.label || 'Untitled slide'}"? This cannot be undone.`)) handleDelete(slide.id)
                     }}
                     disabled={deleting === slide.id}
                     className="flex items-center gap-1 rounded border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 disabled:opacity-40"

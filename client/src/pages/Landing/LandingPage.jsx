@@ -267,29 +267,40 @@ function ScholarCarousel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative min-h-[500px] sm:min-h-[520px] md:min-h-[580px]">
+      <div className="relative h-[68svh] min-h-[420px] max-h-[620px] sm:h-[64svh] sm:min-h-[520px] sm:max-h-[680px] md:min-h-[580px] md:max-h-[760px]">
         {slides.map((slide, i) => (
           <div
             key={i}
             className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            style={{
-              backgroundImage: `linear-gradient(106deg, rgba(12,35,64,0.62) 0%, rgba(12,35,64,0.52) 38%, rgba(12,35,64,0.34) 66%, rgba(6,95,70,0.22) 84%, rgba(6,95,70,0.16) 100%), url('${slide.imageUrl}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
           >
+            <img
+              src={slide.imageUrl}
+              alt={slide.label || 'Scholarship carousel slide'}
+              className="absolute inset-0 h-full w-full object-cover object-center"
+              sizes="100vw"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(106deg, rgba(12,35,64,0.62) 0%, rgba(12,35,64,0.52) 38%, rgba(12,35,64,0.34) 66%, rgba(6,95,70,0.22) 84%, rgba(6,95,70,0.16) 100%)',
+              }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0c2340]/38 via-[#0c2340]/14 to-transparent" />
             <div className="relative z-10 flex h-full flex-col justify-end px-4 py-8 text-white sm:px-10 sm:py-14 md:px-14 md:py-16 lg:px-20 lg:py-20">
               <div className="max-w-full sm:max-w-3xl">
                 <span className="inline-block rounded-full border border-emerald-300/60 bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-100 sm:text-xs">
                   Academic Year 2026
                 </span>
-                <h2 className="mt-3 font-display text-[clamp(1.6rem,8.4vw,3.25rem)] font-bold leading-[1.08] sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">
-                  {slide.label}
-                </h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-100/95 sm:mt-4 sm:text-base sm:leading-8 md:text-lg">
-                  {slide.caption}
-                </p>
+                {slide.label ? (
+                  <h2 className="mt-3 font-display text-[clamp(1.6rem,8.4vw,3.25rem)] font-bold leading-[1.08] sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">
+                    {slide.label}
+                  </h2>
+                ) : null}
+                {slide.caption ? (
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-100/95 sm:mt-4 sm:text-base sm:leading-8 md:text-lg">
+                    {slide.caption}
+                  </p>
+                ) : null}
                 <div className="mt-5 flex flex-wrap gap-2.5 sm:mt-8 sm:gap-3">
                   <Link
                     to="/register"

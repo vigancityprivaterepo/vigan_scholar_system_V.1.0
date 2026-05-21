@@ -90,13 +90,12 @@ const createSlide = async (req, res, next) => {
   try {
     if (!req.file) throw new AppError('Image is required', 400);
     const { label, caption, sortOrder } = req.body;
-    if (!label || !caption) throw new AppError('Label and caption are required', 400);
 
     const slide = await prisma.carouselSlide.create({
       data: {
         imageUrl: `/public-uploads/${req.file.filename}`,
-        label,
-        caption,
+        label: label?.trim() || '',
+        caption: caption?.trim() || '',
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
       },
     });
@@ -114,8 +113,8 @@ const updateSlide = async (req, res, next) => {
 
     const { label, caption, sortOrder, isActive } = req.body;
     const updateData = {};
-    if (label !== undefined) updateData.label = label;
-    if (caption !== undefined) updateData.caption = caption;
+    if (label !== undefined) updateData.label = label.trim();
+    if (caption !== undefined) updateData.caption = caption.trim();
     if (sortOrder !== undefined) updateData.sortOrder = parseInt(sortOrder);
     if (isActive !== undefined) updateData.isActive = isActive === 'true' || isActive === true;
 
