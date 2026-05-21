@@ -267,58 +267,60 @@ function ScholarCarousel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative h-[68svh] min-h-[420px] max-h-[620px] sm:h-[64svh] sm:min-h-[520px] sm:max-h-[680px] md:min-h-[580px] md:max-h-[760px]">
-        {slides.map((slide, i) => (
-          <div
-            key={i}
-            className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-          >
-            <img
-              src={slide.imageUrl}
-              alt={slide.label || 'Scholarship carousel slide'}
-              className="absolute inset-0 h-full w-full object-contain object-top sm:object-cover sm:object-center"
-              sizes="100vw"
-            />
+      <div className="relative h-[180px] min-h-[180px] sm:h-[240px] sm:min-h-[240px] md:h-[320px] md:min-h-[320px] lg:h-[52svh] lg:min-h-[460px] lg:max-h-[620px] xl:h-[58svh] xl:min-h-[540px] xl:max-h-[720px]">
+        {slides.map((slide, i) => {
+          const hasText = Boolean(slide.label || slide.caption)
+
+          return (
             <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(106deg, rgba(12,35,64,0.62) 0%, rgba(12,35,64,0.52) 38%, rgba(12,35,64,0.34) 66%, rgba(6,95,70,0.22) 84%, rgba(6,95,70,0.16) 100%)',
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0c2340]/38 via-[#0c2340]/14 to-transparent" />
-            <div className="relative z-10 flex h-full flex-col justify-end px-4 py-8 text-white sm:px-10 sm:py-14 md:px-14 md:py-16 lg:px-20 lg:py-20">
-              <div className="max-w-full sm:max-w-3xl">
-                <span className="inline-block rounded-full border border-emerald-300/60 bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-100 sm:text-xs">
-                  Academic Year 2026
-                </span>
-                {slide.label ? (
-                  <h2 className="mt-3 font-display text-[clamp(1.6rem,8.4vw,3.25rem)] font-bold leading-[1.08] sm:mt-4 sm:text-4xl md:text-5xl lg:text-6xl">
-                    {slide.label}
-                  </h2>
-                ) : null}
-                {slide.caption ? (
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-100/95 sm:mt-4 sm:text-base sm:leading-8 md:text-lg">
-                    {slide.caption}
-                  </p>
-                ) : null}
-                <div className="mt-5 flex flex-wrap gap-2.5 sm:mt-8 sm:gap-3">
-                  <Link
-                    to="/register"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#10b981] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-900/30 transition-all hover:bg-[#059669] hover:-translate-y-0.5 sm:px-6 sm:py-3"
-                  >
-                    Apply Now <ArrowRightIcon />
-                  </Link>
-                  <Link
-                    to="/how-it-works"
-                    className="inline-flex items-center justify-center rounded-lg border border-white/55 bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-6 sm:py-3"
-                  >
-                    View Application Process
-                  </Link>
+              key={i}
+              className={`absolute inset-0 transition-opacity duration-700 ${i === current ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            >
+              <img
+                src={slide.imageUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover object-center blur-sm scale-105"
+                sizes="100vw"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-emerald-950/5 to-black/10" />
+              <div className="absolute inset-0 bg-white/20" />
+              <div className="relative z-10 flex h-full flex-col justify-between px-3 py-3 sm:px-5 sm:py-4 md:px-8 md:py-6 lg:px-12 lg:py-10">
+                <div className="flex-1 flex items-center justify-center min-h-0">
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.label || 'Scholarship carousel slide'}
+                    className="max-h-full w-full object-contain object-center"
+                    sizes="100vw"
+                  />
+                </div>
+                <div className={`${hasText ? 'mt-3' : 'mt-0'} shrink-0`}>
+                  <div className={`${hasText ? 'block' : 'hidden'}`}>
+                    <span className="inline-block rounded-full border border-emerald-300/60 bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-100 sm:text-xs">
+                      Academic Year 2026
+                    </span>
+                  </div>
+                  <div className={`${hasText ? 'mt-3 max-w-full sm:max-w-3xl' : 'hidden'}`}>
+                {hasText ? (
+                      <>
+                        {slide.label ? (
+                          <h2 className="font-display text-[clamp(1.25rem,4vw,3.25rem)] font-bold leading-[1.08] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
+                            {slide.label}
+                          </h2>
+                        ) : null}
+                        {slide.caption ? (
+                          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-100/95 sm:text-base sm:leading-7 md:text-lg">
+                            {slide.caption}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Prev / Next arrows */}
@@ -338,7 +340,7 @@ function ScholarCarousel() {
       )}
 
       {/* Dot indicators */}
-      <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 gap-2">
+      <div className="absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-3 lg:bottom-5">
         {slides.map((_, i) => (
           <button
             key={i}
@@ -825,9 +827,9 @@ export default function LandingPage() {
 
       {/* TOP UTILITY BAR */}
       <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] border-b border-[#10b981]/30">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs md:px-8">
-          <p className="uppercase tracking-[0.2em] text-emerald-50/95">Republic of the Philippines</p>
-          <div className="flex items-center gap-4 text-emerald-50/95">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-start justify-between gap-x-3 gap-y-1 px-4 py-2 text-[10px] sm:items-center sm:text-xs md:px-8">
+          <p className="max-w-[58%] leading-tight uppercase tracking-[0.18em] text-emerald-50/95 sm:max-w-none sm:tracking-[0.2em]">Republic of the Philippines</p>
+          <div className="flex shrink-0 items-center gap-3 text-emerald-50/95 sm:gap-4">
             <Link to="/faq" className="hidden transition-colors hover:text-[#10b981] md:block">Scholarship Guidelines</Link>
             <Link to="/login" className="transition-colors hover:text-[#10b981]">Applicant Login</Link>
           </div>
