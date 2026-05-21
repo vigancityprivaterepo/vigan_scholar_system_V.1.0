@@ -276,7 +276,7 @@ function ScholarCarousel() {
             <img
               src={slide.imageUrl}
               alt={slide.label || 'Scholarship carousel slide'}
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-contain object-top sm:object-cover sm:object-center"
               sizes="100vw"
             />
             <div
