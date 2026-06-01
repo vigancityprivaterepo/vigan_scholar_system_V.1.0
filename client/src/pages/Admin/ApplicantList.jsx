@@ -66,7 +66,7 @@ export default function ApplicantList() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '')
-  const [academicYear, setAcademicYear] = useState(academicYearOptions[0] || '')
+  const [academicYear, setAcademicYear] = useState('')
   const [sortBy, setSortBy] = useState('submittedAt')
   const [sortOrder, setSortOrder] = useState('desc')
   const [page, setPage] = useState(1)

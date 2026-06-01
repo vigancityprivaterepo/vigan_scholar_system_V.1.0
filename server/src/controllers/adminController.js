@@ -375,7 +375,7 @@ const listApplications = async (req, res, next) => {
   const sortBy = ALLOWED_SORT_FIELDS.includes(rawSortBy) ? rawSortBy : 'submittedAt';
   const sortOrder = rawSortOrder === 'asc' ? 'asc' : 'desc';
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const academicYear = String(rawAcademicYear || '').trim() || toAcademicYear(new Date());
+    const academicYear = String(rawAcademicYear || '').trim();
 
     const where = {};
     if (status) {
@@ -636,7 +636,7 @@ const previewBulkEmailRecipients = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
-      academicYear: academicYear || toAcademicYear(new Date()),
+      academicYear,
     });
 
     const [count, sample] = await Promise.all([
@@ -730,7 +730,7 @@ const bulkEmailApplicants = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
-      academicYear: academicYear || toAcademicYear(new Date()),
+      academicYear,
     });
 
     const applications = await prisma.application.findMany({
@@ -847,7 +847,7 @@ const scheduleBulkEmailApplicants = async (req, res, next) => {
       search,
       submittedFrom,
       submittedTo,
-      academicYear: academicYear || toAcademicYear(new Date()),
+      academicYear,
     };
     const where = buildBulkEmailWhere(filterPayload);
     const count = await prisma.application.count({ where });
@@ -1264,7 +1264,7 @@ const reviewCOR = async (req, res, next) => {
 
 const getDashboardStats = async (req, res, next) => {
   try {
-    const academicYear = String(req.query.academicYear || '').trim() || toAcademicYear(new Date());
+    const academicYear = String(req.query.academicYear || '').trim();
     const where = academicYear ? { academicYear } : {};
     const VIGAN_BARANGAYS = [
       'Ayusan Norte','Ayusan Sur','Barangay I (Poblacion)','Barangay II (Poblacion)',
@@ -1421,7 +1421,7 @@ const getActivityLogs = async (req, res, next) => {
 const listBulkEmailLogs = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, search = '', sentFrom, sentTo, academicYear: rawAcademicYear } = req.query;
-    const academicYear = String(rawAcademicYear || '').trim() || toAcademicYear(new Date());
+    const academicYear = String(rawAcademicYear || '').trim();
     const take = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const currentPage = Math.max(1, parseInt(page, 10) || 1);
     const skip = (currentPage - 1) * take;

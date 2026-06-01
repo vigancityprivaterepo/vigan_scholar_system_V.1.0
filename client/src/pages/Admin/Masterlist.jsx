@@ -41,7 +41,7 @@ export default function Masterlist() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [academicYear, setAcademicYear] = useState(academicYearOptions[0] || '')
+  const [academicYear, setAcademicYear] = useState('')
   const [yearLevel, setYearLevel] = useState('')
 
   const fetchData = useCallback(() => {

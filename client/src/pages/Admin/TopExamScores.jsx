@@ -39,7 +39,7 @@ export default function TopExamScores() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [academicYear, setAcademicYear] = useState(academicYearOptions[0] || '')
+  const [academicYear, setAcademicYear] = useState('')
 
   const fetchData = useCallback(() => {
     setLoading(true)

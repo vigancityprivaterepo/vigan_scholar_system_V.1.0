@@ -58,13 +58,11 @@ const getAcademicYearOptions = () => {
 
 export default function BulkEmail() {
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
-  const defaultAcademicYear = academicYearOptions[0] || ''
-
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [academicYear, setAcademicYear] = useState(defaultAcademicYear)
+  const [academicYear, setAcademicYear] = useState('')
   const [submittedFrom, setSubmittedFrom] = useState('')
   const [submittedTo, setSubmittedTo] = useState('')
   const [sortBy, setSortBy] = useState('submittedAt')
