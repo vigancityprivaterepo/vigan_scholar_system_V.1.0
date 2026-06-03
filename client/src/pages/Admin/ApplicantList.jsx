@@ -29,16 +29,48 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
     const r = await adminService.listApplications(params)
     const apps = r.data.applications
 
-    const headers = ['Name', 'Email', 'School', 'Course', 'Year Level', 'Gen. Average (%)', 'Status', 'Contact', 'Submitted']
+    const headers = [
+      'Reference ID',
+      'Applicant Account Name',
+      'Last Name',
+      'First Name',
+      'Middle Name',
+      'Email',
+      'Contact',
+      'Birthdate',
+      'Age',
+      'Sex',
+      'Gender',
+      'Place of Birth',
+      'Address',
+      'School',
+      'Course',
+      'Year Level',
+      'Gen. Average (%)',
+      'Status',
+      'Academic Year',
+      'Submitted',
+    ]
     const rows = apps.map(a => [
+      a.id ? `#${String(a.id).slice(0, 8).toUpperCase()}` : '',
       a.applicant?.fullName || '',
+      a.lastName || '',
+      a.firstName || '',
+      a.middleName || '',
       a.applicant?.email || '',
+      a.contact || '',
+      a.birthdate ? new Date(a.birthdate).toLocaleDateString() : '',
+      a.age ?? '',
+      a.sex || '',
+      a.gender || '',
+      a.placeOfBirth || '',
+      a.address || '',
       a.school || '',
       a.course || '',
       a.yearLevel || '',
       a.generalAverage ? parseFloat(a.generalAverage).toFixed(1) : '',
       a.status || '',
-      a.contact || '',
+      a.academicYear || '',
       a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '',
     ])
 

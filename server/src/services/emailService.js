@@ -1,9 +1,19 @@
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 let transporter;
+let transporterVerified = false;
 const LOGO_CID = 'portal-logo';
+const EMAIL_SEND_MAX_ATTEMPTS = (() => {
+  const parsed = parseInt(process.env.EMAIL_SEND_MAX_ATTEMPTS || '3', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
+})();
+const EMAIL_SEND_RETRY_DELAY_MS = (() => {
+  const parsed = parseInt(process.env.EMAIL_SEND_RETRY_DELAY_MS || '1500', 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1500;
+})();
 
 const resolveLogoPath = () => {
   const candidates = [
@@ -39,6 +49,32 @@ const getTransporter = () => {
     });
   }
   return transporter;
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getSenderConfig = () => {
+  const smtpUser = String(process.env.SMTP_USER || '').trim();
+  const configuredFrom = String(process.env.EMAIL_FROM || '').trim();
+  const replyTo = String(process.env.EMAIL_REPLY_TO || configuredFrom || '').trim();
+  const senderName = String(process.env.EMAIL_SENDER_NAME || 'Scholarship Portal').trim() || 'Scholarship Portal';
+
+  const from = smtpUser
+    ? `"${senderName.replaceAll('"', '')}" <${smtpUser}>`
+    : (configuredFrom || `"${senderName.replaceAll('"', '')}" <noreply@vigancity.gov.ph>`);
+
+  return {
+    from,
+    replyTo: replyTo && replyTo.toLowerCase() !== smtpUser.toLowerCase() ? replyTo : undefined,
+  };
+};
+
+const verifyTransporter = async () => {
+  if (transporterVerified) return;
+
+  await getTransporter().verify();
+  transporterVerified = true;
+  logger.info('SMTP transporter verified successfully.');
 };
 
 const escapeHtml = (value = '') =>
@@ -446,7 +482,7 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
 
     const rendered = templateFn(data);
 
-    const from = process.env.EMAIL_FROM || '"Scholarship Portal" <noreply@vigancity.gov.ph>';
+    const { from, replyTo } = getSenderConfig();
     const attachments = [];
 
     if (rendered.html.includes(`cid:${LOGO_CID}`)) {
@@ -460,16 +496,43 @@ const sendEmail = async ({ to, subject, template, data = {}, throwOnError = fals
       }
     }
 
-    await getTransporter().sendMail({
+    const mailOptions = {
       from,
-      to,
+      ...(replyTo ? { replyTo } : {}),
+      to: String(to || '').trim(),
       subject: subject || rendered.subject,
       html: rendered.html,
       attachments,
-    });
-    console.log(`Email sent to ${to}: ${rendered.subject}`);
+    };
+
+    if (!mailOptions.to) {
+      throw new Error('Email recipient is required.');
+    }
+
+    let lastError;
+
+    for (let attempt = 1; attempt <= EMAIL_SEND_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        await verifyTransporter();
+        await getTransporter().sendMail(mailOptions);
+        logger.info(`Email sent to ${mailOptions.to} on attempt ${attempt}: ${mailOptions.subject}`);
+        return;
+      } catch (err) {
+        lastError = err;
+        transporterVerified = false;
+        logger.warn(
+          `Email send attempt ${attempt}/${EMAIL_SEND_MAX_ATTEMPTS} failed for ${mailOptions.to}: ${err.message}`
+        );
+
+        if (attempt < EMAIL_SEND_MAX_ATTEMPTS) {
+          await sleep(EMAIL_SEND_RETRY_DELAY_MS * attempt);
+        }
+      }
+    }
+
+    throw lastError || new Error(`Failed to send email to ${mailOptions.to}.`);
   } catch (err) {
-    console.error(`Failed to send email to ${to}:`, err.message);
+    logger.error(`Failed to send email to ${to}: ${err.message}`);
     if (throwOnError) throw err;
   }
 };

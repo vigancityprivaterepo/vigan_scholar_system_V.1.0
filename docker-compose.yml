@@ -16,7 +16,7 @@ services:
     depends_on:
       - db
     env_file:
-      - .env
+      - ./server/.env
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/scholarship_db
       NODE_ENV: production
