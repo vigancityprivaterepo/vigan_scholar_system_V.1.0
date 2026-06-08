@@ -10,7 +10,8 @@ datasource db {
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  passwordHash String?  @map("password_hash")
+  googleId     String?  @unique @map("google_id")
   isEmailVerified Boolean @default(false) @map("is_email_verified")
   role         Role     @default(APPLICANT)
   fullName     String   @map("full_name")

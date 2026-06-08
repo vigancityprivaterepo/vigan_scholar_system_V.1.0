@@ -3,6 +3,7 @@ import logo from '../../assets/logo.png'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -27,7 +28,7 @@ const STRENGTH_SEG_COLOR = ['', 'bg-red-400', 'bg-orange-400', 'bg-green-500', '
 const STRENGTH_TEXT_COLOR = ['', 'text-red-500', 'text-orange-500', 'text-green-600', 'text-[#0c2340]']
 
 export default function RegisterPage() {
-  const { register } = useAuthStore()
+  const { register, loginWithGoogle } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' })
@@ -35,6 +36,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [touched, setTouched] = useState({ fullName: false, email: false, password: false, confirm: false })
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
 
   const passwordStrength = getPasswordStrength(form.password)
@@ -68,6 +70,11 @@ export default function RegisterPage() {
     if (error) setError('')
   }
 
+  const navigateForUser = (user) => {
+    const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role)
+    navigate(isAdminRole ? '/admin/dashboard' : '/applicant/dashboard')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setTouched({ fullName: true, email: true, password: true, confirm: true })
@@ -84,6 +91,25 @@ export default function RegisterPage() {
       setError(err.response?.data?.message || 'Registration failed.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogleSuccess = async (credential) => {
+    if (!credential) {
+      setError('Google sign-up did not return a credential. Please try again.')
+      return
+    }
+
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const user = await loginWithGoogle(credential)
+      toast.success(`Welcome, ${user.fullName}!`)
+      navigateForUser(user)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to continue with Google right now.')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -328,6 +354,30 @@ export default function RegisterPage() {
               </button>
 
             </form>
+
+            <div className="mt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">or</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div className="mt-4 flex justify-center">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Google sign-up was cancelled or failed. Please try again.')}
+                  text="signup_with"
+                  disabled={googleLoading}
+                />
+              </div>
+              {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+                <p className="mt-3 text-center text-xs text-amber-700">
+                  Google sign-up is hidden because `VITE_GOOGLE_CLIENT_ID` is not set.
+                </p>
+              )}
+              {googleLoading && (
+                <p className="mt-3 text-center text-xs text-slate-500">Completing Google sign-up...</p>
+              )}
+            </div>
 
             {/* Login link */}
             <p className="mt-6 text-center text-sm text-slate-500">

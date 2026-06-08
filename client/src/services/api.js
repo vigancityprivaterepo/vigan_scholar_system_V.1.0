@@ -45,6 +45,7 @@ api.interceptors.response.use(
     const skipRefresh = Boolean(
       originalRequest?._skipAuthRefresh ||
       requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/google') ||
       requestUrl.includes('/auth/register') ||
       requestUrl.includes('/auth/forgot-password') ||
       requestUrl.includes('/auth/reset-password') ||

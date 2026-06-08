@@ -3,11 +3,12 @@ import logo from '../../assets/logo.png'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function LoginPage() {
-  const { login } = useAuthStore()
+  const { login, loginWithGoogle } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ email: '', password: '' })
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [touched, setTouched] = useState({ email: false, password: false })
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const pendingVerificationEmail = location.state?.registrationPendingVerification ? location.state?.registrationEmail : ''
 
@@ -39,6 +41,11 @@ export default function LoginPage() {
 
   const canSubmit = Object.keys(fieldErrors).length === 0 && !loading
 
+  const navigateForUser = (user) => {
+    const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role)
+    navigate(isAdminRole ? '/admin/dashboard' : '/applicant/dashboard')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setTouched({ email: true, password: true })
@@ -48,12 +55,30 @@ export default function LoginPage() {
     try {
       const user = await login(form.email.trim(), form.password)
       toast.success(`Welcome back, ${user.fullName}!`)
-      const isAdminRole = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'].includes(user.role)
-      navigate(isAdminRole ? '/admin/dashboard' : '/applicant/dashboard')
+      navigateForUser(user)
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to sign in. Please check your credentials and try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleGoogleSuccess = async (credential) => {
+    if (!credential) {
+      setError('Google sign-in did not return a credential. Please try again.')
+      return
+    }
+
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const user = await loginWithGoogle(credential)
+      toast.success(`Welcome, ${user.fullName}!`)
+      navigateForUser(user)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to sign in with Google right now.')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -242,6 +267,30 @@ export default function LoginPage() {
               </button>
 
             </form>
+
+            <div className="mt-6">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">or</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+              <div className="mt-4 flex justify-center">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Google sign-in was cancelled or failed. Please try again.')}
+                  text="continue_with"
+                  disabled={googleLoading}
+                />
+              </div>
+              {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+                <p className="mt-3 text-center text-xs text-amber-700">
+                  Google sign-in is hidden because `VITE_GOOGLE_CLIENT_ID` is not set.
+                </p>
+              )}
+              {googleLoading && (
+                <p className="mt-3 text-center text-xs text-slate-500">Completing Google sign-in...</p>
+              )}
+            </div>
 
             {/* Register link */}
             <p className="mt-6 text-center text-sm text-slate-500">

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const { PrismaClient } = require('@prisma/client');
 const { generateTokens } = require('../utils/generateTokens');
 const { hashToken } = require('../utils/tokenHash');
@@ -10,6 +11,7 @@ const { getEffectiveRole } = require('../utils/primaryAdmin');
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 
 const prisma = new PrismaClient();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -96,6 +98,13 @@ const getUserProfile = async (userId) => {
   };
 };
 
+const issueAuthSession = async (res, userId) => {
+  const tokens = await generateTokens(userId);
+  res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
+  const profile = await getUserProfile(userId);
+  return { profile, accessToken: tokens.accessToken };
+};
+
 const register = async (req, res, next) => {
   try {
     const { email, password, fullName } = req.body;
@@ -113,6 +122,9 @@ const register = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
+      if (existing.googleId && !existing.passwordHash) {
+        throw new AppError('Email already registered using Google sign-in. Please continue with Google.', 409);
+      }
       if (existing.role !== 'APPLICANT' || existing.isEmailVerified) {
         throw new AppError('Email already registered', 409);
       }
@@ -162,7 +174,7 @@ const forgotPassword = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
-    if (user) {
+    if (user?.passwordHash) {
       // Signed with JWT_SECRET only.  The 30-minute expiry is the primary
       // invalidation mechanism; this keeps the secret simple and auditable.
       const token = jwt.sign(
@@ -201,6 +213,9 @@ const login = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) throw new AppError('Invalid email or password', 401);
+    if (!user.passwordHash) {
+      throw new AppError('This account uses Google sign-in. Please continue with Google.', 400);
+    }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
@@ -215,13 +230,107 @@ const login = async (req, res, next) => {
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
 
-    const tokens = await generateTokens(user.id);
-    res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
-
+    const session = await issueAuthSession(res, user.id);
     logger.info('User logged in', { userId: user.id, email: user.email, role: user.role, ip: req.ip });
+    res.json({ success: true, user: session.profile, accessToken: session.accessToken });
+  } catch (err) {
+    next(err);
+  }
+};
 
-    const profile = await getUserProfile(user.id);
-    res.json({ success: true, user: profile, accessToken: tokens.accessToken });
+const googleAuth = async (req, res, next) => {
+  try {
+    const credential = String(req.body?.credential || '').trim();
+    if (!credential) throw new AppError('Google credential is required', 400);
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch {
+      throw new AppError('Google sign-in verification failed. Please try again.', 401);
+    }
+
+    const googleId = String(payload?.sub || '').trim();
+    const email = String(payload?.email || '').trim().toLowerCase();
+    const fullName = String(payload?.name || '').trim();
+
+    if (!googleId || !email) {
+      throw new AppError('Google account is missing required profile information.', 400);
+    }
+    if (!payload?.email_verified) {
+      throw new AppError('Your Google account email must be verified before you can continue.', 403);
+    }
+
+    const [existingByGoogleId, existingByEmail] = await Promise.all([
+      prisma.user.findUnique({ where: { googleId } }),
+      prisma.user.findUnique({ where: { email } }),
+    ]);
+
+    if (existingByGoogleId && existingByEmail && existingByGoogleId.id !== existingByEmail.id) {
+      throw new AppError('Unable to link this Google account because the email is already in use by another user.', 409);
+    }
+    if (!existingByGoogleId && existingByEmail?.googleId && existingByEmail.googleId !== googleId) {
+      throw new AppError('This email is already linked to a different Google account.', 409);
+    }
+
+    let userId;
+
+    if (existingByGoogleId) {
+      const updateData = { isEmailVerified: true };
+      if (existingByGoogleId.email !== email && (!existingByEmail || existingByEmail.id === existingByGoogleId.id)) {
+        updateData.email = email;
+      }
+      if (!existingByGoogleId.fullName && fullName) {
+        updateData.fullName = fullName;
+      }
+
+      const updated = await prisma.user.update({
+        where: { id: existingByGoogleId.id },
+        data: updateData,
+      });
+      userId = updated.id;
+    } else if (existingByEmail) {
+      const updated = await prisma.user.update({
+        where: { id: existingByEmail.id },
+        data: {
+          googleId,
+          fullName: existingByEmail.fullName || fullName || existingByEmail.email.split('@')[0],
+          isEmailVerified: true,
+        },
+      });
+      userId = updated.id;
+    } else {
+      const created = await prisma.user.create({
+        data: {
+          email,
+          googleId,
+          fullName: fullName || email.split('@')[0],
+          role: 'APPLICANT',
+          isEmailVerified: true,
+        },
+        select: { id: true },
+      });
+      userId = created.id;
+    }
+
+    const linkedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, role: true },
+    });
+
+    const session = await issueAuthSession(res, userId);
+    logger.info('User logged in with Google', {
+      userId,
+      email: linkedUser?.email || email,
+      role: linkedUser?.role,
+      ip: req.ip,
+    });
+
+    res.json({ success: true, user: session.profile, accessToken: session.accessToken });
   } catch (err) {
     next(err);
   }
@@ -273,6 +382,7 @@ const resetPassword = async (req, res, next) => {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) throw new AppError('Invalid or expired reset link', 400);
+    if (!user.passwordHash) throw new AppError('Password reset is not available for Google-only accounts.', 400);
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -361,6 +471,9 @@ const changePassword = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) throw new AppError('User not found', 404);
+    if (!user.passwordHash) {
+      throw new AppError('Password changes are not available for Google-only accounts.', 400);
+    }
 
     const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch) throw new AppError('Current password is incorrect', 400);
@@ -409,4 +522,4 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile };
+module.exports = { register, login, googleAuth, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile };

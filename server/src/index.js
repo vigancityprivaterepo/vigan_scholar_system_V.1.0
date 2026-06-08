@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 // Validate required environment variables before anything else starts.
-const REQUIRED_ENV = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'PRIMARY_ADMIN_EMAIL', 'CLIENT_URL', 'DATABASE_URL'];
+const REQUIRED_ENV = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'PRIMARY_ADMIN_EMAIL', 'CLIENT_URL', 'DATABASE_URL', 'GOOGLE_CLIENT_ID'];
 const missingEnv = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missingEnv.length > 0) {
   // Logger not yet initialised — use console here intentionally.
