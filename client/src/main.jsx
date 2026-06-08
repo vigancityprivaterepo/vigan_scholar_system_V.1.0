@@ -6,11 +6,7 @@ import './index.css'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-const app = (
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-)
+const app = <App />
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   googleClientId ? (
