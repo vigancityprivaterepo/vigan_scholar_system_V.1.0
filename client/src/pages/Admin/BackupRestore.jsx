@@ -17,7 +17,6 @@ const fmtDate = (iso) => {
 }
 
 const parseFilenameDate = (filename) => {
-  // backup-2026-04-14T10-30-00-000Z.json.gz → readable
   const match = filename.match(/^(?:backup|pre-restore)-([\d\-T]+Z)\.json\.gz$/)
   if (!match) return filename
   try {
@@ -27,21 +26,19 @@ const parseFilenameDate = (filename) => {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Confirm dialog
-// ---------------------------------------------------------------------------
 function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
   const [phrase, setPhrase] = useState('')
   const REQUIRED = 'RESTORE'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-lg border border-red-300 bg-white shadow-2xl">
         <div className="border-b border-red-200 bg-red-50 px-6 py-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-red-700">Confirm Database Restore</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-red-700">Confirm Backup Restore</p>
         </div>
         <div className="space-y-4 px-6 py-5">
           <p className="text-sm text-slate-700">
-            This will <strong>permanently overwrite all current data</strong> with the contents of:
+            This will <strong>permanently overwrite all current data and uploaded files</strong> with the contents of:
           </p>
           <p className="break-all rounded bg-slate-100 px-3 py-2 font-mono text-xs text-slate-700">{filename}</p>
           <p className="text-sm text-slate-700">
@@ -75,7 +72,7 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
             className="flex items-center gap-2 rounded bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
           >
             {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-            Restore Database
+            Restore Backup
           </button>
         </div>
       </div>
@@ -83,19 +80,14 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
 export default function BackupRestore() {
   const [backups, setBackups] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [deletingFile, setDeletingFile] = useState(null)
   const [downloadingFile, setDownloadingFile] = useState(null)
-  const [restoreTarget, setRestoreTarget] = useState(null) // filename to restore from server list
+  const [restoreTarget, setRestoreTarget] = useState(null)
   const [restoring, setRestoring] = useState(false)
-
-  // Upload-based restore
   const fileRef = useRef()
   const [uploadFile, setUploadFile] = useState(null)
   const [uploadRestoreOpen, setUploadRestoreOpen] = useState(false)
@@ -113,7 +105,6 @@ export default function BackupRestore() {
 
   useEffect(() => { load() }, [])
 
-  // Create backup
   const handleCreate = async () => {
     setCreating(true)
     try {
@@ -127,7 +118,6 @@ export default function BackupRestore() {
     }
   }
 
-  // Download backup
   const handleDownload = async (filename) => {
     setDownloadingFile(filename)
     try {
@@ -145,7 +135,6 @@ export default function BackupRestore() {
     }
   }
 
-  // Delete backup
   const handleDelete = async (filename) => {
     if (!window.confirm(`Delete backup "${filename}"? This cannot be undone.`)) return
     setDeletingFile(filename)
@@ -160,7 +149,6 @@ export default function BackupRestore() {
     }
   }
 
-  // Restore from server-side file (no download/re-upload needed)
   const handleRestoreFromServer = async () => {
     if (!restoreTarget) return
     setRestoring(true)
@@ -176,7 +164,6 @@ export default function BackupRestore() {
     }
   }
 
-  // Restore from uploaded file
   const handleRestoreFromUpload = async () => {
     if (!uploadFile) return
     setRestoring(true)
@@ -197,7 +184,6 @@ export default function BackupRestore() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Confirm dialogs */}
       {restoreTarget && (
         <ConfirmRestore
           filename={restoreTarget}
@@ -215,12 +201,11 @@ export default function BackupRestore() {
         />
       )}
 
-      {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal VSMS</p>
           <h1 className="mt-1 text-2xl font-bold text-brand-primary">Backup &amp; Restore</h1>
-          <p className="mt-1 text-sm text-slate-500">Create and manage database backups. Accessible to Super Admin only.</p>
+          <p className="mt-1 text-sm text-slate-500">Create and manage full-system backups, including uploaded files. Accessible to Super Admin only.</p>
         </div>
         <button
           onClick={handleCreate}
@@ -230,18 +215,18 @@ export default function BackupRestore() {
           {creating
             ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             : <span className="text-base leading-none">+</span>}
-          {creating ? 'Creating…' : 'Create Backup'}
+          {creating ? 'Creating...' : 'Create Backup'}
         </button>
       </div>
 
-      {/* Warning banner */}
-      <div className="rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <strong>Note:</strong> Backups include all database records but <strong>not</strong> uploaded files
-        (applicant documents, COR files, carousel images). Back up the <code className="text-xs font-mono bg-amber-100 px-1 rounded">server/private_uploads</code> and{' '}
-        <code className="text-xs font-mono bg-amber-100 px-1 rounded">server/public_uploads</code> directories separately.
+      <div className="rounded border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <strong>Note:</strong> New backups include database records plus uploaded files from
+        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/private_uploads</code>,
+        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/public_uploads</code>, and
+        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/uploads</code>.
+        Older backups created before this update may still restore database data only.
       </div>
 
-      {/* Backup list */}
       <div className="border border-slate-300 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-300 bg-slate-50 px-6 py-3">
           <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">
@@ -250,7 +235,7 @@ export default function BackupRestore() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading…</div>
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading...</div>
         ) : backups.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-10 w-10 text-slate-300">
@@ -276,7 +261,7 @@ export default function BackupRestore() {
                       )}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      {fmtDate(b.createdAt)} &nbsp;·&nbsp; {fmt(b.size)}
+                      {parseFilenameDate(b.filename)} | {fmt(b.size)}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
@@ -285,7 +270,7 @@ export default function BackupRestore() {
                       disabled={downloadingFile === b.filename}
                       className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                     >
-                      {downloadingFile === b.filename ? 'Downloading…' : 'Download'}
+                      {downloadingFile === b.filename ? 'Downloading...' : 'Download'}
                     </button>
                     <button
                       onClick={() => setRestoreTarget(b.filename)}
@@ -312,7 +297,6 @@ export default function BackupRestore() {
         )}
       </div>
 
-      {/* Upload & restore from external file */}
       <div className="border border-slate-300 bg-white shadow-sm">
         <div className="border-b border-slate-300 bg-slate-50 px-6 py-3">
           <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">Restore from External File</p>
@@ -320,6 +304,7 @@ export default function BackupRestore() {
         <div className="p-6">
           <p className="mb-4 text-sm text-slate-600">
             Upload a <code className="font-mono text-xs bg-slate-100 px-1 rounded">.json.gz</code> backup file downloaded from a previous export.
+            Newer backups can include both database records and uploaded files.
           </p>
           <div
             onClick={() => fileRef.current?.click()}
@@ -333,10 +318,12 @@ export default function BackupRestore() {
             ) : (
               <>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-slate-400">
-                  <path d="M12 15V5" /><path d="m8.5 8.5 3.5-3.5 3.5 3.5" /><path d="M5 18.5h14" />
+                  <path d="M12 15V5" />
+                  <path d="m8.5 8.5 3.5-3.5 3.5 3.5" />
+                  <path d="M5 18.5h14" />
                 </svg>
                 <span className="text-sm">Click to select a backup file</span>
-                <span className="text-xs text-slate-400">.json.gz — max 50 MB</span>
+                <span className="text-xs text-slate-400">.json.gz - max 250 MB</span>
               </>
             )}
           </div>
