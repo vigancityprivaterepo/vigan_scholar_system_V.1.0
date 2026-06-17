@@ -7,6 +7,7 @@ const { createNotification } = require('../services/notificationService');
 const { toAcademicYear } = require('../utils/academicYear');
 
 const prisma = new PrismaClient();
+const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022']);
 
 const roundToTwoDecimals = (value) => {
   if (value === undefined || value === null || value === '') return null;
@@ -175,19 +176,33 @@ const submitApplication = async (req, res, next) => {
 
 const getMyApplication = async (req, res, next) => {
   try {
-    const application = await prisma.application.findFirst({
-      where: { applicantId: req.user.id },
-      include: {
-        requirementFiles: true,
-        corFiles: { orderBy: { uploadedAt: 'desc' } },
-        activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
-        examSchedules: {
-          orderBy: { scheduledAt: 'desc' },
-          take: 1,
-          include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+    let application;
+    try {
+      application = await prisma.application.findFirst({
+        where: { applicantId: req.user.id },
+        include: {
+          requirementFiles: true,
+          corFiles: { orderBy: { uploadedAt: 'desc' } },
+          activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
+          examSchedules: {
+            orderBy: { scheduledAt: 'desc' },
+            take: 1,
+            include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      if (!OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)) throw err;
+      application = await prisma.application.findFirst({
+        where: { applicantId: req.user.id },
+        include: {
+          requirementFiles: true,
+          corFiles: { orderBy: { uploadedAt: 'desc' } },
+          activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
+          examSchedules: { orderBy: { scheduledAt: 'desc' }, take: 1 },
+        },
+      });
+    }
 
     if (!application) return res.json({ success: true, application: null });
     res.json({ success: true, application });

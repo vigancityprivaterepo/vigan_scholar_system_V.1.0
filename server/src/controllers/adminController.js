@@ -31,6 +31,7 @@ const EMAIL_JOB_DEFAULT_MAX_ATTEMPTS = (() => {
   const parsed = parseInt(process.env.BULK_EMAIL_JOB_MAX_ATTEMPTS || '3', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 3;
 })();
+const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022']);
 const privateUploadsDir = path.join(__dirname, '../../private_uploads');
 const legacyUploadsDir = path.join(__dirname, '../../uploads');
 
@@ -251,6 +252,29 @@ const buildBulkEmailWhere = ({
   return where;
 };
 
+const isSchemaDriftError = (err) => OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code);
+
+const buildExamScheduleCreateData = ({ applicationId, scheduledAt, location, type, examinerId }) => ({
+  applicationId,
+  scheduledAt,
+  location: location || null,
+  type: type || 'BOTH',
+  ...(examinerId ? { examinerId } : {}),
+});
+
+const createExamScheduleRecord = async ({ applicationId, scheduledAt, location, type, examinerId }) => {
+  try {
+    return await prisma.examSchedule.create({
+      data: buildExamScheduleCreateData({ applicationId, scheduledAt, location, type, examinerId }),
+    });
+  } catch (err) {
+    if (examinerId && isSchemaDriftError(err)) {
+      throw new AppError('Examiner assignment requires the latest database migration on the server. Apply the migration first, or schedule without assigning an examiner for now.', 400);
+    }
+    throw err;
+  }
+};
+
 const getLatestPreviousStatus = async (applicationId, currentStatus) => {
   const latestStatusChange = await prisma.activityLog.findFirst({
     where: {
@@ -451,22 +475,40 @@ const listApplications = async (req, res, next) => {
 const getApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const application = await prisma.application.findUnique({
-      where: { id },
-      include: {
-        applicant: { select: { id: true, email: true, fullName: true, createdAt: true } },
-        requirementFiles: true,
-        corFiles: { orderBy: { uploadedAt: 'desc' } },
-        activityLogs: {
-          orderBy: { createdAt: 'desc' },
-          include: { performedBy: { select: { fullName: true, role: true } } },
+    let application;
+    try {
+      application = await prisma.application.findUnique({
+        where: { id },
+        include: {
+          applicant: { select: { id: true, email: true, fullName: true, createdAt: true } },
+          requirementFiles: true,
+          corFiles: { orderBy: { uploadedAt: 'desc' } },
+          activityLogs: {
+            orderBy: { createdAt: 'desc' },
+            include: { performedBy: { select: { fullName: true, role: true } } },
+          },
+          examSchedules: {
+            orderBy: { scheduledAt: 'desc' },
+            include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+          },
         },
-        examSchedules: {
-          orderBy: { scheduledAt: 'desc' },
-          include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+      });
+    } catch (err) {
+      if (!isSchemaDriftError(err)) throw err;
+      application = await prisma.application.findUnique({
+        where: { id },
+        include: {
+          applicant: { select: { id: true, email: true, fullName: true, createdAt: true } },
+          requirementFiles: true,
+          corFiles: { orderBy: { uploadedAt: 'desc' } },
+          activityLogs: {
+            orderBy: { createdAt: 'desc' },
+            include: { performedBy: { select: { fullName: true, role: true } } },
+          },
+          examSchedules: { orderBy: { scheduledAt: 'desc' } },
         },
-      },
-    });
+      });
+    }
     if (!application) throw new AppError('Application not found', 404);
     res.json({ success: true, application });
   } catch (err) {
@@ -1090,14 +1132,12 @@ const scheduleExam = async (req, res, next) => {
       if (!examiner) throw new AppError('Selected examiner was not found.', 400);
     }
 
-    const schedule = await prisma.examSchedule.create({
-      data: {
-        applicationId: id,
-        examinerId: examiner?.id || null,
-        scheduledAt: new Date(scheduledAt),
-        location: location || null,
-        type: type || 'BOTH',
-      },
+    const schedule = await createExamScheduleRecord({
+      applicationId: id,
+      examinerId: examiner?.id,
+      scheduledAt: new Date(scheduledAt),
+      location,
+      type,
     });
 
     // ExamSchedule is the authoritative source for scheduling data.
@@ -1180,14 +1220,12 @@ const bulkScheduleExam = async (req, res, next) => {
 
     for (const application of applications) {
       try {
-        const schedule = await prisma.examSchedule.create({
-          data: {
-            applicationId: application.id,
-            examinerId: examiner?.id || null,
-            scheduledAt: scheduledDate,
-            location: schedLocation,
-            type: schedType,
-          },
+        const schedule = await createExamScheduleRecord({
+          applicationId: application.id,
+          examinerId: examiner?.id,
+          scheduledAt: scheduledDate,
+          location: schedLocation,
+          type: schedType,
         });
 
         await createNotification({
