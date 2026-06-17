@@ -382,7 +382,7 @@ const emailTemplates = {
       sections: [
         renderPanel(
           'Schedule Details',
-          `<strong>Date and Time:</strong> ${escapeHtml(data.scheduledAt || 'Not specified')}<br />${data.location ? `<strong>Location:</strong> ${escapeHtml(data.location)}<br />` : ''}<strong>Type:</strong> ${escapeHtml(data.type || 'Not specified')}`,
+          `<strong>Date and Time:</strong> ${escapeHtml(data.scheduledAt || 'Not specified')}<br />${data.location ? `<strong>Location:</strong> ${escapeHtml(data.location)}<br />` : ''}${data.examinerName ? `<strong>Examiner:</strong> ${escapeHtml(data.examinerName)}<br />` : ''}<strong>Type:</strong> ${escapeHtml(data.type || 'Not specified')}`,
           'teal'
         ),
       ],

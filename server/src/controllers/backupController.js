@@ -11,9 +11,10 @@ const { AppError } = require('../middleware/errorHandler')
 
 const SERVER_ROOT = path.resolve(__dirname, '../..')
 const BACKUP_DIR = path.resolve(process.env.BACKUP_DIR || path.join(SERVER_ROOT, 'backups'))
+const RESTORE_UPLOAD_DIR = path.join(BACKUP_DIR, '_restore_uploads')
 const BACKUP_VERSION = '2'
 const FILENAME_RE = /^(backup|pre-restore)-[\w\-]+\.json\.gz$/
-const MAX_BACKUP_UPLOAD_MB = parseInt(process.env.BACKUP_UPLOAD_MAX_MB || '250', 10)
+const MAX_BACKUP_UPLOAD_MB = parseInt(process.env.BACKUP_UPLOAD_MAX_MB || '4096', 10)
 const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022'])
 const UPLOAD_DIRECTORIES = {
   privateUploads: path.resolve(__dirname, '../../private_uploads'),
@@ -39,6 +40,7 @@ const BACKUP_DATASETS = [
 
 function ensureRuntimeDirectories() {
   fs.mkdirSync(BACKUP_DIR, { recursive: true })
+  fs.mkdirSync(RESTORE_UPLOAD_DIR, { recursive: true })
   for (const dir of Object.values(UPLOAD_DIRECTORIES)) {
     fs.mkdirSync(dir, { recursive: true })
   }
@@ -68,7 +70,17 @@ function serializeBackupValue(value) {
 }
 
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      ensureRuntimeDirectories()
+      cb(null, RESTORE_UPLOAD_DIR)
+    },
+    filename: (_req, file, cb) => {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const safeName = path.basename(file.originalname || `restore-${timestamp}.json.gz`).replace(/[^\w.\-]/g, '_')
+      cb(null, `${timestamp}-${safeName}`)
+    },
+  }),
   limits: { fileSize: MAX_BACKUP_UPLOAD_MB * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.originalname.endsWith('.json.gz')) return cb(null, true)
@@ -197,11 +209,14 @@ async function writeChunk(stream, chunk) {
   await new Promise(resolve => stream.once('drain', resolve))
 }
 
-async function writeBackupFile(filepath, data, meta) {
+async function writeBackupFile(filepath, data, meta, options = {}) {
+  const includeFiles = options.includeFiles !== false
   const counts = Object.fromEntries(
     Object.entries(data).map(([k, v]) => [k, v.length])
   )
-  const fileCounts = collectFileCounts()
+  const fileCounts = includeFiles
+    ? collectFileCounts()
+    : Object.fromEntries(Object.keys(UPLOAD_DIRECTORIES).map((key) => [key, 0]))
   const gzip = zlib.createGzip()
   const fileStream = fs.createWriteStream(filepath)
   gzip.pipe(fileStream)
@@ -215,7 +230,11 @@ async function writeBackupFile(filepath, data, meta) {
       await writeChunk(gzip, `,${serializeBackupValue(key)}:${serializeBackupValue(value)}`)
     }
 
-    await writeChunk(gzip, `,"note":${serializeBackupValue('Includes database records and uploaded files from private_uploads, public_uploads, and legacy uploads directories.')}`)
+    await writeChunk(gzip, `,"note":${serializeBackupValue(includeFiles
+      ? 'Includes database records and uploaded files from private_uploads, public_uploads, and legacy uploads directories.'
+      : 'Includes database records only. Uploaded files are intentionally excluded for a lightweight backup.'
+    )}`)
+    await writeChunk(gzip, `,"includesFiles":${serializeBackupValue(includeFiles)}`)
     await writeChunk(gzip, `,"counts":${serializeBackupValue(counts)}`)
     await writeChunk(gzip, `,"fileCounts":${serializeBackupValue(fileCounts)}`)
 
@@ -235,28 +254,30 @@ async function writeBackupFile(filepath, data, meta) {
       firstDirectory = false
       await writeChunk(gzip, `${serializeBackupValue(key)}:[`)
 
-      let firstFile = true
-      await walkDirectoryFiles(dirPath, async (absolutePath, baseDir) => {
-        try {
-          const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
-          const content = fs.readFileSync(absolutePath)
-          const stat = fs.statSync(absolutePath)
-          const entry = serializeBackupValue({
-            path: relativePath,
-            size: stat.size,
-            contentBase64: content.toString('base64'),
-          })
+      if (includeFiles) {
+        let firstFile = true
+        await walkDirectoryFiles(dirPath, async (absolutePath, baseDir) => {
+          try {
+            const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
+            const content = fs.readFileSync(absolutePath)
+            const stat = fs.statSync(absolutePath)
+            const entry = serializeBackupValue({
+              path: relativePath,
+              size: stat.size,
+              contentBase64: content.toString('base64'),
+            })
 
-          if (!firstFile) await writeChunk(gzip, ',')
-          firstFile = false
-          await writeChunk(gzip, entry)
-        } catch (err) {
-          logger.warn('Skipping unreadable file while creating backup', {
-            file: absolutePath,
-            message: err.message,
-          })
-        }
-      })
+            if (!firstFile) await writeChunk(gzip, ',')
+            firstFile = false
+            await writeChunk(gzip, entry)
+          } catch (err) {
+            logger.warn('Skipping unreadable file while creating backup', {
+              file: absolutePath,
+              message: err.message,
+            })
+          }
+        })
+      }
 
       await writeChunk(gzip, ']')
     }
@@ -324,9 +345,19 @@ function decompressBackupBuffer(buffer) {
   })
 }
 
+function removeTempUpload(filepath) {
+  if (!filepath) return
+  try {
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath)
+  } catch (err) {
+    logger.warn('Could not remove temporary restore upload', { filepath, message: err.message })
+  }
+}
+
 const createBackup = async (req, res, next) => {
   try {
     ensureRuntimeDirectories()
+    const includeFiles = req.body?.includeFiles !== false && req.body?.includeFiles !== 'false'
     const data = await collectAllData()
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filename = `backup-${timestamp}.json.gz`
@@ -334,14 +365,15 @@ const createBackup = async (req, res, next) => {
 
     const { counts, fileCounts, size } = await writeBackupFile(filepath, data, {
       createdBy: req.user.email,
-    })
+    }, { includeFiles })
 
-    logger.info('Backup created', { filename, bytes: size, by: req.user.email, fileCounts })
+    logger.info('Backup created', { filename, bytes: size, by: req.user.email, includeFiles, fileCounts })
 
     res.status(201).json({
-      message: 'Backup created successfully',
+      message: includeFiles ? 'Full backup created successfully' : 'Data-only backup created successfully',
       filename,
       size,
+      includesFiles: includeFiles,
       createdAt: new Date().toISOString(),
       counts,
       fileCounts,
@@ -494,7 +526,14 @@ async function runRestoreFromBuffer(buffer, originalName, userEmail, res, next) 
 
 const restoreBackup = (req, res, next) => {
   if (!req.file) return next(new AppError('No backup file uploaded', 400))
-  return runRestoreFromBuffer(req.file.buffer, req.file.originalname, req.user.email, res, next)
+  try {
+    const buffer = fs.readFileSync(req.file.path)
+    return runRestoreFromBuffer(buffer, req.file.originalname, req.user.email, res, next)
+  } catch (err) {
+    return next(err)
+  } finally {
+    removeTempUpload(req.file.path)
+  }
 }
 
 const restoreBackupFromServer = (req, res, next) => {

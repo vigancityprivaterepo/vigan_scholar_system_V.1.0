@@ -28,6 +28,7 @@ model User {
   appeals Appeal[]
   reviewedAppeals Appeal[] @relation("AppealReviewedBy")
   scholarshipRenewals ScholarshipRenewal[]
+  assignedExamSchedules ExamSchedule[] @relation("ExamScheduleExaminer")
 
   @@map("users")
 }
@@ -278,12 +279,15 @@ model ExamSchedule {
   id            String         @id @default(uuid())
   applicationId String         @map("application_id")
   application   Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  examinerId    String?        @map("examiner_id")
+  examiner      User?          @relation("ExamScheduleExaminer", fields: [examinerId], references: [id], onDelete: SetNull)
   scheduledAt   DateTime       @map("scheduled_at")
   location      String?
   type          ScheduleType   @default(BOTH)
   status        ScheduleStatus @default(SCHEDULED)
   createdAt     DateTime       @default(now()) @map("created_at")
 
+  @@index([examinerId])
   @@map("exam_schedules")
 }
 

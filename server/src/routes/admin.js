@@ -18,6 +18,7 @@ const {
   sendManualNotification,
   getActivityLogs,
   listBulkEmailLogs,
+  listAssignableExaminers,
   getAdminNotifications,
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
@@ -54,6 +55,7 @@ router.post('/applications/bulk-email', requireReviewer, bulkEmailApplicants);
 router.post('/applications/bulk-email/schedule', requireScheduler, scheduleBulkEmailApplicants);
 router.get('/applications/bulk-email/jobs', requireScheduler, listEmailJobs);
 router.get('/applications/bulk-email/logs', listBulkEmailLogs);
+router.get('/staff/examiners', requireScheduler, listAssignableExaminers);
 router.get('/applications/:id', getApplication);
 router.delete('/applications/:id/applicant', requireSuperAdmin, deleteApplicant);
 router.patch('/applications/:id/status', requireReviewer, updateStatus);

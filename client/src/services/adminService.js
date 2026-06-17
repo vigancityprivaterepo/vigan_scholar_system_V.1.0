@@ -14,6 +14,7 @@ export const adminService = {
   scheduleBulkEmailApplicants: (data) => api.post('/admin/applications/bulk-email/schedule', data),
   listBulkEmailJobs: (params) => api.get('/admin/applications/bulk-email/jobs', { params }),
   getBulkEmailLogs: (params) => api.get('/admin/applications/bulk-email/logs', { params }),
+  listAssignableExaminers: () => api.get('/admin/staff/examiners'),
   scheduleExam: (id, data) => api.post(`/admin/applications/${id}/schedule`, data),
   bulkScheduleExam: (data) => api.post('/admin/applications/bulk-schedule', data),
   reviewCOR: (id, data) => api.patch(`/admin/applications/${id}/cor`, data),
@@ -41,7 +42,7 @@ export const adminService = {
   resolveAppeal: (id, data) => api.patch(`/admin/appeals/${id}`, data),
 
   // Backup & Restore
-  createBackup: () => api.post('/admin/backup'),
+  createBackup: (data) => api.post('/admin/backup', data || {}),
   listBackups: () => api.get('/admin/backup'),
   downloadBackup: (filename) => api.get(`/admin/backup/${encodeURIComponent(filename)}`, { responseType: 'blob' }),
   deleteBackup: (filename) => api.delete(`/admin/backup/${encodeURIComponent(filename)}`),

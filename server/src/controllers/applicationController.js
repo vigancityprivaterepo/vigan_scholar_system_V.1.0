@@ -181,7 +181,11 @@ const getMyApplication = async (req, res, next) => {
         requirementFiles: true,
         corFiles: { orderBy: { uploadedAt: 'desc' } },
         activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
-        examSchedules: { orderBy: { scheduledAt: 'desc' }, take: 1 },
+        examSchedules: {
+          orderBy: { scheduledAt: 'desc' },
+          take: 1,
+          include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+        },
       },
     });
 

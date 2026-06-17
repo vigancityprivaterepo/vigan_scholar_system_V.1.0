@@ -9,6 +9,7 @@ const PAGE_SIZE = 20
 
 export default function ExamInterview() {
   const [apps, setApps] = useState([])
+  const [examiners, setExaminers] = useState([])
   const [pagination, setPagination] = useState({ total: 0, pages: 1 })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -19,7 +20,7 @@ export default function ExamInterview() {
 
   // Bulk scheduling state
   const [selected, setSelected] = useState(new Set())
-  const [bulkForm, setBulkForm] = useState({ scheduledAt: '', location: '', type: 'BOTH' })
+  const [bulkForm, setBulkForm] = useState({ scheduledAt: '', location: '', type: 'BOTH', examinerId: '' })
   const [bulkActing, setBulkActing] = useState(false)
 
   const fetchData = useCallback(() => {
@@ -37,6 +38,12 @@ export default function ExamInterview() {
   }, [page, search])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  useEffect(() => {
+    adminService.listAssignableExaminers()
+      .then((res) => setExaminers(res.data.examiners || []))
+      .catch((err) => toast.error(err.response?.data?.message || 'Failed to load examiners.'))
+  }, [])
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -61,10 +68,11 @@ export default function ExamInterview() {
         scheduledAt: bulkForm.scheduledAt,
         location: bulkForm.location || '',
         type: bulkForm.type || 'BOTH',
+        examinerId: bulkForm.examinerId || undefined,
       })
       const { scheduled, skipped } = res.data.summary
       toast.success(`Scheduled ${scheduled} applicant${scheduled !== 1 ? 's' : ''}.${skipped > 0 ? ` ${skipped} skipped.` : ''}`)
-      setBulkForm({ scheduledAt: '', location: '', type: 'BOTH' })
+      setBulkForm({ scheduledAt: '', location: '', type: 'BOTH', examinerId: '' })
       fetchData()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Bulk schedule failed.')
@@ -83,6 +91,7 @@ export default function ExamInterview() {
         scheduledAt: form.scheduledAt,
         location: form.location || '',
         type: form.type || 'BOTH',
+        examinerId: form.examinerId || undefined,
       })
       toast.success('Exam/interview scheduled.')
       fetchData()
@@ -158,7 +167,7 @@ export default function ExamInterview() {
               )}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <input
                 type="datetime-local"
                 className="portal-input text-sm"
@@ -180,6 +189,18 @@ export default function ExamInterview() {
                 <option value="INTERVIEW">Interview only</option>
                 <option value="BOTH">Exam + Interview</option>
               </select>
+              <select
+                className="portal-input text-sm"
+                value={bulkForm.examinerId}
+                onChange={e => setBulkForm(f => ({ ...f, examinerId: e.target.value }))}
+              >
+                <option value="">No examiner assigned</option>
+                {examiners.map(examiner => (
+                  <option key={examiner.id} value={examiner.id}>
+                    {examiner.fullName} ({examiner.role})
+                  </option>
+                ))}
+              </select>
               <button
                 onClick={bulkSchedule}
                 disabled={bulkActing || selected.size === 0}
@@ -190,7 +211,7 @@ export default function ExamInterview() {
             </div>
 
             <p className="mt-2 text-xs text-slate-500">
-              Check applicants below to include them in the bulk schedule. All selected applicants receive the same date, location, and type.
+              Check applicants below to include them in the bulk schedule. All selected applicants receive the same date, location, type, and assigned examiner.
             </p>
           </div>
 
@@ -252,6 +273,14 @@ export default function ExamInterview() {
                         <option value="EXAM">Exam only</option>
                         <option value="INTERVIEW">Interview only</option>
                         <option value="BOTH">Exam + Interview</option>
+                      </select>
+                      <select className="portal-input text-sm" value={sf.examinerId || ''} onChange={e => setScheduleForm(f => ({ ...f, [app.id]: { ...sf, examinerId: e.target.value } }))}>
+                        <option value="">No examiner assigned</option>
+                        {examiners.map(examiner => (
+                          <option key={examiner.id} value={examiner.id}>
+                            {examiner.fullName} ({examiner.role})
+                          </option>
+                        ))}
                       </select>
                       <button onClick={() => scheduleExam(app.id)} disabled={acting[`sched_${app.id}`]} className="portal-button-primary text-xs">
                         Send Schedule

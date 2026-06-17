@@ -461,7 +461,10 @@ const getApplication = async (req, res, next) => {
           orderBy: { createdAt: 'desc' },
           include: { performedBy: { select: { fullName: true, role: true } } },
         },
-        examSchedules: { orderBy: { scheduledAt: 'desc' } },
+        examSchedules: {
+          orderBy: { scheduledAt: 'desc' },
+          include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+        },
       },
     });
     if (!application) throw new AppError('Application not found', 404);
@@ -1064,7 +1067,7 @@ const handleStatusNotification = async (application, newStatus, remarks, rejecti
 const scheduleExam = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { scheduledAt, location, type } = req.body;
+    const { scheduledAt, location, type, examinerId } = req.body;
 
     const application = await prisma.application.findUnique({
       where: { id },
@@ -1075,9 +1078,22 @@ const scheduleExam = async (req, res, next) => {
       throw new AppError('Application must be in EXAM_INTERVIEW status', 400);
     }
 
+    let examiner = null;
+    if (examinerId) {
+      examiner = await prisma.user.findFirst({
+        where: {
+          id: examinerId,
+          role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] },
+        },
+        select: { id: true, fullName: true },
+      });
+      if (!examiner) throw new AppError('Selected examiner was not found.', 400);
+    }
+
     const schedule = await prisma.examSchedule.create({
       data: {
         applicationId: id,
+        examinerId: examiner?.id || null,
         scheduledAt: new Date(scheduledAt),
         location: location || null,
         type: type || 'BOTH',
@@ -1091,7 +1107,7 @@ const scheduleExam = async (req, res, next) => {
       userId: application.applicant.id,
       applicationId: id,
       title: 'Exam/Interview Scheduled',
-      message: `Your exam/interview is scheduled for ${new Date(scheduledAt).toLocaleString()}${location ? ` at ${location}` : ''}.`,
+      message: `Your exam/interview is scheduled for ${new Date(scheduledAt).toLocaleString()}${location ? ` at ${location}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
       type: 'INFO',
     });
 
@@ -1104,6 +1120,7 @@ const scheduleExam = async (req, res, next) => {
         scheduledAt: new Date(scheduledAt).toLocaleString(),
         location,
         type,
+        examinerName: examiner?.fullName || '',
         portalUrl: `${process.env.CLIENT_URL}/applicant/status`,
       },
     });
@@ -1113,6 +1130,7 @@ const scheduleExam = async (req, res, next) => {
         applicationId: id,
         performedById: req.user.id,
         action: `Scheduled ${type} for ${new Date(scheduledAt).toLocaleDateString()}`,
+        notes: examiner?.fullName ? `Assigned examiner: ${examiner.fullName}` : null,
       },
     });
 
@@ -1124,7 +1142,7 @@ const scheduleExam = async (req, res, next) => {
 
 const bulkScheduleExam = async (req, res, next) => {
   try {
-    const { applicationIds, scheduledAt, location, type } = req.body;
+    const { applicationIds, scheduledAt, location, type, examinerId } = req.body;
 
     if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
       throw new AppError('applicationIds must be a non-empty array.', 400);
@@ -1135,6 +1153,17 @@ const bulkScheduleExam = async (req, res, next) => {
     if (scheduledDate <= new Date()) throw new AppError('Scheduled date must be in the future.', 400);
 
     const uniqueIds = [...new Set(applicationIds)];
+    let examiner = null;
+    if (examinerId) {
+      examiner = await prisma.user.findFirst({
+        where: {
+          id: examinerId,
+          role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] },
+        },
+        select: { id: true, fullName: true },
+      });
+      if (!examiner) throw new AppError('Selected examiner was not found.', 400);
+    }
     const applications = await prisma.application.findMany({
       where: { id: { in: uniqueIds }, status: 'EXAM_INTERVIEW' },
       include: { applicant: true },
@@ -1154,6 +1183,7 @@ const bulkScheduleExam = async (req, res, next) => {
         const schedule = await prisma.examSchedule.create({
           data: {
             applicationId: application.id,
+            examinerId: examiner?.id || null,
             scheduledAt: scheduledDate,
             location: schedLocation,
             type: schedType,
@@ -1164,7 +1194,7 @@ const bulkScheduleExam = async (req, res, next) => {
           userId: application.applicant.id,
           applicationId: application.id,
           title: 'Exam/Interview Scheduled',
-          message: `Your exam/interview is scheduled for ${scheduledDate.toLocaleString()}${schedLocation ? ` at ${schedLocation}` : ''}.`,
+          message: `Your exam/interview is scheduled for ${scheduledDate.toLocaleString()}${schedLocation ? ` at ${schedLocation}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
           type: 'INFO',
         });
 
@@ -1177,6 +1207,7 @@ const bulkScheduleExam = async (req, res, next) => {
             scheduledAt: scheduledDate.toLocaleString(),
             location: schedLocation,
             type: schedType,
+            examinerName: examiner?.fullName || '',
             portalUrl: `${process.env.CLIENT_URL}/applicant/status`,
           },
         });
@@ -1186,6 +1217,7 @@ const bulkScheduleExam = async (req, res, next) => {
             applicationId: application.id,
             performedById: req.user.id,
             action: `Bulk scheduled ${schedType} for ${scheduledDate.toLocaleDateString()}`,
+            notes: examiner?.fullName ? `Assigned examiner: ${examiner.fullName}` : null,
           },
         });
 
@@ -1202,6 +1234,28 @@ const bulkScheduleExam = async (req, res, next) => {
       scheduled,
       skipped,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const listAssignableExaminers = async (_req, res, next) => {
+  try {
+    const examiners = await prisma.user.findMany({
+      where: {
+        role: { in: ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'] },
+      },
+      orderBy: [{ fullName: 'asc' }, { email: 'asc' }],
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+      },
+      take: 200,
+    });
+
+    res.json({ success: true, examiners: examiners.map((user) => ({ ...user, role: getEffectiveRole(user) })) });
   } catch (err) {
     next(err);
   }
@@ -2040,6 +2094,7 @@ module.exports = {
   sendManualNotification,
   getActivityLogs,
   listBulkEmailLogs,
+  listAssignableExaminers,
   listAppeals,
   resolveAppeal,
   getAdminNotifications,

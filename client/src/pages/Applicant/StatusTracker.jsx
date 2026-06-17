@@ -160,6 +160,7 @@ export default function StatusTracker() {
             </div>
             <p className="text-slate-700">Date: <strong>{formatDateTime(application.examSchedules[0].scheduledAt)}</strong></p>
             {application.examSchedules[0].location && <p className="text-slate-700">Location: <strong>{application.examSchedules[0].location}</strong></p>}
+            {application.examSchedules[0].examiner?.fullName && <p className="text-slate-700">Examiner: <strong>{application.examSchedules[0].examiner.fullName}</strong></p>}
             <p className="text-slate-700">Type: <strong>{application.examSchedules[0].type}</strong></p>
           </div>
         )}

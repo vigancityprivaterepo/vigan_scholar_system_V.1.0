@@ -84,6 +84,7 @@ export default function BackupRestore() {
   const [backups, setBackups] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [backupMode, setBackupMode] = useState('FULL')
   const [deletingFile, setDeletingFile] = useState(null)
   const [downloadingFile, setDownloadingFile] = useState(null)
   const [restoreTarget, setRestoreTarget] = useState(null)
@@ -108,8 +109,9 @@ export default function BackupRestore() {
   const handleCreate = async () => {
     setCreating(true)
     try {
-      const { data } = await adminService.createBackup()
-      toast.success(`Backup created (${fmt(data.size)})`)
+      const includeFiles = backupMode !== 'DATA_ONLY'
+      const { data } = await adminService.createBackup({ includeFiles })
+      toast.success(`${includeFiles ? 'Full backup' : 'Data-only backup'} created (${fmt(data.size)})`)
       load()
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create backup')
@@ -205,26 +207,37 @@ export default function BackupRestore() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal VSMS</p>
           <h1 className="mt-1 text-2xl font-bold text-brand-primary">Backup &amp; Restore</h1>
-          <p className="mt-1 text-sm text-slate-500">Create and manage full-system backups, including uploaded files. Accessible to Super Admin only.</p>
+          <p className="mt-1 text-sm text-slate-500">Create either a lightweight data-only backup or a full backup that also includes uploaded files. Accessible to Super Admin only.</p>
         </div>
-        <button
-          onClick={handleCreate}
-          disabled={creating}
-          className="inline-flex items-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-900 disabled:opacity-60"
-        >
-          {creating
-            ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            : <span className="text-base leading-none">+</span>}
-          {creating ? 'Creating...' : 'Create Backup'}
-        </button>
+        <div className="flex min-w-[280px] flex-col gap-2">
+          <select
+            className="portal-input text-sm"
+            value={backupMode}
+            onChange={e => setBackupMode(e.target.value)}
+            disabled={creating}
+          >
+            <option value="FULL">Full backup: data + uploaded files</option>
+            <option value="DATA_ONLY">Lightweight backup: data only</option>
+          </select>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="inline-flex items-center justify-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-900 disabled:opacity-60"
+          >
+            {creating
+              ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              : <span className="text-base leading-none">+</span>}
+            {creating ? 'Creating...' : backupMode === 'DATA_ONLY' ? 'Create Data-Only Backup' : 'Create Full Backup'}
+          </button>
+        </div>
       </div>
 
       <div className="rounded border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        <strong>Note:</strong> New backups include database records plus uploaded files from
+        <strong>Note:</strong> Full backups include database records plus uploaded files from
         <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/private_uploads</code>,
         <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/public_uploads</code>, and
         <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/uploads</code>.
-        Older backups created before this update may still restore database data only.
+        Data-only backups skip uploaded files entirely, so they are much smaller and faster to generate. Older backups created before this update may still restore database data only.
       </div>
 
       <div className="border border-slate-300 bg-white shadow-sm">
@@ -304,7 +317,7 @@ export default function BackupRestore() {
         <div className="p-6">
           <p className="mb-4 text-sm text-slate-600">
             Upload a <code className="font-mono text-xs bg-slate-100 px-1 rounded">.json.gz</code> backup file downloaded from a previous export.
-            Newer backups can include both database records and uploaded files.
+            Newer backups can include both database records and uploaded files. Large restore files are processed on server disk first before restore begins.
           </p>
           <div
             onClick={() => fileRef.current?.click()}
@@ -323,7 +336,7 @@ export default function BackupRestore() {
                   <path d="M5 18.5h14" />
                 </svg>
                 <span className="text-sm">Click to select a backup file</span>
-                <span className="text-xs text-slate-400">.json.gz - max 250 MB</span>
+                <span className="text-xs text-slate-400">.json.gz - max 4 GB</span>
               </>
             )}
           </div>
