@@ -9,7 +9,8 @@ const multer = require('multer')
 const logger = require('../utils/logger')
 const { AppError } = require('../middleware/errorHandler')
 
-const BACKUP_DIR = path.resolve('backups')
+const SERVER_ROOT = path.resolve(__dirname, '../..')
+const BACKUP_DIR = path.resolve(process.env.BACKUP_DIR || path.join(SERVER_ROOT, 'backups'))
 const BACKUP_VERSION = '2'
 const FILENAME_RE = /^(backup|pre-restore)-[\w\-]+\.json\.gz$/
 const MAX_BACKUP_UPLOAD_MB = parseInt(process.env.BACKUP_UPLOAD_MAX_MB || '250', 10)
@@ -36,10 +37,14 @@ const BACKUP_DATASETS = [
   { key: 'renewalFiles', optional: true, read: () => prisma.renewalFile.findMany() },
 ]
 
-fs.mkdirSync(BACKUP_DIR, { recursive: true })
-for (const dir of Object.values(UPLOAD_DIRECTORIES)) {
-  fs.mkdirSync(dir, { recursive: true })
+function ensureRuntimeDirectories() {
+  fs.mkdirSync(BACKUP_DIR, { recursive: true })
+  for (const dir of Object.values(UPLOAD_DIRECTORIES)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
 }
+
+ensureRuntimeDirectories()
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -213,6 +218,7 @@ function decompressBackupBuffer(buffer) {
 
 const createBackup = async (req, res, next) => {
   try {
+    ensureRuntimeDirectories()
     const data = await collectAllData()
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filename = `backup-${timestamp}.json.gz`
@@ -239,7 +245,7 @@ const createBackup = async (req, res, next) => {
 
 const listBackups = (_req, res, next) => {
   try {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true })
+    ensureRuntimeDirectories()
     const files = fs
       .readdirSync(BACKUP_DIR)
       .filter(f => FILENAME_RE.test(f))
@@ -256,6 +262,7 @@ const listBackups = (_req, res, next) => {
 
 const downloadBackup = (req, res, next) => {
   try {
+    ensureRuntimeDirectories()
     const { filename } = req.params
     if (!FILENAME_RE.test(filename)) throw new AppError('Invalid backup filename', 400)
     const filepath = path.join(BACKUP_DIR, filename)
@@ -271,6 +278,7 @@ const downloadBackup = (req, res, next) => {
 
 const deleteBackup = (req, res, next) => {
   try {
+    ensureRuntimeDirectories()
     const { filename } = req.params
     if (!FILENAME_RE.test(filename)) throw new AppError('Invalid backup filename', 400)
     const filepath = path.join(BACKUP_DIR, filename)
@@ -286,6 +294,7 @@ const deleteBackup = (req, res, next) => {
 
 async function runRestoreFromBuffer(buffer, originalName, userEmail, res, next) {
   try {
+    ensureRuntimeDirectories()
     const decompressed = await decompressBackupBuffer(buffer)
 
     let backup
@@ -381,6 +390,7 @@ const restoreBackup = (req, res, next) => {
 }
 
 const restoreBackupFromServer = (req, res, next) => {
+  ensureRuntimeDirectories()
   const { filename } = req.params
   if (!FILENAME_RE.test(filename)) return next(new AppError('Invalid backup filename', 400))
   const filepath = path.join(BACKUP_DIR, filename)
