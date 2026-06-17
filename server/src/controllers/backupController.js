@@ -13,11 +13,28 @@ const BACKUP_DIR = path.resolve('backups')
 const BACKUP_VERSION = '2'
 const FILENAME_RE = /^(backup|pre-restore)-[\w\-]+\.json\.gz$/
 const MAX_BACKUP_UPLOAD_MB = parseInt(process.env.BACKUP_UPLOAD_MAX_MB || '250', 10)
+const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022'])
 const UPLOAD_DIRECTORIES = {
   privateUploads: path.resolve(__dirname, '../../private_uploads'),
   publicUploads: path.resolve(__dirname, '../../public_uploads'),
   legacyUploads: path.resolve(__dirname, '../../uploads'),
 }
+const BACKUP_DATASETS = [
+  { key: 'users', optional: false, read: () => prisma.user.findMany() },
+  { key: 'applications', optional: false, read: () => prisma.application.findMany() },
+  { key: 'requirementFiles', optional: false, read: () => prisma.requirementFile.findMany() },
+  { key: 'corFiles', optional: false, read: () => prisma.corFile.findMany() },
+  { key: 'activityLogs', optional: false, read: () => prisma.activityLog.findMany() },
+  { key: 'communicationLogs', optional: true, read: () => prisma.communicationLog.findMany() },
+  { key: 'emailJobs', optional: true, read: () => prisma.emailJob.findMany() },
+  { key: 'appeals', optional: true, read: () => prisma.appeal.findMany() },
+  { key: 'examSchedules', optional: false, read: () => prisma.examSchedule.findMany() },
+  { key: 'carouselSlides', optional: true, read: () => prisma.carouselSlide.findMany() },
+  { key: 'siteSettings', optional: true, read: () => prisma.siteSetting.findMany() },
+  { key: 'notifications', optional: false, read: () => prisma.notification.findMany() },
+  { key: 'scholarshipRenewals', optional: true, read: () => prisma.scholarshipRenewal.findMany() },
+  { key: 'renewalFiles', optional: true, read: () => prisma.renewalFile.findMany() },
+]
 
 fs.mkdirSync(BACKUP_DIR, { recursive: true })
 for (const dir of Object.values(UPLOAD_DIRECTORIES)) {
@@ -34,53 +51,43 @@ const upload = multer({
 })
 
 async function collectAllData() {
-  const [
-    users,
-    applications,
-    requirementFiles,
-    corFiles,
-    activityLogs,
-    communicationLogs,
-    emailJobs,
-    appeals,
-    examSchedules,
-    carouselSlides,
-    siteSettings,
-    notifications,
-    scholarshipRenewals,
-    renewalFiles,
-  ] = await Promise.all([
-    prisma.user.findMany(),
-    prisma.application.findMany(),
-    prisma.requirementFile.findMany(),
-    prisma.corFile.findMany(),
-    prisma.activityLog.findMany(),
-    prisma.communicationLog.findMany(),
-    prisma.emailJob.findMany(),
-    prisma.appeal.findMany(),
-    prisma.examSchedule.findMany(),
-    prisma.carouselSlide.findMany(),
-    prisma.siteSetting.findMany(),
-    prisma.notification.findMany(),
-    prisma.scholarshipRenewal.findMany(),
-    prisma.renewalFile.findMany(),
-  ])
-  return {
-    users,
-    applications,
-    requirementFiles,
-    corFiles,
-    activityLogs,
-    communicationLogs,
-    emailJobs,
-    appeals,
-    examSchedules,
-    carouselSlides,
-    siteSettings,
-    notifications,
-    scholarshipRenewals,
-    renewalFiles,
+  const entries = await Promise.all(
+    BACKUP_DATASETS.map(async ({ key, optional, read }) => {
+      try {
+        return [key, await read()]
+      } catch (err) {
+        if (optional && OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)) {
+          logger.warn('Skipping backup dataset because the database schema is behind this code version', {
+            dataset: key,
+            code: err.code,
+            message: err.message,
+          })
+          return [key, []]
+        }
+        throw err
+      }
+    })
+  )
+
+  return Object.fromEntries(entries)
+}
+
+async function runRestoreStep(step, work, optional = false) {
+  try {
+    await work()
+  } catch (err) {
+    if (optional && OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)) {
+      logger.warn('Skipping restore step because the database schema is behind this code version', {
+        step,
+        code: err.code,
+        message: err.message,
+      })
+      return false
+    }
+    throw err
   }
+
+  return true
 }
 
 function collectDirectoryFiles(dirPath) {
@@ -320,35 +327,35 @@ async function runRestoreFromBuffer(buffer, originalName, userEmail, res, next) 
 
     await prisma.$transaction(async (tx) => {
       await tx.refreshToken.deleteMany()
-      await tx.notification.deleteMany()
-      await tx.activityLog.deleteMany()
-      await tx.communicationLog.deleteMany()
-      await tx.emailJob.deleteMany()
-      await tx.appeal.deleteMany()
-      await tx.examSchedule.deleteMany()
-      await tx.renewalFile.deleteMany()
-      await tx.scholarshipRenewal.deleteMany()
-      await tx.corFile.deleteMany()
-      await tx.requirementFile.deleteMany()
-      await tx.application.deleteMany()
-      await tx.carouselSlide.deleteMany()
-      await tx.siteSetting.deleteMany()
-      await tx.user.deleteMany()
+      await runRestoreStep('notification.deleteMany', () => tx.notification.deleteMany())
+      await runRestoreStep('activityLog.deleteMany', () => tx.activityLog.deleteMany())
+      await runRestoreStep('communicationLog.deleteMany', () => tx.communicationLog.deleteMany(), true)
+      await runRestoreStep('emailJob.deleteMany', () => tx.emailJob.deleteMany(), true)
+      await runRestoreStep('appeal.deleteMany', () => tx.appeal.deleteMany(), true)
+      await runRestoreStep('examSchedule.deleteMany', () => tx.examSchedule.deleteMany())
+      await runRestoreStep('renewalFile.deleteMany', () => tx.renewalFile.deleteMany(), true)
+      await runRestoreStep('scholarshipRenewal.deleteMany', () => tx.scholarshipRenewal.deleteMany(), true)
+      await runRestoreStep('corFile.deleteMany', () => tx.corFile.deleteMany())
+      await runRestoreStep('requirementFile.deleteMany', () => tx.requirementFile.deleteMany())
+      await runRestoreStep('application.deleteMany', () => tx.application.deleteMany())
+      await runRestoreStep('carouselSlide.deleteMany', () => tx.carouselSlide.deleteMany(), true)
+      await runRestoreStep('siteSetting.deleteMany', () => tx.siteSetting.deleteMany(), true)
+      await runRestoreStep('user.deleteMany', () => tx.user.deleteMany())
 
-      if (data.users?.length) await tx.user.createMany({ data: data.users })
-      if (data.applications?.length) await tx.application.createMany({ data: data.applications })
-      if (data.requirementFiles?.length) await tx.requirementFile.createMany({ data: data.requirementFiles })
-      if (data.corFiles?.length) await tx.corFile.createMany({ data: data.corFiles })
-      if (data.scholarshipRenewals?.length) await tx.scholarshipRenewal.createMany({ data: data.scholarshipRenewals })
-      if (data.renewalFiles?.length) await tx.renewalFile.createMany({ data: data.renewalFiles })
-      if (data.examSchedules?.length) await tx.examSchedule.createMany({ data: data.examSchedules })
-      if (data.appeals?.length) await tx.appeal.createMany({ data: data.appeals })
-      if (data.activityLogs?.length) await tx.activityLog.createMany({ data: data.activityLogs })
-      if (data.communicationLogs?.length) await tx.communicationLog.createMany({ data: data.communicationLogs })
-      if (data.emailJobs?.length) await tx.emailJob.createMany({ data: data.emailJobs })
-      if (data.notifications?.length) await tx.notification.createMany({ data: data.notifications })
-      if (data.carouselSlides?.length) await tx.carouselSlide.createMany({ data: data.carouselSlides })
-      if (data.siteSettings?.length) await tx.siteSetting.createMany({ data: data.siteSettings })
+      if (data.users?.length) await runRestoreStep('user.createMany', () => tx.user.createMany({ data: data.users }))
+      if (data.applications?.length) await runRestoreStep('application.createMany', () => tx.application.createMany({ data: data.applications }))
+      if (data.requirementFiles?.length) await runRestoreStep('requirementFile.createMany', () => tx.requirementFile.createMany({ data: data.requirementFiles }))
+      if (data.corFiles?.length) await runRestoreStep('corFile.createMany', () => tx.corFile.createMany({ data: data.corFiles }))
+      if (data.scholarshipRenewals?.length) await runRestoreStep('scholarshipRenewal.createMany', () => tx.scholarshipRenewal.createMany({ data: data.scholarshipRenewals }), true)
+      if (data.renewalFiles?.length) await runRestoreStep('renewalFile.createMany', () => tx.renewalFile.createMany({ data: data.renewalFiles }), true)
+      if (data.examSchedules?.length) await runRestoreStep('examSchedule.createMany', () => tx.examSchedule.createMany({ data: data.examSchedules }))
+      if (data.appeals?.length) await runRestoreStep('appeal.createMany', () => tx.appeal.createMany({ data: data.appeals }), true)
+      if (data.activityLogs?.length) await runRestoreStep('activityLog.createMany', () => tx.activityLog.createMany({ data: data.activityLogs }))
+      if (data.communicationLogs?.length) await runRestoreStep('communicationLog.createMany', () => tx.communicationLog.createMany({ data: data.communicationLogs }), true)
+      if (data.emailJobs?.length) await runRestoreStep('emailJob.createMany', () => tx.emailJob.createMany({ data: data.emailJobs }), true)
+      if (data.notifications?.length) await runRestoreStep('notification.createMany', () => tx.notification.createMany({ data: data.notifications }))
+      if (data.carouselSlides?.length) await runRestoreStep('carouselSlide.createMany', () => tx.carouselSlide.createMany({ data: data.carouselSlides }), true)
+      if (data.siteSettings?.length) await runRestoreStep('siteSetting.createMany', () => tx.siteSetting.createMany({ data: data.siteSettings }), true)
     }, { timeout: 120000 })
 
     const filesRestored = restoreFileDirectories(backup.files)
