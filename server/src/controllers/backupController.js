@@ -46,6 +46,23 @@ function ensureRuntimeDirectories() {
 
 ensureRuntimeDirectories()
 
+function isSchemaDriftError(err) {
+  return OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)
+}
+
+function serializeBackupPayload(payload) {
+  return JSON.stringify(payload, (_key, value) => {
+    if (typeof value === 'bigint') return value.toString()
+    if (value && typeof value === 'object') {
+      if (typeof value.toJSON === 'function') return value.toJSON()
+      if (value.constructor?.name === 'Decimal' && typeof value.toString === 'function') {
+        return value.toString()
+      }
+    }
+    return value
+  })
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BACKUP_UPLOAD_MB * 1024 * 1024 },
@@ -57,11 +74,11 @@ const upload = multer({
 
 async function collectAllData() {
   const entries = await Promise.all(
-    BACKUP_DATASETS.map(async ({ key, optional, read }) => {
+    BACKUP_DATASETS.map(async ({ key, read }) => {
       try {
         return [key, await read()]
       } catch (err) {
-        if (optional && OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)) {
+        if (isSchemaDriftError(err)) {
           logger.warn('Skipping backup dataset because the database schema is behind this code version', {
             dataset: key,
             code: err.code,
@@ -99,7 +116,16 @@ function collectDirectoryFiles(dirPath) {
   if (!fs.existsSync(dirPath)) return []
 
   const walk = (currentDir, baseDir) => {
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true })
+    let entries = []
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true })
+    } catch (err) {
+      logger.warn('Skipping unreadable directory while creating backup', {
+        directory: currentDir,
+        message: err.message,
+      })
+      return []
+    }
     const files = []
 
     for (const entry of entries) {
@@ -109,14 +135,21 @@ function collectDirectoryFiles(dirPath) {
         continue
       }
 
-      const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
-      const content = fs.readFileSync(absolutePath)
-      const stat = fs.statSync(absolutePath)
-      files.push({
-        path: relativePath,
-        size: stat.size,
-        contentBase64: content.toString('base64'),
-      })
+      try {
+        const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
+        const content = fs.readFileSync(absolutePath)
+        const stat = fs.statSync(absolutePath)
+        files.push({
+          path: relativePath,
+          size: stat.size,
+          contentBase64: content.toString('base64'),
+        })
+      } catch (err) {
+        logger.warn('Skipping unreadable file while creating backup', {
+          file: absolutePath,
+          message: err.message,
+        })
+      }
     }
 
     return files
@@ -154,7 +187,7 @@ async function writeBackupFile(filepath, data, meta) {
     files,
   }
 
-  const json = JSON.stringify(payload)
+  const json = serializeBackupPayload(payload)
   await pipeline(
     Readable.from([json]),
     zlib.createGzip(),
