@@ -3,7 +3,7 @@ const prisma = new PrismaClient()
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
-const { pipeline } = require('stream/promises')
+const { finished } = require('stream/promises')
 const { Readable } = require('stream')
 const multer = require('multer')
 const logger = require('../utils/logger')
@@ -63,6 +63,10 @@ function serializeBackupPayload(payload) {
   })
 }
 
+function serializeBackupValue(value) {
+  return serializeBackupPayload(value)
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_BACKUP_UPLOAD_MB * 1024 * 1024 },
@@ -112,10 +116,10 @@ async function runRestoreStep(step, work, optional = false) {
   return true
 }
 
-function collectDirectoryFiles(dirPath) {
-  if (!fs.existsSync(dirPath)) return []
+async function walkDirectoryFiles(dirPath, visitor) {
+  if (!fs.existsSync(dirPath)) return
 
-  const walk = (currentDir, baseDir) => {
+  const walk = async (currentDir, baseDir) => {
     let entries = []
     try {
       entries = fs.readdirSync(currentDir, { withFileTypes: true })
@@ -124,75 +128,146 @@ function collectDirectoryFiles(dirPath) {
         directory: currentDir,
         message: err.message,
       })
-      return []
+      return
     }
-    const files = []
 
     for (const entry of entries) {
       const absolutePath = path.join(currentDir, entry.name)
       if (entry.isDirectory()) {
-        files.push(...walk(absolutePath, baseDir))
+        await walk(absolutePath, baseDir)
         continue
       }
 
-      try {
-        const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
-        const content = fs.readFileSync(absolutePath)
-        const stat = fs.statSync(absolutePath)
-        files.push({
-          path: relativePath,
-          size: stat.size,
-          contentBase64: content.toString('base64'),
-        })
-      } catch (err) {
-        logger.warn('Skipping unreadable file while creating backup', {
-          file: absolutePath,
-          message: err.message,
-        })
-      }
+      await visitor(absolutePath, baseDir)
     }
-
-    return files
   }
 
-  return walk(dirPath, dirPath)
+  await walk(dirPath, dirPath)
 }
 
-function collectAllFiles() {
-  const files = {}
+function collectFileCounts() {
   const fileCounts = {}
 
   for (const [key, dirPath] of Object.entries(UPLOAD_DIRECTORIES)) {
-    const directoryFiles = collectDirectoryFiles(dirPath)
-    files[key] = directoryFiles
-    fileCounts[key] = directoryFiles.length
+    let count = 0
+    if (!fs.existsSync(dirPath)) {
+      fileCounts[key] = 0
+      continue
+    }
+    const walk = (currentDir, baseDir) => {
+      let entries = []
+      try {
+        entries = fs.readdirSync(currentDir, { withFileTypes: true })
+      } catch (err) {
+        logger.warn('Skipping unreadable directory while counting backup files', {
+          directory: currentDir,
+          message: err.message,
+        })
+        return
+      }
+
+      for (const entry of entries) {
+        const absolutePath = path.join(currentDir, entry.name)
+        if (entry.isDirectory()) {
+          walk(absolutePath, baseDir)
+          continue
+        }
+
+        try {
+          fs.statSync(absolutePath)
+          const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
+          if (relativePath) count += 1
+        } catch (err) {
+          logger.warn('Skipping unreadable file while counting backup files', {
+            file: absolutePath,
+            message: err.message,
+          })
+        }
+      }
+    }
+    walk(dirPath, dirPath)
+    fileCounts[key] = count
   }
 
-  return { files, fileCounts }
+  return fileCounts
+}
+
+async function writeChunk(stream, chunk) {
+  if (stream.write(chunk)) return
+  await new Promise(resolve => stream.once('drain', resolve))
 }
 
 async function writeBackupFile(filepath, data, meta) {
   const counts = Object.fromEntries(
     Object.entries(data).map(([k, v]) => [k, v.length])
   )
-  const { files, fileCounts } = collectAllFiles()
-  const payload = {
-    version: BACKUP_VERSION,
-    createdAt: new Date().toISOString(),
-    ...meta,
-    note: 'Includes database records and uploaded files from private_uploads, public_uploads, and legacy uploads directories.',
-    counts,
-    fileCounts,
-    data,
-    files,
-  }
+  const fileCounts = collectFileCounts()
+  const gzip = zlib.createGzip()
+  const fileStream = fs.createWriteStream(filepath)
+  gzip.pipe(fileStream)
 
-  const json = serializeBackupPayload(payload)
-  await pipeline(
-    Readable.from([json]),
-    zlib.createGzip(),
-    fs.createWriteStream(filepath)
-  )
+  try {
+    await writeChunk(gzip, '{')
+    await writeChunk(gzip, `"version":${serializeBackupValue(BACKUP_VERSION)}`)
+    await writeChunk(gzip, `,"createdAt":${serializeBackupValue(new Date().toISOString())}`)
+
+    for (const [key, value] of Object.entries(meta)) {
+      await writeChunk(gzip, `,${serializeBackupValue(key)}:${serializeBackupValue(value)}`)
+    }
+
+    await writeChunk(gzip, `,"note":${serializeBackupValue('Includes database records and uploaded files from private_uploads, public_uploads, and legacy uploads directories.')}`)
+    await writeChunk(gzip, `,"counts":${serializeBackupValue(counts)}`)
+    await writeChunk(gzip, `,"fileCounts":${serializeBackupValue(fileCounts)}`)
+
+    await writeChunk(gzip, ',"data":{')
+    let firstDataset = true
+    for (const [key, value] of Object.entries(data)) {
+      if (!firstDataset) await writeChunk(gzip, ',')
+      firstDataset = false
+      await writeChunk(gzip, `${serializeBackupValue(key)}:${serializeBackupValue(value)}`)
+    }
+    await writeChunk(gzip, '}')
+
+    await writeChunk(gzip, ',"files":{')
+    let firstDirectory = true
+    for (const [key, dirPath] of Object.entries(UPLOAD_DIRECTORIES)) {
+      if (!firstDirectory) await writeChunk(gzip, ',')
+      firstDirectory = false
+      await writeChunk(gzip, `${serializeBackupValue(key)}:[`)
+
+      let firstFile = true
+      await walkDirectoryFiles(dirPath, async (absolutePath, baseDir) => {
+        try {
+          const relativePath = path.relative(baseDir, absolutePath).split(path.sep).join('/')
+          const content = fs.readFileSync(absolutePath)
+          const stat = fs.statSync(absolutePath)
+          const entry = serializeBackupValue({
+            path: relativePath,
+            size: stat.size,
+            contentBase64: content.toString('base64'),
+          })
+
+          if (!firstFile) await writeChunk(gzip, ',')
+          firstFile = false
+          await writeChunk(gzip, entry)
+        } catch (err) {
+          logger.warn('Skipping unreadable file while creating backup', {
+            file: absolutePath,
+            message: err.message,
+          })
+        }
+      })
+
+      await writeChunk(gzip, ']')
+    }
+    await writeChunk(gzip, '}}')
+    gzip.end()
+    await finished(fileStream)
+  } catch (err) {
+    gzip.destroy(err)
+    fileStream.destroy(err)
+    throw err
+  }
 
   return { counts, fileCounts, size: fs.statSync(filepath).size }
 }
