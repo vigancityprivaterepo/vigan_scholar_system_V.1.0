@@ -1,4 +1,4 @@
-ï»¿import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
@@ -18,6 +18,11 @@ const getAcademicYearOptions = () => {
     const start = baseStartYear - index
     return `${start}-${start + 1}`
   })
+}
+
+const getFirstPreferenceCourse = (application) => {
+  const firstPreference = application.collegePreferences?.find((preference) => preference?.course?.trim())
+  return firstPreference?.course?.trim() || application.course || ''
 }
 
 const exportToCSV = async (search, statusFilter, academicYear) => {
@@ -66,7 +71,7 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
       a.placeOfBirth || '',
       a.address || '',
       a.school || '',
-      a.course || '',
+      getFirstPreferenceCourse(a),
       a.yearLevel || '',
       a.generalAverage ? parseFloat(a.generalAverage).toFixed(1) : '',
       a.status || '',
@@ -594,7 +599,7 @@ export default function ApplicantList() {
                     <span className="shrink-0 font-mono text-[10px] font-semibold tracking-wider text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</span>
                   </div>
                   <p className="truncate text-xs text-slate-500">{app.applicant?.email}</p>
-                  <p className="mt-1 truncate text-xs text-slate-500">{app.school || '-'}{app.course ? ` â€¢ ${app.course}` : ''}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">{app.school || '-'}{app.course ? ` • ${app.course}` : ''}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge status={app.status} size="sm" />
                     {app.generalAverage && (
@@ -627,7 +632,7 @@ export default function ApplicantList() {
 
         {data.pagination.pages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} â€¢ {data.pagination.total} results</p>
+            <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} • {data.pagination.total} results</p>
             <div className="flex gap-2">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
               <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
@@ -638,3 +643,4 @@ export default function ApplicantList() {
     </div>
   )
 }
+
