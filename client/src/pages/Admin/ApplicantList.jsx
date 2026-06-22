@@ -20,9 +20,13 @@ const getAcademicYearOptions = () => {
   })
 }
 
-const getFirstPreferenceCourse = (application) => {
-  const firstPreference = application.collegePreferences?.find((preference) => preference?.course?.trim())
-  return firstPreference?.course?.trim() || application.course || ''
+const getFirstPreferenceDetails = (application) => {
+  const firstPreference = application.collegePreferences?.[0]
+
+  return {
+    school: firstPreference?.name?.trim() || '',
+    course: firstPreference?.course?.trim() || application.course || '',
+  }
 }
 
 const exportToCSV = async (search, statusFilter, academicYear) => {
@@ -49,6 +53,7 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
       'Place of Birth',
       'Address',
       'School',
+      'College Preference School',
       'Course',
       'Year Level',
       'Gen. Average (%)',
@@ -56,28 +61,33 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
       'Academic Year',
       'Submitted',
     ]
-    const rows = apps.map(a => [
-      a.id ? `#${String(a.id).slice(0, 8).toUpperCase()}` : '',
-      a.applicant?.fullName || '',
-      a.lastName || '',
-      a.firstName || '',
-      a.middleName || '',
-      a.applicant?.email || '',
-      a.contact || '',
-      a.birthdate ? new Date(a.birthdate).toLocaleDateString() : '',
-      a.age ?? '',
-      a.sex || '',
-      a.gender || '',
-      a.placeOfBirth || '',
-      a.address || '',
-      a.school || '',
-      getFirstPreferenceCourse(a),
-      a.yearLevel || '',
-      a.generalAverage ? parseFloat(a.generalAverage).toFixed(1) : '',
-      a.status || '',
-      a.academicYear || '',
-      a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '',
-    ])
+    const rows = apps.map(a => {
+      const firstPreference = getFirstPreferenceDetails(a)
+
+      return [
+        a.id ? `#${String(a.id).slice(0, 8).toUpperCase()}` : '',
+        a.applicant?.fullName || '',
+        a.lastName || '',
+        a.firstName || '',
+        a.middleName || '',
+        a.applicant?.email || '',
+        a.contact || '',
+        a.birthdate ? new Date(a.birthdate).toLocaleDateString() : '',
+        a.age ?? '',
+        a.sex || '',
+        a.gender || '',
+        a.placeOfBirth || '',
+        a.address || '',
+        a.school || '',
+        firstPreference.school,
+        firstPreference.course,
+        a.yearLevel || '',
+        a.generalAverage ? parseFloat(a.generalAverage).toFixed(1) : '',
+        a.status || '',
+        a.academicYear || '',
+        a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : '',
+      ]
+    })
 
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -643,4 +653,3 @@ export default function ApplicantList() {
     </div>
   )
 }
-
