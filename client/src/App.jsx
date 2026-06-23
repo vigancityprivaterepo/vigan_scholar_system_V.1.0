@@ -35,6 +35,7 @@ import SettingsLayout from './pages/Admin/settings/SettingsLayout'
 import GeneralSettings from './pages/Admin/settings/GeneralSettings'
 import LandingPageSettings from './pages/Admin/settings/LandingPageSettings'
 import AccessManagementSettings from './pages/Admin/settings/AccessManagementSettings'
+import ScheduleAuditSettings from './pages/Admin/settings/ScheduleAuditSettings'
 import CarouselManagement from './pages/Admin/CarouselManagement'
 import BackupRestore from './pages/Admin/BackupRestore'
 import RenewalList from './pages/Admin/RenewalList'
@@ -107,6 +108,7 @@ export default function App() {
               <Route path="general" element={<GeneralSettings />} />
               <Route path="landing" element={<LandingPageSettings />} />
               <Route path="access" element={<AccessManagementSettings />} />
+              <Route path="schedule-audit" element={<ScheduleAuditSettings />} />
             </Route>
             <Route path="/admin/backup" element={<BackupRestore />} />
             <Route path="/admin/renewals" element={<RenewalList />} />

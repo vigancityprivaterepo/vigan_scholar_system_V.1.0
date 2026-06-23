@@ -16,6 +16,30 @@ const roundToTwoDecimals = (value) => {
   return Math.round((parsed + Number.EPSILON) * 100) / 100;
 };
 
+const loadLegacyExamSchedules = async (applicationId, take = null) => {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      es."id",
+      es."application_id" AS "applicationId",
+      es."scheduled_at" AS "scheduledAt",
+      es."location",
+      es."type"::text AS "type",
+      es."status"::text AS "status",
+      es."created_at" AS "createdAt"
+    FROM "exam_schedules" es
+    WHERE es."application_id" = ${applicationId}
+    ORDER BY es."scheduled_at" DESC
+  `;
+
+  const normalizedRows = rows.map((row) => ({
+    ...row,
+    examinerId: null,
+    examiner: null,
+  }));
+
+  return typeof take === 'number' ? normalizedRows.slice(0, take) : normalizedRows;
+};
+
 const getApplicationWindow = async () => {
   let rows = [];
   try {
@@ -199,9 +223,11 @@ const getMyApplication = async (req, res, next) => {
           requirementFiles: true,
           corFiles: { orderBy: { uploadedAt: 'desc' } },
           activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
-          examSchedules: { orderBy: { scheduledAt: 'desc' }, take: 1 },
         },
       });
+      if (application) {
+        application.examSchedules = await loadLegacyExamSchedules(application.id, 1);
+      }
     }
 
     if (!application) return res.json({ success: true, application: null });

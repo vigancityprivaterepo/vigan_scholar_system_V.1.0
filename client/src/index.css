@@ -27,8 +27,128 @@
 }
 
 @layer components {
+  .navbar {
+    @apply relative flex w-full items-center border-b border-slate-200 bg-white;
+  }
+  .navbar-vertical {
+    @apply fixed inset-y-0 left-0 z-40 w-72 flex-col border-r border-emerald-200 bg-[#dceee5] shadow-sm;
+  }
+  .navbar-brand {
+    @apply flex items-center gap-3 bg-gradient-to-b from-[#cfe7db] to-[#dceee5] px-4 py-3 text-brand-primary no-underline;
+  }
+  .navbar-nav {
+    @apply flex list-none flex-col gap-1 p-0;
+  }
+  .nav-item {
+    @apply m-0 list-none;
+  }
+  .nav-link {
+    @apply flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-emerald-200/70 hover:text-slate-900;
+  }
+  .nav-link.active {
+    @apply bg-emerald-300/60 text-slate-900 shadow-sm ring-1 ring-emerald-400/50;
+  }
+  .page-wrapper {
+    @apply min-h-screen bg-slate-50 lg:pl-72;
+  }
+  .page-body {
+    @apply p-4 md:p-6 lg:p-8;
+  }
+  .page-header {
+    @apply mb-6;
+  }
+  .page-pretitle {
+    @apply mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+  }
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-slate-900 md:text-3xl;
+  }
+  .page-subtitle {
+    @apply mt-2 text-sm text-slate-500;
+  }
+  .subheader {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+  }
+  .card {
+    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+  .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4;
+  }
+  .card-body {
+    @apply p-5;
+  }
+  .card-title {
+    @apply text-base font-semibold text-slate-900;
+  }
+  .table {
+    @apply w-full border-collapse text-left text-sm text-slate-700;
+  }
+  .table th {
+    @apply border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500;
+  }
+  .table td {
+    @apply border-b border-slate-100 px-4 py-3 align-middle;
+  }
+  .table-vcenter td,
+  .table-vcenter th {
+    @apply align-middle;
+  }
+  .card-table th:first-child,
+  .card-table td:first-child {
+    @apply pl-5;
+  }
+  .card-table th:last-child,
+  .card-table td:last-child {
+    @apply pr-5;
+  }
+  .avatar {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700;
+  }
+  .input-icon {
+    @apply relative flex items-center;
+  }
+  .input-icon .form-control {
+    @apply pr-10;
+  }
+  .input-icon-addon {
+    @apply pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400;
+  }
+  .form-control {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
+  }
   .btn-primary {
-    @apply bg-brand-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-[#0f3460] transition-all duration-200 font-body;
+    @apply border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700;
+  }
+  .btn-ghost-secondary {
+    @apply border-transparent bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700;
+  }
+  .btn-list {
+    @apply flex flex-wrap items-center gap-2;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+  .bg-success-lt {
+    @apply bg-emerald-50 text-emerald-700;
+  }
+  .bg-danger-lt {
+    @apply bg-red-50 text-red-700;
+  }
+  .bg-warning-lt {
+    @apply bg-amber-50 text-amber-700;
+  }
+  .bg-info-lt {
+    @apply bg-blue-50 text-blue-700;
+  }
+  .dropdown-card {
+    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl;
+  }
+  .table-actions {
+    @apply flex items-center justify-end gap-2;
   }
   .btn-gold {
     @apply bg-brand-green text-white font-bold px-6 py-3 rounded-xl hover:bg-[#059669] transition-all duration-200 shadow-lg font-body;
@@ -84,14 +204,8 @@
   .portal-empty {
     @apply portal-surface p-10 text-center;
   }
-  .card {
-    @apply bg-white rounded-2xl shadow-md border border-gray-100 p-6;
-  }
   .input-field {
     @apply w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent transition-all duration-200 font-body bg-white;
-  }
-  .badge {
-    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold font-mono;
   }
 }
 
@@ -109,3 +223,7 @@
   animation: orbFloat var(--duration, 8s) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
 }
+
+
+
+

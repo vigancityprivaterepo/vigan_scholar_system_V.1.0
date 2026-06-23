@@ -275,6 +275,28 @@ const createExamScheduleRecord = async ({ applicationId, scheduledAt, location, 
   }
 };
 
+const loadLegacyExamSchedules = async (applicationId) => {
+  const rows = await prisma.$queryRaw`
+    SELECT
+      es."id",
+      es."application_id" AS "applicationId",
+      es."scheduled_at" AS "scheduledAt",
+      es."location",
+      es."type"::text AS "type",
+      es."status"::text AS "status",
+      es."created_at" AS "createdAt"
+    FROM "exam_schedules" es
+    WHERE es."application_id" = ${applicationId}
+    ORDER BY es."scheduled_at" DESC
+  `;
+
+  return rows.map((row) => ({
+    ...row,
+    examinerId: null,
+    examiner: null,
+  }));
+};
+
 const getLatestPreviousStatus = async (applicationId, currentStatus) => {
   const latestStatusChange = await prisma.activityLog.findFirst({
     where: {
@@ -505,9 +527,11 @@ const getApplication = async (req, res, next) => {
             orderBy: { createdAt: 'desc' },
             include: { performedBy: { select: { fullName: true, role: true } } },
           },
-          examSchedules: { orderBy: { scheduledAt: 'desc' } },
         },
       });
+      if (application) {
+        application.examSchedules = await loadLegacyExamSchedules(id);
+      }
     }
     if (!application) throw new AppError('Application not found', 404);
     res.json({ success: true, application });
@@ -1277,6 +1301,63 @@ const bulkScheduleExam = async (req, res, next) => {
   }
 };
 
+const listExamScheduleRecords = async (req, res, next) => {
+  try {
+    const rawPage = parseInt(req.query.page, 10);
+    const rawLimit = parseInt(req.query.limit, 10);
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 10;
+    const search = String(req.query.search || '').trim();
+
+    const where = search
+      ? {
+          OR: [
+            { application: { applicant: { fullName: { contains: search, mode: 'insensitive' } } } },
+            { application: { applicant: { email: { contains: search, mode: 'insensitive' } } } },
+            { application: { school: { contains: search, mode: 'insensitive' } } },
+            { location: { contains: search, mode: 'insensitive' } },
+            { examiner: { fullName: { contains: search, mode: 'insensitive' } } },
+          ],
+        }
+      : {};
+
+    const [total, records] = await Promise.all([
+      prisma.examSchedule.count({ where }),
+      prisma.examSchedule.findMany({
+        where,
+        include: {
+          application: {
+            select: {
+              id: true,
+              school: true,
+              status: true,
+              generalAverage: true,
+              applicant: { select: { fullName: true, email: true } },
+            },
+          },
+          examiner: { select: { fullName: true, role: true } },
+        },
+        orderBy: [{ createdAt: 'desc' }, { scheduledAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      records,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const listAssignableExaminers = async (_req, res, next) => {
   try {
     const examiners = await prisma.user.findMany({
@@ -1369,7 +1450,7 @@ const getDashboardStats = async (req, res, next) => {
       'Salindeg','San Jose','San Julian Norte','San Julian Sur','San Pedro','Tamag',
     ];
 
-    const [total, byStatus, recentLogs, topSchoolsRaw, topCoursesRaw, rejectionRaw, appealStats, barangayAddresses, pendingRenewals] = await Promise.all([
+    const [total, byStatus, recentLogs, topSchoolsRaw, coursePreferenceRows, rejectionRaw, appealStats, barangayAddresses, pendingRenewals] = await Promise.all([
       prisma.application.count({ where }),
       prisma.application.groupBy({ by: ['status'], where, _count: { _all: true } }),
       prisma.activityLog.findMany({
@@ -1387,12 +1468,12 @@ const getDashboardStats = async (req, res, next) => {
         orderBy: { _count: { school: 'desc' } },
         take: 8,
       }),
-      prisma.application.groupBy({
-        by: ['course'],
-        where: { ...where, course: { not: null } },
-        _count: { _all: true },
-        orderBy: { _count: { course: 'desc' } },
-        take: 8,
+      prisma.application.findMany({
+        where,
+        select: {
+          course: true,
+          collegePreferences: true,
+        },
       }),
       prisma.application.groupBy({
         by: ['rejectionReason'],
@@ -1426,6 +1507,25 @@ const getDashboardStats = async (req, res, next) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
 
+    const preferredCourseCounts = {};
+    for (const { course, collegePreferences } of coursePreferenceRows) {
+      const firstPreferredCourse = Array.isArray(collegePreferences)
+        ? collegePreferences
+            .map((preference) => (typeof preference?.course === 'string' ? preference.course.trim() : ''))
+            .find(Boolean)
+        : '';
+      const fallbackCourse = typeof course === 'string' ? course.trim() : '';
+      const courseLabel = firstPreferredCourse || fallbackCourse;
+
+      if (!courseLabel) continue;
+      preferredCourseCounts[courseLabel] = (preferredCourseCounts[courseLabel] || 0) + 1;
+    }
+
+    const topPreferredCourses = Object.entries(preferredCourseCounts)
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
     const statusCounts = Object.fromEntries(byStatus.map((s) => [s.status, s._count._all]));
     const stats = {
       total,
@@ -1445,7 +1545,7 @@ const getDashboardStats = async (req, res, next) => {
       },
       trends: {
         schools: topSchoolsRaw.map((row) => ({ label: row.school || 'Unknown', count: row._count._all })),
-        courses: topCoursesRaw.map((row) => ({ label: row.course || 'Unknown', count: row._count._all })),
+        courses: topPreferredCourses,
         barangays: topBarangays,
       },
       rejectionReasons: rejectionRaw.map((row) => ({ reason: row.rejectionReason || 'Unspecified', count: row._count._all })),
@@ -1725,13 +1825,20 @@ const getAdminNotifications = async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const offset = parseInt(req.query.offset) || 0;
-    const notifications = await prisma.notification.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    });
-    res.json({ success: true, notifications });
+    const where = { userId: req.user.id };
+
+    const [notifications, unreadCount, total] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.notification.count({ where: { ...where, isRead: false } }),
+      prisma.notification.count({ where }),
+    ]);
+
+    res.json({ success: true, notifications, unreadCount, total });
   } catch (err) {
     next(err);
   }
@@ -2127,6 +2234,7 @@ module.exports = {
   listEmailJobs,
   scheduleExam,
   bulkScheduleExam,
+  listExamScheduleRecords,
   reviewCOR,
   getDashboardStats,
   sendManualNotification,

@@ -310,7 +310,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
   }
 
   return (
-    <div className="flex max-w-6xl flex-col gap-6">
+    <div className="flex w-full max-w-none flex-col gap-6">
       <div className="flex flex-wrap items-start gap-3">
         <button onClick={() => navigate(-1)} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Back</button>
         <div className="min-w-0 flex-1">
@@ -330,8 +330,8 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
         <StatusBadge status={app.status} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 lg:col-span-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
+        <div className="min-w-0 flex flex-col gap-4">
           <div className="portal-surface p-1">
             <div className="flex gap-1 overflow-x-auto">
               {TABS.map(tab => (
@@ -353,7 +353,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             <div className="portal-surface p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Personal Information</h3>
               {editMode ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[['Last Name','lastName'],['First Name','firstName'],['Middle Name','middleName'],['Place of Birth','placeOfBirth'],['Contact','contact'],['Age','age']].map(([l,k]) => (
                     <div key={k}>
                       <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
@@ -378,16 +378,16 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                       {['Cis Gender/Straight','Lesbian','Gay','Bisexual','Transgender','Prefer not to Say'].map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 xl:col-span-3">
                     <p className="mb-1 text-xs font-medium text-slate-500">Address</p>
                     <input className="portal-input text-sm" value={editData.address || ''} onChange={e => ed('address', e.target.value)} />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 xl:col-span-3">
                     <p className="text-xs text-slate-400">Email: {app.applicant?.email} (not editable)</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[
                     ['Last Name', app.lastName], ['First Name', app.firstName], ['Middle Name', app.middleName],
                     ['Sex', app.sex], ['Gender', app.gender], ['Age', app.age],
@@ -400,7 +400,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                       <p className="mt-0.5 text-sm font-medium text-brand-primary">{v || '-'}</p>
                     </div>
                   ))}
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 xl:col-span-3">
                     <p className="text-xs font-medium text-slate-500">Address</p>
                     <p className="mt-0.5 text-sm font-medium text-brand-primary">{app.address || '-'}</p>
                   </div>
@@ -413,7 +413,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             <div className="portal-surface p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Family Information</h3>
               {editMode ? (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[['Name of Father','fatherName'],['Father\'s Occupation','fatherOccupation'],['Name of Mother','motherName'],['Mother\'s Occupation','motherOccupation'],['No. of Dependents','numDependents'],['Monthly Family Income','familyIncome']].map(([l,k]) => (
                     <div key={k}>
                       <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
@@ -429,7 +429,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                   </div>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[
                     ['Name of Father', app.fatherName], ['Father\'s Occupation', app.fatherOccupation],
                     ['Name of Mother', app.motherName], ['Mother\'s Occupation', app.motherOccupation],
@@ -452,7 +452,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Academic Information</h3>
               {editMode ? (
                 <div className="flex flex-col gap-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {[['SHS Attended','school'],['School Address','schoolAddress'],['Year Graduated','yearGraduated'],['General Average','generalAverage']].map(([l,k]) => (
                       <div key={k}>
                         <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
@@ -522,7 +522,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {[
                       ['SHS Attended', app.school], ['School Address', app.schoolAddress],
                       ['Year Graduated (SHS)', app.yearGraduated],
@@ -592,7 +592,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Requirement Files ({app.requirementFiles?.length || 0})</h3>
               <div className="mb-5 rounded-md border border-slate-200 bg-slate-50 p-4">
                 <p className="mb-2 text-sm font-semibold text-brand-primary">Per-Requirement Checklist</p>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {REQUIREMENT_CHECKLIST_ITEMS.map((item) => {
                     const current = requirementChecklist[item] || { checked: false, notes: '' }
                     return (

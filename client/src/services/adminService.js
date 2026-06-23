@@ -15,6 +15,7 @@ export const adminService = {
   listBulkEmailJobs: (params) => api.get('/admin/applications/bulk-email/jobs', { params }),
   getBulkEmailLogs: (params) => api.get('/admin/applications/bulk-email/logs', { params }),
   listAssignableExaminers: () => api.get('/admin/staff/examiners'),
+  listExamScheduleRecords: (params) => api.get('/admin/exam-schedules', { params }),
   scheduleExam: (id, data) => api.post(`/admin/applications/${id}/schedule`, data),
   bulkScheduleExam: (data) => api.post('/admin/applications/bulk-schedule', data),
   reviewCOR: (id, data) => api.patch(`/admin/applications/${id}/cor`, data),

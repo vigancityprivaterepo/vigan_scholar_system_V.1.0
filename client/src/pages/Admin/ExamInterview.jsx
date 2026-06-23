@@ -14,7 +14,6 @@ export default function ExamInterview() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [scheduleForm, setScheduleForm] = useState({})
   const [scoreForm, setScoreForm] = useState({})
   const [acting, setActing] = useState({})
 
@@ -38,6 +37,7 @@ export default function ExamInterview() {
   }, [page, search])
 
   useEffect(() => { fetchData() }, [fetchData])
+
 
   useEffect(() => {
     adminService.listAssignableExaminers()
@@ -78,27 +78,6 @@ export default function ExamInterview() {
       toast.error(err.response?.data?.message || 'Bulk schedule failed.')
     } finally {
       setBulkActing(false)
-    }
-  }
-
-  const scheduleExam = async (id) => {
-    const form = scheduleForm[id] || {}
-    if (!form.scheduledAt) { toast.error('Please select a date/time'); return }
-    if (new Date(form.scheduledAt) <= new Date()) { toast.error('Scheduled date must be in the future'); return }
-    setActing(a => ({ ...a, [`sched_${id}`]: true }))
-    try {
-      await adminService.scheduleExam(id, {
-        scheduledAt: form.scheduledAt,
-        location: form.location || '',
-        type: form.type || 'BOTH',
-        examinerId: form.examinerId || undefined,
-      })
-      toast.success('Exam/interview scheduled.')
-      fetchData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed')
-    } finally {
-      setActing(a => ({ ...a, [`sched_${id}`]: false }))
     }
   }
 
@@ -234,7 +213,6 @@ export default function ExamInterview() {
 
           {/* ── Applicant cards ── */}
           {apps.map(app => {
-            const sf = scheduleForm[app.id] || {}
             const scf = scoreForm[app.id] || {}
             const isSelected = selected.has(app.id)
             return (
@@ -259,52 +237,22 @@ export default function ExamInterview() {
                     View <ArrowRightIcon className="h-4 w-4" />
                   </Link>
                 </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="portal-panel p-4">
-                    <div className="mb-3 flex items-center gap-2 text-brand-primary">
-                      <CalendarIcon className="h-4 w-4" />
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em]">Schedule Exam/Interview</p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input type="datetime-local" className="portal-input text-sm" value={sf.scheduledAt || ''} onChange={e => setScheduleForm(f => ({ ...f, [app.id]: { ...sf, scheduledAt: e.target.value } }))} />
-                      <input className="portal-input text-sm" placeholder="Location (optional)" value={sf.location || ''} onChange={e => setScheduleForm(f => ({ ...f, [app.id]: { ...sf, location: e.target.value } }))} />
-                      <select className="portal-input text-sm" value={sf.type || 'BOTH'} onChange={e => setScheduleForm(f => ({ ...f, [app.id]: { ...sf, type: e.target.value } }))}>
-                        <option value="EXAM">Exam only</option>
-                        <option value="INTERVIEW">Interview only</option>
-                        <option value="BOTH">Exam + Interview</option>
-                      </select>
-                      <select className="portal-input text-sm" value={sf.examinerId || ''} onChange={e => setScheduleForm(f => ({ ...f, [app.id]: { ...sf, examinerId: e.target.value } }))}>
-                        <option value="">No examiner assigned</option>
-                        {examiners.map(examiner => (
-                          <option key={examiner.id} value={examiner.id}>
-                            {examiner.fullName} ({examiner.role})
-                          </option>
-                        ))}
-                      </select>
-                      <button onClick={() => scheduleExam(app.id)} disabled={acting[`sched_${app.id}`]} className="portal-button-primary text-xs">
-                        Send Schedule
-                      </button>
-                    </div>
+                <div className="portal-panel p-4">
+                  <div className="mb-3 flex items-center gap-2 text-brand-primary">
+                    <ChartIcon className="h-4 w-4" />
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em]">Record Result</p>
                   </div>
-
-                  <div className="portal-panel p-4">
-                    <div className="mb-3 flex items-center gap-2 text-brand-primary">
-                      <ChartIcon className="h-4 w-4" />
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em]">Record Result</p>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input type="number" className="portal-input text-sm" placeholder="Exam Score (e.g. 87.5)" value={scf.score || ''} onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, score: e.target.value } }))} />
-                      <textarea className="portal-input text-sm" rows={2} placeholder="Interview notes (optional)" value={scf.notes || ''} onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, notes: e.target.value } }))} />
-                      <div className="flex gap-2">
-                        <button onClick={() => markResult(app.id, true)} disabled={acting[`result_${app.id}`]} className="portal-button-primary flex-1 text-xs">
-                          Pass
-                        </button>
-                        <button onClick={() => markResult(app.id, false)} disabled={acting[`result_${app.id}`]} className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800">
-                          <AlertTriangleIcon className="h-4 w-4" />
-                          Fail
-                        </button>
-                      </div>
+                  <div className="flex flex-col gap-2">
+                    <input type="number" className="portal-input text-sm" placeholder="Exam Score (e.g. 87.5)" value={scf.score || ''} onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, score: e.target.value } }))} />
+                    <textarea className="portal-input text-sm" rows={2} placeholder="Interview notes (optional)" value={scf.notes || ''} onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, notes: e.target.value } }))} />
+                    <div className="flex gap-2">
+                      <button onClick={() => markResult(app.id, true)} disabled={acting[`result_${app.id}`]} className="portal-button-primary flex-1 text-xs">
+                        Pass
+                      </button>
+                      <button onClick={() => markResult(app.id, false)} disabled={acting[`result_${app.id}`]} className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800">
+                        <AlertTriangleIcon className="h-4 w-4" />
+                        Fail
+                      </button>
                     </div>
                   </div>
                 </div>

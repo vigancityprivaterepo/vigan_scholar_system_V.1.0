@@ -15,6 +15,7 @@ model User {
   isEmailVerified Boolean @default(false) @map("is_email_verified")
   role         Role     @default(APPLICANT)
   fullName     String   @map("full_name")
+  profileImageUrl String? @map("profile_image_url")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -377,3 +378,4 @@ model RenewalFile {
 
   @@map("renewal_files")
 }
+

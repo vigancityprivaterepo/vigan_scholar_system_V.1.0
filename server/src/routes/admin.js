@@ -13,6 +13,7 @@ const {
   listEmailJobs,
   scheduleExam,
   bulkScheduleExam,
+  listExamScheduleRecords,
   reviewCOR,
   getDashboardStats,
   sendManualNotification,
@@ -56,6 +57,7 @@ router.post('/applications/bulk-email/schedule', requireScheduler, scheduleBulkE
 router.get('/applications/bulk-email/jobs', requireScheduler, listEmailJobs);
 router.get('/applications/bulk-email/logs', listBulkEmailLogs);
 router.get('/staff/examiners', requireScheduler, listAssignableExaminers);
+router.get('/exam-schedules', listExamScheduleRecords);
 router.get('/applications/:id', getApplication);
 router.delete('/applications/:id/applicant', requireSuperAdmin, deleteApplicant);
 router.patch('/applications/:id/status', requireReviewer, updateStatus);

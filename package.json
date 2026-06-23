@@ -1,0 +1,18 @@
+{
+  "name": "scholarship-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "db:generate": "cd server && npx prisma generate",
+    "db:migrate": "cd server && npx prisma migrate dev --name init",
+    "db:seed": "cd server && node src/db/seed.js",
+    "db:studio": "cd server && npx prisma studio"
+  },
+  "description": "Scholarship Management System — Full Stack (React + Vite + Express + PostgreSQL)",
+  "dependencies": {
+    "multer": "^2.1.1"
+  }
+}

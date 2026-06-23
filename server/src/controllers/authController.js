@@ -1,4 +1,6 @@
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const { PrismaClient } = require('@prisma/client');
@@ -14,6 +16,10 @@ const prisma = new PrismaClient();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REFRESH_COOKIE_NAME = 'refreshToken';
+const publicUploadsDir = path.join(__dirname, '../../public_uploads');
+const prismaSupportsUserProfileImage = Boolean(prisma._runtimeDataModel?.models?.User?.fields?.some((field) => field.name === 'profileImageUrl'));
+const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022']);
+const PROFILE_IMAGE_MIGRATION_MESSAGE = 'Profile photo support will work after the latest Prisma client and database migration are applied.';
 
 const parseCookies = (req) => {
   const raw = String(req.headers.cookie || '');
@@ -67,23 +73,62 @@ const buildEmailVerificationUrl = (user, req) => {
   return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
 };
 
+const normalizeProfileImageUrl = (rawUrl) => {
+  const baseName = path.basename(String(rawUrl || ''));
+  return baseName ? `/public-uploads/${baseName}` : null;
+};
+
+const resolveProfileImagePath = (rawUrl) => {
+  const baseName = path.basename(String(rawUrl || ''));
+  if (!baseName || baseName === '.' || baseName === '..') return null;
+  return path.join(publicUploadsDir, baseName);
+};
+
+const deleteProfileImageFile = (rawUrl) => {
+  const targetPath = resolveProfileImagePath(rawUrl);
+  if (!targetPath || !fs.existsSync(targetPath)) return;
+  try {
+    fs.unlinkSync(targetPath);
+  } catch (err) {
+    logger.warn('Failed to delete previous profile image', { message: err.message, file: rawUrl });
+  }
+};
+
+const isProfileImageSchemaError = (err) => {
+  if (OPTIONAL_SCHEMA_ERROR_CODES.has(err?.code)) return true;
+  const message = String(err?.message || '');
+  return message.includes('profileImageUrl') || message.includes('profile_image_url');
+};
+
+const buildUserProfileSelect = (includeProfileImage = prismaSupportsUserProfileImage) => ({
+  id: true,
+  email: true,
+  fullName: true,
+  ...(includeProfileImage ? { profileImageUrl: true } : {}),
+  role: true,
+  isEmailVerified: true,
+  createdAt: true,
+  applications: {
+    select: { contact: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 1,
+  },
+});
+
 const getUserProfile = async (userId) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      role: true,
-      isEmailVerified: true,
-      createdAt: true,
-      applications: {
-        select: { contact: true },
-        orderBy: { updatedAt: 'desc' },
-        take: 1,
-      },
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: buildUserProfileSelect(),
+    });
+  } catch (err) {
+    if (!isProfileImageSchemaError(err)) throw err;
+    user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: buildUserProfileSelect(false),
+    });
+  }
 
   if (!user) return null;
 
@@ -91,6 +136,7 @@ const getUserProfile = async (userId) => {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
+    profileImageUrl: normalizeProfileImageUrl(user.profileImageUrl),
     role: getEffectiveRole(user),
     isEmailVerified: user.isEmailVerified,
     createdAt: user.createdAt,
@@ -494,32 +540,86 @@ const changePassword = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const { fullName, contact } = req.body;
-    if (!fullName || !fullName.trim()) {
+
+    let existingUser;
+    try {
+      existingUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: prismaSupportsUserProfileImage
+          ? { fullName: true, profileImageUrl: true }
+          : { fullName: true },
+      });
+    } catch (err) {
+      if (!isProfileImageSchemaError(err)) throw err;
+      existingUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { fullName: true },
+      });
+    }
+
+    if (!existingUser) throw new AppError('User not found', 404);
+
+    const nextFullName = fullName !== undefined ? String(fullName).trim() : String(existingUser.fullName || '').trim();
+    if (!nextFullName) {
       throw new AppError('Full name is required', 400);
     }
 
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { fullName: fullName.trim() },
-    });
-
+    let normalizedContact;
     if (contact !== undefined) {
-      const normalizedContact = String(contact).trim();
+      normalizedContact = String(contact).trim();
       if (normalizedContact && !/^(09|\+639)\d{9}$/.test(normalizedContact.replace(/\s/g, ''))) {
         throw new AppError('Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX).', 400);
       }
+    }
 
+    if (req.file && !prismaSupportsUserProfileImage) {
+      deleteProfileImageFile(`/public-uploads/${req.file.filename}`);
+      throw new AppError(PROFILE_IMAGE_MIGRATION_MESSAGE, 409);
+    }
+
+    const nextProfileImageUrl = req.file ? `/public-uploads/${req.file.filename}` : existingUser.profileImageUrl;
+    const updateData = { fullName: nextFullName };
+    if (req.file && prismaSupportsUserProfileImage) {
+      updateData.profileImageUrl = nextProfileImageUrl;
+    }
+
+    try {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: updateData,
+      });
+    } catch (err) {
+      if (!isProfileImageSchemaError(err)) throw err;
+      if (req.file) {
+        deleteProfileImageFile(`/public-uploads/${req.file.filename}`);
+        throw new AppError(PROFILE_IMAGE_MIGRATION_MESSAGE, 409);
+      }
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { fullName: nextFullName },
+      });
+    }
+
+    if (contact !== undefined) {
       await prisma.application.updateMany({
         where: { applicantId: req.user.id },
         data: { contact: normalizedContact || null },
       });
     }
 
+    if (req.file && existingUser.profileImageUrl && existingUser.profileImageUrl !== nextProfileImageUrl) {
+      deleteProfileImageFile(existingUser.profileImageUrl);
+    }
+
     const profile = await getUserProfile(req.user.id);
-    res.json({ success: true, message: 'Profile updated successfully.', user: profile });
+    res.json({ success: true, message: req.file ? 'Profile and photo updated successfully.' : 'Profile updated successfully.', user: profile });
   } catch (err) {
+    if (req.file) {
+      deleteProfileImageFile(`/public-uploads/${req.file.filename}`);
+    }
     next(err);
   }
 };
 
 module.exports = { register, login, googleAuth, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile };
+

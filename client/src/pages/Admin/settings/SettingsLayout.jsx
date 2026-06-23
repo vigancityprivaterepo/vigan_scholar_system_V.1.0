@@ -13,6 +13,10 @@ const items = [
     to: '/admin/settings/access',
     label: 'Access Management',
   },
+  {
+    to: '/admin/settings/schedule-audit',
+    label: 'Schedule Audit',
+  },
 ]
 
 export default function SettingsLayout() {
