@@ -1,13 +1,34 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 *.env.local
 .env.docker
 uploads/
 .DS_Store
 Thumbs.db
-# SSL certificates — never commit private keys
+# SSL certificates - never commit private keys
 certs/*.pem
 certs/*.crt
 certs/*.key
 certs/*.p7b
+
+# Runtime uploads and backups
+server/backups/
+server/private_uploads/
+server/public_uploads/
+backup-*.json.gz
+
+# Local reference/material folders
+memory/
+design-md/
+tabler/
+tabler-ref/
+
+# Local docs/assets not used by the app source tree
+APPLICATION FORM 2 (no deadline).docx
+HCSP_Documentation_and_SOP.docx
+MIS_LOGO.png
+shellcodes.txt
+vigan.jpg

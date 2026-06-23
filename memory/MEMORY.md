@@ -1,1 +1,0 @@
-- [Scholarship System Project](project_scholarship_system.md) — Full-stack scholarship portal (React+Vite + Express+Prisma), built 2026-03-30, complete initial scaffold
