@@ -1,4 +1,4 @@
-﻿const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
@@ -10,6 +10,7 @@ const { createNotification } = require('../services/notificationService');
 const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYear');
 const { getPrimaryAdminEmail, isPrimaryAdminEmail, getEffectiveRole } = require('../utils/primaryAdmin');
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
+const { formatManilaDate, formatManilaDateTime, parseManilaScheduleInput } = require('../utils/scheduleDateTime');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
@@ -396,7 +397,7 @@ const applyStatusUpdate = async ({
     return result;
   });
 
-  // Notifications and emails run after the transaction commits — they are
+  // Notifications and emails run after the transaction commits � they are
   // intentionally outside the transaction since they cannot be rolled back.
   await handleStatusNotification(application, status, remarks, effectiveRejectionReason, { isRollback });
   return updated;
@@ -1159,19 +1160,19 @@ const scheduleExam = async (req, res, next) => {
     const schedule = await createExamScheduleRecord({
       applicationId: id,
       examinerId: examiner?.id,
-      scheduledAt: new Date(scheduledAt),
+      scheduledAt: parseManilaScheduleInput(scheduledAt),
       location,
       type,
     });
 
     // ExamSchedule is the authoritative source for scheduling data.
-    // interviewDate on Application is a deprecated legacy field — do not write to it.
+    // interviewDate on Application is a deprecated legacy field � do not write to it.
 
     await createNotification({
       userId: application.applicant.id,
       applicationId: id,
       title: 'Exam/Interview Scheduled',
-      message: `Your exam/interview is scheduled for ${new Date(scheduledAt).toLocaleString()}${location ? ` at ${location}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
+      message: `Your exam/interview is scheduled for ${formatManilaDateTime(parseManilaScheduleInput(scheduledAt))}${location ? ` at ${location}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
       type: 'INFO',
     });
 
@@ -1181,7 +1182,7 @@ const scheduleExam = async (req, res, next) => {
       template: 'examScheduled',
       data: {
         name: application.applicant.fullName,
-        scheduledAt: new Date(scheduledAt).toLocaleString(),
+        scheduledAt: formatManilaDateTime(parseManilaScheduleInput(scheduledAt)),
         location,
         type,
         examinerName: examiner?.fullName || '',
@@ -1193,7 +1194,7 @@ const scheduleExam = async (req, res, next) => {
       data: {
         applicationId: id,
         performedById: req.user.id,
-        action: `Scheduled ${type} for ${new Date(scheduledAt).toLocaleDateString()}`,
+        action: `Scheduled ${type} for ${formatManilaDate(parseManilaScheduleInput(scheduledAt))}`,
         notes: examiner?.fullName ? `Assigned examiner: ${examiner.fullName}` : null,
       },
     });
@@ -1212,7 +1213,7 @@ const bulkScheduleExam = async (req, res, next) => {
       throw new AppError('applicationIds must be a non-empty array.', 400);
     }
     if (!scheduledAt) throw new AppError('scheduledAt is required.', 400);
-    const scheduledDate = new Date(scheduledAt);
+    const scheduledDate = parseManilaScheduleInput(scheduledAt);
     if (isNaN(scheduledDate.getTime())) throw new AppError('scheduledAt must be a valid date.', 400);
     if (scheduledDate <= new Date()) throw new AppError('Scheduled date must be in the future.', 400);
 
@@ -1256,7 +1257,7 @@ const bulkScheduleExam = async (req, res, next) => {
           userId: application.applicant.id,
           applicationId: application.id,
           title: 'Exam/Interview Scheduled',
-          message: `Your exam/interview is scheduled for ${scheduledDate.toLocaleString()}${schedLocation ? ` at ${schedLocation}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
+          message: `Your exam/interview is scheduled for ${formatManilaDateTime(scheduledDate)}${schedLocation ? ` at ${schedLocation}` : ''}${examiner?.fullName ? `. Examiner: ${examiner.fullName}` : ''}.`,
           type: 'INFO',
         });
 
@@ -1266,7 +1267,7 @@ const bulkScheduleExam = async (req, res, next) => {
           template: 'examScheduled',
           data: {
             name: application.applicant.fullName,
-            scheduledAt: scheduledDate.toLocaleString(),
+            scheduledAt: formatManilaDateTime(scheduledDate),
             location: schedLocation,
             type: schedType,
             examinerName: examiner?.fullName || '',
@@ -1278,7 +1279,7 @@ const bulkScheduleExam = async (req, res, next) => {
           data: {
             applicationId: application.id,
             performedById: req.user.id,
-            action: `Bulk scheduled ${schedType} for ${scheduledDate.toLocaleDateString()}`,
+            action: `Bulk scheduled ${schedType} for ${formatManilaDate(scheduledDate)}`,
             notes: examiner?.fullName ? `Assigned examiner: ${examiner.fullName}` : null,
           },
         });
@@ -1747,7 +1748,7 @@ const resolveAppeal = async (req, res, next) => {
           data: {
             applicationId: appeal.applicationId,
             performedById: req.user.id,
-            action: `Appeal approved — application reinstated to ${revertTo}`,
+            action: `Appeal approved � application reinstated to ${revertTo}`,
             fromStatus: currentAppStatus,
             toStatus: revertTo,
             notes: reason,
@@ -1764,7 +1765,7 @@ const resolveAppeal = async (req, res, next) => {
         await createNotification({
           userId: appeal.applicantId,
           applicationId: appeal.applicationId,
-          title: 'Appeal Approved — Application Reinstated',
+          title: 'Appeal Approved � Application Reinstated',
           message: `Your appeal has been approved. Your application has been reinstated to the ${stageLabel} stage. Please monitor your portal for further updates.`,
           type: 'SUCCESS',
         });
@@ -1772,13 +1773,13 @@ const resolveAppeal = async (req, res, next) => {
           applicationId: appeal.applicationId,
           userId: appeal.applicantId,
           channel: 'PORTAL_NOTICE',
-          subject: 'Appeal Approved — Application Reinstated',
+          subject: 'Appeal Approved � Application Reinstated',
           message: reason,
           metadata: { appealId: id, appealStatus: normalizedStatus, revertedTo: revertTo },
           createdById: req.user.id,
         });
       } else {
-        // Application is in an unexpected status — still notify, but no automatic reversion
+        // Application is in an unexpected status � still notify, but no automatic reversion
         await createNotification({
           userId: appeal.applicantId,
           applicationId: appeal.applicationId,
@@ -2211,7 +2212,7 @@ const processDueEmailJobs = async () => {
             data: superAdmins.map(u => ({
               userId: u.id,
               title: 'Bulk Email Job Failed',
-              message: `A scheduled bulk email job (ID: ${job.id.slice(0, 8)}) permanently failed after ${nextAttempts} attempts. Check Bulk Email → History for details.`,
+              message: `A scheduled bulk email job (ID: ${job.id.slice(0, 8)}) permanently failed after ${nextAttempts} attempts. Check Bulk Email ? History for details.`,
               type: 'ERROR',
             })),
           });
@@ -2253,3 +2254,4 @@ module.exports = {
   inviteAdminUser,
   processDueEmailJobs,
 };
+

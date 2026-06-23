@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import Stepper from '../../components/ui/Stepper'
-import { formatDate, formatDateTime } from '../../utils/formatDate'
+import { formatDate, formatDateTime, formatScheduleDateTime } from '../../utils/formatDate'
 import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, DocumentIcon, InfoIcon } from '../../components/ui/PortalIcons'
 
 export default function StatusTracker() {
@@ -158,7 +158,7 @@ export default function StatusTracker() {
               <CalendarIcon className="h-4 w-4" />
               <p className="font-semibold">Exam/Interview Schedule</p>
             </div>
-            <p className="text-slate-700">Date: <strong>{formatDateTime(application.examSchedules[0].scheduledAt)}</strong></p>
+            <p className="text-slate-700">Date: <strong>{formatScheduleDateTime(application.examSchedules[0].scheduledAt)}</strong></p>
             {application.examSchedules[0].location && <p className="text-slate-700">Location: <strong>{application.examSchedules[0].location}</strong></p>}
             {application.examSchedules[0].examiner?.fullName && <p className="text-slate-700">Examiner: <strong>{application.examSchedules[0].examiner.fullName}</strong></p>}
             <p className="text-slate-700">Type: <strong>{application.examSchedules[0].type}</strong></p>
@@ -279,3 +279,4 @@ export default function StatusTracker() {
     </div>
   )
 }
+

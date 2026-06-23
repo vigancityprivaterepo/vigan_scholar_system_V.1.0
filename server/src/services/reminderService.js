@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { sendEmail } = require('./emailService');
 const { createNotification } = require('./notificationService');
 const logger = require('../utils/logger');
+const { formatManilaDateTime } = require('../utils/scheduleDateTime');
 
 const prisma = new PrismaClient();
 
@@ -118,7 +119,7 @@ const runAutomatedReminders = async () => {
         userId: schedule.application.applicantId,
         applicationId: schedule.applicationId,
         title: 'Reminder: Upcoming Exam/Interview',
-        message: `You have a scheduled ${String(schedule.type || 'exam/interview').toLowerCase()} on ${new Date(schedule.scheduledAt).toLocaleString()}.`,
+        message: `You have a scheduled ${String(schedule.type || 'exam/interview').toLowerCase()} on ${formatManilaDateTime(schedule.scheduledAt)}.`,
         type: 'INFO',
       });
     }
@@ -179,3 +180,4 @@ const runAutomatedReminders = async () => {
 };
 
 module.exports = { runAutomatedReminders };
+

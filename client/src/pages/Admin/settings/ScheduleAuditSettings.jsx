@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import Pagination from '../../../components/shared/Pagination'
 import { adminService } from '../../../services/adminService'
-import { formatDateTime } from '../../../utils/formatDate'
+import { formatDateTime, formatScheduleDateTime } from '../../../utils/formatDate'
 import { ArrowRightIcon, SearchIcon } from '../../../components/ui/PortalIcons'
 
 export default function ScheduleAuditSettings() {
@@ -76,7 +76,7 @@ export default function ScheduleAuditSettings() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Scheduled for</p>
-                  <p className="mt-1 text-sm font-medium text-slate-700">{formatDateTime(record.scheduledAt)}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-700">{formatScheduleDateTime(record.scheduledAt)}</p>
                   <p className="mt-1 text-xs text-slate-500">{record.type}{record.location ? ` | ${record.location}` : ''}</p>
                 </div>
                 <div>
