@@ -250,9 +250,32 @@ docker compose up -d
 # Wait 30 seconds then retry migrations
 ```
 
+### Network pool overlaps with another Docker network
+This project now uses a fixed Docker subnet to reduce collisions.
+If you still get `Pool overlaps with other one on this address space`, run:
+
+```powershell
+docker compose down
+docker network rm scholarship_net
+```
+
+If Docker says the network does not exist, list networks and remove the conflicting old one:
+
+```powershell
+docker network ls
+docker network inspect <network_name>
+docker network rm <network_name>
+```
+
+Then start again:
+
+```powershell
+docker compose up -d --build
+```
+
 ### Container not in Docker network
 ```powershell
-docker network connect scholarship_default scholarship-server-1
+docker network connect scholarship_net scholarship-server-1
 ```
 
 ### Check container logs for errors
