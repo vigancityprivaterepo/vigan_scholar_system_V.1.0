@@ -88,7 +88,6 @@ export default function ExamInterview() {
       await adminService.updateStatus(id, {
         status: passed ? 'APPROVED' : 'FAILED_EXAM',
         examScore: form.examScore ? parseFloat(form.examScore) : undefined,
-        interviewScore: form.interviewScore ? parseFloat(form.interviewScore) : undefined,
         rejectionReason: !passed ? (form.notes || 'Did not pass the exam/interview.') : undefined,
         interviewNotes: form.notes || undefined,
       })
@@ -244,53 +243,20 @@ export default function ExamInterview() {
                     <p className="text-xs font-semibold uppercase tracking-[0.16em]">Record Result</p>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {/* Score Inputs */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-500">Exam Score</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          className="portal-input text-sm"
-                          placeholder="e.g. 85.00"
-                          value={scf.examScore || ''}
-                          onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, examScore: e.target.value } }))}
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-500">Interview Score</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          className="portal-input text-sm"
-                          placeholder="e.g. 90.00"
-                          value={scf.interviewScore || ''}
-                          onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, interviewScore: e.target.value } }))}
-                        />
-                      </div>
+                    {/* General Score Input */}
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-500">General Score</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        className="portal-input text-sm"
+                        placeholder="e.g. 87.50"
+                        value={scf.examScore || ''}
+                        onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, examScore: e.target.value } }))}
+                      />
                     </div>
-
-                    {/* Live General Average Preview */}
-                    {(() => {
-                      const e = parseFloat(scf.examScore)
-                      const i = parseFloat(scf.interviewScore)
-                      const avg = !isNaN(e) && !isNaN(i) ? ((e + i) / 2).toFixed(2) : null
-                      const examOnly = !isNaN(e) && isNaN(i) ? e.toFixed(2) : null
-                      return avg || examOnly ? (
-                        <div className="flex items-center gap-2 rounded-md border border-brand-primary/20 bg-brand-primary/5 px-3 py-2">
-                          <ChartIcon className="h-4 w-4 text-brand-primary" />
-                          <span className="text-xs font-medium text-slate-600">
-                            {avg
-                              ? <>General Average: <span className="font-bold text-brand-primary">{avg}</span></>
-                              : <>Exam Score only: <span className="font-bold text-brand-primary">{examOnly}</span> — enter interview score for average</>}
-                          </span>
-                        </div>
-                      ) : null
-                    })()}
 
                     <textarea
                       className="portal-input text-sm"

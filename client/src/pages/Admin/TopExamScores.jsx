@@ -32,9 +32,23 @@ const toDisplayName = (app) => {
 
 const ALL_STATUSES = 'APPROVED,ACCEPTED,COR_SUBMITTED,COR_REJECTED,FAILED_EXAM,EXAM_INTERVIEW'
 
+// Compute dense ranks based on descending numeric score
+const computeRanks = (items, getScore) => {
+  const ranks = []
+  let rank = 1
+  for (let i = 0; i < items.length; i++) {
+    if (i > 0 && getScore(items[i]) !== getScore(items[i - 1])) {
+      rank = i + 1
+    }
+    ranks.push(rank)
+  }
+  return ranks
+}
+
 export default function TopExamScores() {
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
   const [apps, setApps] = useState([])
+  const pageRanks = useMemo(() => computeRanks(apps, x => x.examScore ? parseFloat(x.examScore) : null), [apps])
   const [pagination, setPagination] = useState({ total: 0, pages: 1 })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -93,14 +107,13 @@ export default function TopExamScores() {
       const all = await fetchAll()
       const headers = [
         'Rank', 'Last Name', 'First Name', 'Middle Name', 'Email', 'Contact',
-        'SHS Attended', 'Gen. Average (%)', 'Exam Score', 'Interview Score', 'General Average (Exam+Interview)', 'Status', 'Academic Year', 'Date Updated',
+        'SHS Attended', 'Gen. Average (%)', 'General Score', 'Status', 'Academic Year', 'Date Updated',
       ]
+      const ranks = computeRanks(all, x => x.examScore ? parseFloat(x.examScore) : null)
       const rows = all.map((a, i) => {
-        const exam = a.examScore ? parseFloat(a.examScore) : null
-        const interview = a.interviewScore ? parseFloat(a.interviewScore) : null
-        const avg = exam !== null && interview !== null ? ((exam + interview) / 2).toFixed(2) : ''
+        const score = a.examScore ? parseFloat(a.examScore) : null
         return [
-          i + 1,
+          ranks[i],
           a.lastName || '',
           a.firstName || '',
           a.middleName || '',
@@ -108,9 +121,7 @@ export default function TopExamScores() {
           a.contact || '',
           a.school || '',
           a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) : '',
-          exam !== null ? exam.toFixed(2) : '',
-          interview !== null ? interview.toFixed(2) : '',
-          avg,
+          score !== null ? score.toFixed(2) : '',
           STATUS_LABELS[a.status]?.label || a.status || '',
           a.academicYear || '',
           a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('en-PH') : '',
@@ -138,9 +149,7 @@ export default function TopExamScores() {
       const all = await fetchAll()
       toast.dismiss('print')
       const rows = all.map((a, i) => {
-        const exam = a.examScore ? parseFloat(a.examScore) : null
-        const interview = a.interviewScore ? parseFloat(a.interviewScore) : null
-        const avg = exam !== null && interview !== null ? ((exam + interview) / 2).toFixed(2) : (exam !== null ? exam.toFixed(2) : '-')
+        const score = a.examScore ? parseFloat(a.examScore) : null
         const gwa = a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) + '%' : '-'
         const statusLabel = STATUS_LABELS[a.status]?.label || a.status || '-'
         return `
@@ -149,9 +158,7 @@ export default function TopExamScores() {
           <td>${toDisplayName(a)}</td>
           <td>${a.school || '-'}</td>
           <td style="text-align:center">${gwa}</td>
-          <td style="text-align:center;font-weight:bold;color:${exam !== null ? '#064e3b' : '#888'}">${exam !== null ? exam.toFixed(2) : '-'}</td>
-          <td style="text-align:center;font-weight:bold;color:${interview !== null ? '#1e40af' : '#888'}">${interview !== null ? interview.toFixed(2) : '-'}</td>
-          <td style="text-align:center;font-weight:bold;color:${exam !== null || interview !== null ? '#7c3aed' : '#888'}">${avg}</td>
+          <td style="text-align:center;font-weight:bold;color:${score !== null ? '#064e3b' : '#888'}">${score !== null ? score.toFixed(2) : '-'}</td>
           <td style="text-align:center">${statusLabel}</td>
           <td>${a.academicYear || '-'}</td>
         </tr>`
@@ -179,7 +186,7 @@ export default function TopExamScores() {
 <body>
 <div class="header">
   <h1>City Government of Vigan</h1>
-  <h1>Top Exam Scores — Scholarship Applicants</h1>
+  <h1>General Average / Total Score — Scholarship Applicants</h1>
   <p>Academic Year: ${academicYear || 'All'} &nbsp;|&nbsp; Total Records: ${all.length}</p>
 </div>
 <table>
@@ -189,14 +196,12 @@ export default function TopExamScores() {
       <th>Name</th>
       <th>SHS Attended</th>
       <th style="text-align:center">GWA</th>
-      <th style="text-align:center">Exam Score</th>
-      <th style="text-align:center">Interview Score</th>
-      <th style="text-align:center">General Average</th>
+      <th style="text-align:center">General Score</th>
       <th style="text-align:center">Status</th>
       <th>AY</th>
     </tr>
   </thead>
-  <tbody>${rows || '<tr><td colspan="9" style="text-align:center;padding:20px;color:#888">No records</td></tr>'}</tbody>
+  <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">No records</td></tr>'}</tbody>
 </table>
 <div class="footer">Printed: ${new Date().toLocaleString('en-PH')} &nbsp;|&nbsp; Vigan City Scholarship Management System</div>
 </body>
@@ -216,8 +221,8 @@ export default function TopExamScores() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="portal-kicker">Assessment Results</p>
-          <h1 className="portal-page-title mt-2">Top Exam Scores</h1>
-          <p className="portal-page-subtitle">{pagination.total} applicant{pagination.total !== 1 ? 's' : ''} with recorded exam scores</p>
+          <h1 className="portal-page-title mt-2">General Average / Total Score</h1>
+          <p className="portal-page-subtitle">{pagination.total} applicant{pagination.total !== 1 ? 's' : ''} with recorded scores</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={exportCSV} className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
@@ -262,9 +267,9 @@ export default function TopExamScores() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">SHS Attended</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">GWA</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Exam Score</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Interview Score</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">General Average</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  General Score <span className="text-brand-primary">&#8595;</span>
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">AY</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date Updated</th>
@@ -274,37 +279,36 @@ export default function TopExamScores() {
               {loading ? (
                 [...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-slate-100">
-                    {[...Array(10)].map((__, j) => (
+                    {[...Array(8)].map((__, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded bg-slate-100" /></td>
                     ))}
                   </tr>
                 ))
               ) : apps.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-16 text-center">
+                  <td colSpan={8} className="py-16 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
                       <ChartIcon className="h-6 w-6" />
                     </div>
-                    <p className="mt-3 text-sm text-slate-500">No exam scores recorded yet</p>
+                    <p className="mt-3 text-sm text-slate-500">No scores recorded yet</p>
                     {search && <p className="mt-1 text-xs text-slate-400">Try clearing the search</p>}
                   </td>
                 </tr>
               ) : (
                 apps.map((app, idx) => {
-                  const rank = (page - 1) * 50 + idx + 1
-                  const exam = app.examScore ? parseFloat(app.examScore) : null
-                  const interview = app.interviewScore ? parseFloat(app.interviewScore) : null
-                  const avg = exam !== null && interview !== null ? (exam + interview) / 2 : null
+                  const score = app.examScore ? parseFloat(app.examScore) : null
+                  const pageOffset = (page - 1) * 50
+                  const denseRank = pageOffset + pageRanks[idx]
                   const statusInfo = STATUS_LABELS[app.status] || { label: app.status, color: 'text-slate-600 bg-slate-50 border-slate-200' }
                   return (
                     <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
                       <td className="px-4 py-3 text-center">
-                        {rank <= 3 ? (
-                          <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${rank === 1 ? 'bg-yellow-400 text-yellow-900' : rank === 2 ? 'bg-slate-300 text-slate-700' : 'bg-orange-300 text-orange-900'}`}>
-                            {rank}
+                        {denseRank <= 3 ? (
+                          <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${denseRank === 1 ? 'bg-yellow-400 text-yellow-900' : denseRank === 2 ? 'bg-slate-300 text-slate-700' : 'bg-orange-300 text-orange-900'}`}>
+                            {denseRank}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">{rank}</span>
+                          <span className="text-xs text-slate-400">{denseRank}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -318,18 +322,8 @@ export default function TopExamScores() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${exam !== null ? 'text-brand-primary' : 'text-slate-400'}`}>
-                          {exam !== null ? exam.toFixed(2) : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${interview !== null ? 'text-blue-600' : 'text-slate-400'}`}>
-                          {interview !== null ? interview.toFixed(2) : '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${avg !== null ? 'text-violet-700' : 'text-slate-400'}`}>
-                          {avg !== null ? avg.toFixed(2) : exam !== null ? <span className="text-xs text-slate-400">{exam.toFixed(2)}*</span> : '-'}
+                        <span className={`font-mono text-sm font-bold ${score !== null ? 'text-brand-primary' : 'text-slate-400'}`}>
+                          {score !== null ? score.toFixed(2) : '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
