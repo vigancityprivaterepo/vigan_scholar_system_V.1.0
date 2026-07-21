@@ -93,22 +93,29 @@ export default function TopExamScores() {
       const all = await fetchAll()
       const headers = [
         'Rank', 'Last Name', 'First Name', 'Middle Name', 'Email', 'Contact',
-        'SHS Attended', 'Gen. Average (%)', 'Exam Score', 'Status', 'Academic Year', 'Date Updated',
+        'SHS Attended', 'Gen. Average (%)', 'Exam Score', 'Interview Score', 'General Average (Exam+Interview)', 'Status', 'Academic Year', 'Date Updated',
       ]
-      const rows = all.map((a, i) => [
-        i + 1,
-        a.lastName || '',
-        a.firstName || '',
-        a.middleName || '',
-        a.applicant?.email || '',
-        a.contact || '',
-        a.school || '',
-        a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) : '',
-        a.examScore ? parseFloat(a.examScore).toFixed(2) : '',
-        STATUS_LABELS[a.status]?.label || a.status || '',
-        a.academicYear || '',
-        a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('en-PH') : '',
-      ])
+      const rows = all.map((a, i) => {
+        const exam = a.examScore ? parseFloat(a.examScore) : null
+        const interview = a.interviewScore ? parseFloat(a.interviewScore) : null
+        const avg = exam !== null && interview !== null ? ((exam + interview) / 2).toFixed(2) : ''
+        return [
+          i + 1,
+          a.lastName || '',
+          a.firstName || '',
+          a.middleName || '',
+          a.applicant?.email || '',
+          a.contact || '',
+          a.school || '',
+          a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) : '',
+          exam !== null ? exam.toFixed(2) : '',
+          interview !== null ? interview.toFixed(2) : '',
+          avg,
+          STATUS_LABELS[a.status]?.label || a.status || '',
+          a.academicYear || '',
+          a.updatedAt ? new Date(a.updatedAt).toLocaleDateString('en-PH') : '',
+        ]
+      })
       const csv = [headers, ...rows].map(row =>
         row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
       ).join('\n')
@@ -131,7 +138,9 @@ export default function TopExamScores() {
       const all = await fetchAll()
       toast.dismiss('print')
       const rows = all.map((a, i) => {
-        const score = a.examScore ? parseFloat(a.examScore).toFixed(2) : '-'
+        const exam = a.examScore ? parseFloat(a.examScore) : null
+        const interview = a.interviewScore ? parseFloat(a.interviewScore) : null
+        const avg = exam !== null && interview !== null ? ((exam + interview) / 2).toFixed(2) : (exam !== null ? exam.toFixed(2) : '-')
         const gwa = a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) + '%' : '-'
         const statusLabel = STATUS_LABELS[a.status]?.label || a.status || '-'
         return `
@@ -140,7 +149,9 @@ export default function TopExamScores() {
           <td>${toDisplayName(a)}</td>
           <td>${a.school || '-'}</td>
           <td style="text-align:center">${gwa}</td>
-          <td style="text-align:center;font-weight:bold;color:${a.examScore ? '#064e3b' : '#888'}">${score}</td>
+          <td style="text-align:center;font-weight:bold;color:${exam !== null ? '#064e3b' : '#888'}">${exam !== null ? exam.toFixed(2) : '-'}</td>
+          <td style="text-align:center;font-weight:bold;color:${interview !== null ? '#1e40af' : '#888'}">${interview !== null ? interview.toFixed(2) : '-'}</td>
+          <td style="text-align:center;font-weight:bold;color:${exam !== null || interview !== null ? '#7c3aed' : '#888'}">${avg}</td>
           <td style="text-align:center">${statusLabel}</td>
           <td>${a.academicYear || '-'}</td>
         </tr>`
@@ -179,11 +190,13 @@ export default function TopExamScores() {
       <th>SHS Attended</th>
       <th style="text-align:center">GWA</th>
       <th style="text-align:center">Exam Score</th>
+      <th style="text-align:center">Interview Score</th>
+      <th style="text-align:center">General Average</th>
       <th style="text-align:center">Status</th>
       <th>AY</th>
     </tr>
   </thead>
-  <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">No records</td></tr>'}</tbody>
+  <tbody>${rows || '<tr><td colspan="9" style="text-align:center;padding:20px;color:#888">No records</td></tr>'}</tbody>
 </table>
 <div class="footer">Printed: ${new Date().toLocaleString('en-PH')} &nbsp;|&nbsp; Vigan City Scholarship Management System</div>
 </body>
@@ -250,6 +263,8 @@ export default function TopExamScores() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">SHS Attended</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">GWA</th>
                 <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Exam Score</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Interview Score</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">General Average</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">AY</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date Updated</th>
@@ -259,14 +274,14 @@ export default function TopExamScores() {
               {loading ? (
                 [...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-slate-100">
-                    {[...Array(8)].map((__, j) => (
+                    {[...Array(10)].map((__, j) => (
                       <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded bg-slate-100" /></td>
                     ))}
                   </tr>
                 ))
               ) : apps.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center">
+                  <td colSpan={10} className="py-16 text-center">
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
                       <ChartIcon className="h-6 w-6" />
                     </div>
@@ -277,7 +292,9 @@ export default function TopExamScores() {
               ) : (
                 apps.map((app, idx) => {
                   const rank = (page - 1) * 50 + idx + 1
-                  const score = app.examScore ? parseFloat(app.examScore) : null
+                  const exam = app.examScore ? parseFloat(app.examScore) : null
+                  const interview = app.interviewScore ? parseFloat(app.interviewScore) : null
+                  const avg = exam !== null && interview !== null ? (exam + interview) / 2 : null
                   const statusInfo = STATUS_LABELS[app.status] || { label: app.status, color: 'text-slate-600 bg-slate-50 border-slate-200' }
                   return (
                     <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
@@ -301,8 +318,18 @@ export default function TopExamScores() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-lg font-bold ${score !== null ? 'text-brand-primary' : 'text-slate-400'}`}>
-                          {score !== null ? score.toFixed(2) : '-'}
+                        <span className={`font-mono text-sm font-bold ${exam !== null ? 'text-brand-primary' : 'text-slate-400'}`}>
+                          {exam !== null ? exam.toFixed(2) : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-mono text-sm font-bold ${interview !== null ? 'text-blue-600' : 'text-slate-400'}`}>
+                          {interview !== null ? interview.toFixed(2) : '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`font-mono text-sm font-bold ${avg !== null ? 'text-violet-700' : 'text-slate-400'}`}>
+                          {avg !== null ? avg.toFixed(2) : exam !== null ? <span className="text-xs text-slate-400">{exam.toFixed(2)}*</span> : '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3">

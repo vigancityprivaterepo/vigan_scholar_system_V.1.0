@@ -4,7 +4,7 @@ import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, CheckCircleIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, CheckCircleIcon, SpinnerIcon } from '../../components/ui/PortalIcons'
 
 const DEFAULT_GWA_THRESHOLD = 83
 const PAGE_SIZE = 20
@@ -41,7 +41,7 @@ export default function EligibilityScreening() {
       toast.error('Remarks are required when disqualifying.')
       return
     }
-    setActing(a => ({ ...a, [id]: true }))
+    setActing(a => ({ ...a, [id]: status }))
     try {
       await adminService.updateStatus(id, { status, remarks: remarks[id], ...extra })
       toast.success(`Marked as ${status.replace(/_/g, ' ')}`)
@@ -120,15 +120,21 @@ export default function EligibilityScreening() {
                         />
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => act(app.id, 'EXAM_INTERVIEW')} disabled={acting[app.id]} className="portal-button-primary flex-1 !px-3 !py-2 text-xs">
-                          Qualify
+                        <button
+                          onClick={() => act(app.id, 'EXAM_INTERVIEW')}
+                          disabled={Boolean(acting[app.id])}
+                          className="portal-button-primary flex-1 !px-3 !py-2 text-xs flex items-center justify-center gap-1.5"
+                        >
+                          {acting[app.id] === 'EXAM_INTERVIEW' && <SpinnerIcon className="h-3.5 w-3.5 text-current" />}
+                          {acting[app.id] === 'EXAM_INTERVIEW' ? 'Qualifying...' : 'Qualify'}
                         </button>
                         <button
                           onClick={() => act(app.id, 'NOT_QUALIFIED', { rejectionReason: remarks[app.id] || 'Does not meet eligibility requirements.' })}
-                          disabled={acting[app.id]}
-                          className="portal-button-secondary flex-1 !border-red-300 !px-3 !py-2 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800"
+                          disabled={Boolean(acting[app.id])}
+                          className="portal-button-secondary flex-1 !border-red-300 !px-3 !py-2 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800 flex items-center justify-center gap-1.5"
                         >
-                          Disqualify
+                          {acting[app.id] === 'NOT_QUALIFIED' && <SpinnerIcon className="h-3.5 w-3.5 text-red-700" />}
+                          {acting[app.id] === 'NOT_QUALIFIED' ? 'Disqualifying...' : 'Disqualify'}
                         </button>
                       </div>
                     </div>

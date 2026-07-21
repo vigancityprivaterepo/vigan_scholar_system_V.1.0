@@ -320,6 +320,7 @@ const applyStatusUpdate = async ({
   remarks,
   rejectionReason,
   examScore,
+  interviewScore,
   interviewNotes,
   requirementChecklist,
   performedById,
@@ -374,16 +375,29 @@ const applyStatusUpdate = async ({
   } else {
     updateData.rejectionReason = null;
   }
-  if (examScore !== undefined) updateData.examScore = parseFloat(examScore);
+  if (examScore !== undefined && examScore !== null && examScore !== '') updateData.examScore = parseFloat(examScore);
+  if (interviewScore !== undefined && interviewScore !== null && interviewScore !== '') updateData.interviewScore = parseFloat(interviewScore);
   if (interviewNotes) updateData.interviewNotes = interviewNotes;
   if (requirementChecklist && typeof requirementChecklist === 'object') {
     updateData.requirementChecklist = requirementChecklist;
   }
 
+  // Compute general average for activity log traceability
+  const parsedExam = examScore !== undefined && examScore !== null && examScore !== '' ? parseFloat(examScore) : null;
+  const parsedInterview = interviewScore !== undefined && interviewScore !== null && interviewScore !== '' ? parseFloat(interviewScore) : null;
+  const computedAverage = parsedExam !== null && parsedInterview !== null
+    ? ((parsedExam + parsedInterview) / 2).toFixed(2)
+    : null;
+
   // Wrap the DB writes in a transaction so the application update and its
   // activity log entry are always committed together or not at all.
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.application.update({ where: { id: application.id }, data: updateData });
+    const scoreNote = computedAverage
+      ? `Exam: ${parsedExam}, Interview: ${parsedInterview}, Average: ${computedAverage}`
+      : parsedExam !== null
+        ? `Exam Score: ${parsedExam}`
+        : null;
     await tx.activityLog.create({
       data: {
         applicationId: application.id,
@@ -391,13 +405,13 @@ const applyStatusUpdate = async ({
         action: isRollback ? `Status rolled back to ${status}` : `Status changed to ${status}`,
         fromStatus: application.status,
         toStatus: status,
-        notes: remarks || effectiveRejectionReason || null,
+        notes: remarks || scoreNote || effectiveRejectionReason || null,
       },
     });
     return result;
   });
 
-  // Notifications and emails run after the transaction commits � they are
+  // Notifications and emails run after the transaction commits - they are
   // intentionally outside the transaction since they cannot be rolled back.
   await handleStatusNotification(application, status, remarks, effectiveRejectionReason, { isRollback });
   return updated;
@@ -544,7 +558,7 @@ const getApplication = async (req, res, next) => {
 const updateStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, remarks, rejectionReason, examScore, interviewNotes, requirementChecklist } = req.body;
+    const { status, remarks, rejectionReason, examScore, interviewScore, interviewNotes, requirementChecklist } = req.body;
 
     const application = await prisma.application.findUnique({
       where: { id },
@@ -558,6 +572,7 @@ const updateStatus = async (req, res, next) => {
       remarks,
       rejectionReason,
       examScore,
+      interviewScore,
       interviewNotes,
       requirementChecklist,
       performedById: req.user.id,
@@ -632,7 +647,7 @@ const updateApplicationFields = async (req, res, next) => {
 
 const batchUpdateStatus = async (req, res, next) => {
   try {
-    const { applicationIds, status, remarks, rejectionReason, examScore, interviewNotes, requirementChecklist } = req.body;
+    const { applicationIds, status, remarks, rejectionReason, examScore, interviewScore, interviewNotes, requirementChecklist } = req.body;
 
     if (!Array.isArray(applicationIds) || applicationIds.length === 0) {
       throw new AppError('applicationIds is required and must contain at least one id.', 400);
@@ -663,6 +678,7 @@ const batchUpdateStatus = async (req, res, next) => {
           remarks,
           rejectionReason,
           examScore,
+          interviewScore,
           interviewNotes,
           requirementChecklist,
           performedById: req.user.id,
@@ -1166,7 +1182,7 @@ const scheduleExam = async (req, res, next) => {
     });
 
     // ExamSchedule is the authoritative source for scheduling data.
-    // interviewDate on Application is a deprecated legacy field � do not write to it.
+    // interviewDate on Application is a deprecated legacy field - do not write to it.
 
     await createNotification({
       userId: application.applicant.id,
@@ -1748,7 +1764,7 @@ const resolveAppeal = async (req, res, next) => {
           data: {
             applicationId: appeal.applicationId,
             performedById: req.user.id,
-            action: `Appeal approved � application reinstated to ${revertTo}`,
+            action: `Appeal approved - application reinstated to ${revertTo}`,
             fromStatus: currentAppStatus,
             toStatus: revertTo,
             notes: reason,
@@ -1765,7 +1781,7 @@ const resolveAppeal = async (req, res, next) => {
         await createNotification({
           userId: appeal.applicantId,
           applicationId: appeal.applicationId,
-          title: 'Appeal Approved � Application Reinstated',
+          title: 'Appeal Approved - Application Reinstated',
           message: `Your appeal has been approved. Your application has been reinstated to the ${stageLabel} stage. Please monitor your portal for further updates.`,
           type: 'SUCCESS',
         });
@@ -1773,13 +1789,13 @@ const resolveAppeal = async (req, res, next) => {
           applicationId: appeal.applicationId,
           userId: appeal.applicantId,
           channel: 'PORTAL_NOTICE',
-          subject: 'Appeal Approved � Application Reinstated',
+          subject: 'Appeal Approved - Application Reinstated',
           message: reason,
           metadata: { appealId: id, appealStatus: normalizedStatus, revertedTo: revertTo },
           createdById: req.user.id,
         });
       } else {
-        // Application is in an unexpected status � still notify, but no automatic reversion
+        // Application is in an unexpected status - still notify, but no automatic reversion
         await createNotification({
           userId: appeal.applicantId,
           applicationId: appeal.applicationId,

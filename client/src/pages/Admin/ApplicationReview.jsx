@@ -7,7 +7,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate, formatDateTime } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
 import { STATUS_CONFIG } from '../../utils/statusConfig'
-import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon, SpinnerIcon } from '../../components/ui/PortalIcons'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
 const REQUIREMENT_CHECKLIST_ITEMS = [
@@ -32,6 +32,7 @@ export default function ApplicationReview() {
   const [remarks, setRemarks] = useState('')
   const [rejectionReason, setRejectionReason] = useState('')
   const [examScore, setExamScore] = useState('')
+  const [interviewScore, setInterviewScore] = useState('')
   const [requirementChecklist, setRequirementChecklist] = useState({})
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState({})
@@ -59,6 +60,7 @@ export default function ApplicationReview() {
         remarks: remarks || undefined,
         rejectionReason: rejectionReason || extra.rejectionReason || undefined,
         examScore: examScore ? parseFloat(examScore) : undefined,
+        interviewScore: interviewScore ? parseFloat(interviewScore) : undefined,
         requirementChecklist,
         ...extra,
       })
@@ -71,6 +73,7 @@ export default function ApplicationReview() {
       setRemarks('')
       setRejectionReason('')
       setExamScore('')
+      setInterviewScore('')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Action failed')
     } finally {
@@ -545,7 +548,21 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                     {app.examScore && (
                       <div>
                         <p className="text-xs font-medium text-slate-500">Exam Score</p>
-                        <p className="mt-0.5 font-mono text-2xl font-bold text-brand-primary">{app.examScore}</p>
+                        <p className="mt-0.5 font-mono text-2xl font-bold text-brand-primary">{parseFloat(app.examScore).toFixed(2)}</p>
+                      </div>
+                    )}
+                    {app.interviewScore && (
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">Interview Score</p>
+                        <p className="mt-0.5 font-mono text-2xl font-bold text-blue-600">{parseFloat(app.interviewScore).toFixed(2)}</p>
+                      </div>
+                    )}
+                    {app.examScore && app.interviewScore && (
+                      <div>
+                        <p className="text-xs font-medium text-slate-500">General Average (Exam+Int)</p>
+                        <p className="mt-0.5 font-mono text-2xl font-bold text-violet-700">
+                          {((parseFloat(app.examScore) + parseFloat(app.interviewScore)) / 2).toFixed(2)}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -725,9 +742,30 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             ) : (
               <div className="flex flex-col gap-3">
                 {app.status === 'EXAM_INTERVIEW' && (
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Exam Score (optional)</label>
-                    <input type="number" className="portal-input" placeholder="e.g. 85.5" value={examScore} onChange={e => setExamScore(e.target.value)} />
+                  <div className="flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-600">Exam Score</label>
+                        <input type="number" min="0" max="100" step="0.01" className="portal-input text-sm" placeholder="e.g. 85.0" value={examScore} onChange={e => setExamScore(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-600">Interview Score</label>
+                        <input type="number" min="0" max="100" step="0.01" className="portal-input text-sm" placeholder="e.g. 90.0" value={interviewScore} onChange={e => setInterviewScore(e.target.value)} />
+                      </div>
+                    </div>
+                    {(() => {
+                      const e = parseFloat(examScore)
+                      const i = parseFloat(interviewScore)
+                      const avg = !isNaN(e) && !isNaN(i) ? ((e + i) / 2).toFixed(2) : null
+                      const examOnly = !isNaN(e) && isNaN(i) ? e.toFixed(2) : null
+                      return avg || examOnly ? (
+                        <div className="rounded-md border border-brand-primary/20 bg-brand-primary/5 p-2 text-xs text-slate-600">
+                          {avg
+                            ? <>Computed Avg: <span className="font-bold text-brand-primary">{avg}</span></>
+                            : <>Exam only: <span className="font-bold text-brand-primary">{examOnly}</span></>}
+                        </div>
+                      ) : null
+                    })()}
                   </div>
                 )}
 
@@ -745,18 +783,22 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                   </div>
                 )}
 
-                {visibleActions.map(action => (
-                  <div key={`${action.status}-${action.label}`} className="flex flex-col gap-1">
-                    <button
-                      onClick={() => requestAction(action)}
-                      disabled={actionLoading}
-                      className={clsx(action.color || 'portal-button-primary', 'w-full justify-center py-2.5 text-sm')}
-                    >
-                      {action.label}
-                    </button>
-                    {action.hint && <p className="text-xs text-slate-400">{action.hint}</p>}
-                  </div>
-                ))}
+                {visibleActions.map(action => {
+                  const isCurrentActionLoading = actionLoading && pendingAction?.status === action.status
+                  return (
+                    <div key={`${action.status}-${action.label}`} className="flex flex-col gap-1">
+                      <button
+                        onClick={() => requestAction(action)}
+                        disabled={actionLoading}
+                        className={clsx(action.color || 'portal-button-primary', 'w-full justify-center py-2.5 text-sm flex items-center justify-center gap-2')}
+                      >
+                        {isCurrentActionLoading && <SpinnerIcon className="h-4 w-4 text-current" />}
+                        {isCurrentActionLoading ? 'Processing...' : action.label}
+                      </button>
+                      {action.hint && <p className="text-xs text-slate-400">{action.hint}</p>}
+                    </div>
+                  )
+                })}
               </div>
             )}
 
@@ -769,13 +811,14 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                 <p className="mb-3 text-xs text-red-600">This action cannot be undone. Type <strong>CONFIRM</strong> to proceed.</p>
                 <input className="portal-input mb-3 text-sm" placeholder="Type CONFIRM" value={confirmText} onChange={e => setConfirmText(e.target.value)} />
                 <div className="flex gap-2">
-                  <button onClick={() => { setShowConfirm(false); setConfirmText('') }} className="portal-button-secondary flex-1 text-xs">Cancel</button>
+                  <button onClick={() => { setShowConfirm(false); setConfirmText('') }} disabled={actionLoading} className="portal-button-secondary flex-1 text-xs">Cancel</button>
                   <button
                     disabled={confirmText !== 'CONFIRM' || actionLoading}
                     onClick={() => doAction(pendingAction.status, pendingAction?.extra || {})}
-                    className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 disabled:opacity-40 hover:!border-red-500 hover:!text-red-800"
+                    className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 disabled:opacity-40 hover:!border-red-500 hover:!text-red-800 flex items-center justify-center gap-2"
                   >
-                    Confirm
+                    {actionLoading && <SpinnerIcon className="h-4 w-4 text-red-700" />}
+                    {actionLoading ? 'Processing...' : 'Confirm'}
                   </button>
                 </div>
               </div>
@@ -787,7 +830,16 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             <div className="flex flex-col gap-2 text-slate-600">
               <div className="flex justify-between"><span>Files</span><span className="font-medium">{app.requirementFiles?.length || 0}</span></div>
               <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('font-mono font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
-              {app.examScore && <div className="flex justify-between"><span>Exam Score</span><span className="font-mono font-bold">{app.examScore}</span></div>}
+              {app.examScore && <div className="flex justify-between"><span>Exam Score</span><span className="font-mono font-bold">{parseFloat(app.examScore).toFixed(2)}</span></div>}
+              {app.interviewScore && <div className="flex justify-between"><span>Interview Score</span><span className="font-mono font-bold text-blue-600">{parseFloat(app.interviewScore).toFixed(2)}</span></div>}
+              {app.examScore && app.interviewScore && (
+                <div className="flex justify-between border-t border-slate-100 pt-1 mt-1">
+                  <span>Gen. Avg (Exam+Int)</span>
+                  <span className="font-mono font-bold text-violet-700">
+                    {((parseFloat(app.examScore) + parseFloat(app.interviewScore)) / 2).toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between"><span>Submitted</span><span>{formatDate(app.submittedAt)}</span></div>
             </div>
           </div>
