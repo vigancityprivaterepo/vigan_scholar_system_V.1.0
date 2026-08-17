@@ -19,6 +19,7 @@ export const adminService = {
   scheduleExam: (id, data) => api.post(`/admin/applications/${id}/schedule`, data),
   bulkScheduleExam: (data) => api.post('/admin/applications/bulk-schedule', data),
   reviewCOR: (id, data) => api.patch(`/admin/applications/${id}/cor`, data),
+  markCorHardCopyReceived: (id, received = true) => api.patch(`/admin/applications/${id}/cor-hardcopy`, { received }),
   sendNotification: (id, data) => api.post(`/admin/notify/${id}`, data),
   getLogs: (id) => api.get(`/admin/logs/${id}`),
   getSiteSettings: () => api.get('/admin/settings'),

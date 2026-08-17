@@ -11,6 +11,7 @@ const STAFF_ROLES = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'];
 const submitRenewal = async (req, res, next) => {
   try {
     const applicantId = req.user.id;
+    const currentAcademicYear = toAcademicYear(new Date());
 
     // Must have an ACCEPTED application
     const application = await prisma.application.findFirst({
@@ -20,12 +21,13 @@ const submitRenewal = async (req, res, next) => {
       throw new AppError('Only scholars with ACCEPTED status may submit a renewal.', 403);
     }
 
-    // Only one active (non-rejected) renewal allowed at a time
+    // Only one active (non-rejected) renewal allowed per academic year —
+    // a past cycle's approved/pending renewal must not block this year's.
     const existing = await prisma.scholarshipRenewal.findFirst({
-      where: { applicantId, status: { in: ['PENDING_REVIEW', 'APPROVED'] } },
+      where: { applicantId, academicYear: currentAcademicYear, status: { in: ['PENDING_REVIEW', 'APPROVED'] } },
     });
     if (existing) {
-      throw new AppError('You already have a pending or approved renewal application.', 409);
+      throw new AppError(`You already have a pending or approved renewal application for ${currentAcademicYear}.`, 409);
     }
 
     // upload.fields() returns req.files as { cor: [...], grades: [...] }
@@ -41,7 +43,7 @@ const submitRenewal = async (req, res, next) => {
         applicantId,
         applicationId: application.id,
         status: 'PENDING_REVIEW',
-        academicYear: toAcademicYear(new Date()),
+        academicYear: currentAcademicYear,
       },
     });
 
@@ -91,7 +93,7 @@ const getMyRenewal = async (req, res, next) => {
       orderBy: { submittedAt: 'desc' },
       include: { renewalFiles: true },
     });
-    res.json({ success: true, renewal: renewal || null });
+    res.json({ success: true, renewal: renewal || null, currentAcademicYear: toAcademicYear(new Date()) });
   } catch (err) {
     next(err);
   }

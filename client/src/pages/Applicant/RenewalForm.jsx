@@ -101,8 +101,9 @@ export default function RenewalForm() {
   useEffect(() => {
     applicationService.getMyRenewal()
       .then((res) => {
-        const r = res.data.renewal
-        if (r && r.status !== 'REJECTED') {
+        const { renewal: r, currentAcademicYear } = res.data
+        const isCurrentCycle = !!r && r.academicYear === currentAcademicYear
+        if (r && isCurrentCycle && r.status !== 'REJECTED') {
           setExistingRenewal(r)
         }
       })

@@ -119,7 +119,7 @@ export default function ApplicationForm() {
   const [serverSlots, setServerSlots] = useState(Array(REQUIRED_DOCS.length).fill(null))
   const [existingApplication, setExistingApplication] = useState(null)
   const [checkingApplication, setCheckingApplication] = useState(true)
-  const [settings, setSettings] = useState({ applicationOpen: true, applicationDeadline: null })
+  const [settings, setSettings] = useState({ applicationOpen: true, applicationDeadline: null, gwaThreshold: 83 })
   const [countdownNow, setCountdownNow] = useState(Date.now())
   const [qualityWarnings, setQualityWarnings] = useState([])
   const [schoolDropdownOpen, setSchoolDropdownOpen] = useState(false)
@@ -224,9 +224,10 @@ export default function ApplicationForm() {
         setSettings({
           applicationOpen: response.data?.settings?.applicationOpen !== false,
           applicationDeadline: response.data?.settings?.applicationDeadline || null,
+          gwaThreshold: response.data?.settings?.gwaThreshold != null ? Number(response.data.settings.gwaThreshold) : 83,
         })
       })
-      .catch(() => setSettings({ applicationOpen: true, applicationDeadline: null }))
+      .catch(() => setSettings({ applicationOpen: true, applicationDeadline: null, gwaThreshold: 83 }))
   }, [])
 
   useEffect(() => {
@@ -374,7 +375,7 @@ export default function ApplicationForm() {
       if (form.school === 'Others' && !form.schoolOther.trim()) e.schoolOther = 'Please specify your school'
       if (!form.yearGraduated || parseInt(form.yearGraduated) < 2000 || parseInt(form.yearGraduated) > new Date().getFullYear() + 1) e.yearGraduated = 'Enter a valid graduation year'
       const avg = roundToTwoDecimals(form.generalAverage)
-      if (!form.generalAverage || isNaN(avg) || avg < 75 || avg > 100) e.generalAverage = 'General average must be between 75 and 100'
+      if (!form.generalAverage || isNaN(avg) || avg < settings.gwaThreshold || avg > 100) e.generalAverage = `General average must be at least ${settings.gwaThreshold}% (and no more than 100%)`
       const hasOnePref = form.collegePreferences.some(p => p.name.trim())
       if (!hasOnePref) e.collegePreferences = 'Please list at least one college preference'
       if (!form.yearLevel) e.yearLevel = 'Please select a year level'
@@ -753,7 +754,7 @@ export default function ApplicationForm() {
                 <input
                   type="number"
                   step="0.01"
-                  min="75"
+                  min={settings.gwaThreshold}
                   max="100"
                   className={inputClass('generalAverage')}
                   value={form.generalAverage}
@@ -768,7 +769,7 @@ export default function ApplicationForm() {
                   }}
                   placeholder="e.g. 87.50"
                 />
-                <p className="mt-1 text-xs text-slate-500">Minimum of 83% required (no grade lower than 80% per semester)</p>
+                <p className="mt-1 text-xs text-slate-500">Minimum of {settings.gwaThreshold}% required (no grade lower than 80% per semester)</p>
                 {err('generalAverage')}
               </div>
             </div>

@@ -271,6 +271,7 @@ const emailTemplates = {
       intro: `We are pleased to officially welcome you to the scholarship program. Your application${data.refId ? ` (Reference #${escapeHtml(data.refId)})` : ''} has been fully accepted.`,
       sections: [
         renderPanel('Congratulations', 'This scholarship reflects the scholarship office\'s confidence in your potential and academic commitment. Please continue monitoring your portal for future notices.', 'teal'),
+        renderPanel('One More Step', 'Please bring the original (physical) Certificate of Registration to the Scholarship Office in person to complete your enrollment record.', 'amber'),
       ],
       ctaLabel: 'View Scholar Dashboard',
       ctaUrl: data.portalUrl || `${process.env.CLIENT_URL}/applicant/dashboard`,

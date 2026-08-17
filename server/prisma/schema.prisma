@@ -30,6 +30,7 @@ model User {
   reviewedAppeals Appeal[] @relation("AppealReviewedBy")
   scholarshipRenewals ScholarshipRenewal[]
   assignedExamSchedules ExamSchedule[] @relation("ExamScheduleExaminer")
+  corHardCopyVerifications Application[] @relation("ApplicationCorHardCopyReceivedBy")
 
   @@map("users")
 }
@@ -94,6 +95,9 @@ model Application {
   rejectionReason String?  @map("rejection_reason")
   academicYear    String?  @map("academic_year")
   requirementChecklist Json? @map("requirement_checklist")
+  corHardCopyReceivedAt   DateTime? @map("cor_hard_copy_received_at")
+  corHardCopyReceivedById String?   @map("cor_hard_copy_received_by_id")
+  corHardCopyReceivedBy   User?     @relation("ApplicationCorHardCopyReceivedBy", fields: [corHardCopyReceivedById], references: [id], onDelete: SetNull)
 
   submittedAt DateTime  @default(now()) @map("submitted_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")

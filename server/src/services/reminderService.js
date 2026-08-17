@@ -42,8 +42,22 @@ const runAutomatedReminders = async () => {
     const incompleteReminderCutoff = new Date(now - INCOMPLETE_REMINDER_INTERVAL_MS);
     const corReminderCutoff = new Date(now - COR_REMINDER_INTERVAL_MS);
 
+    // If the application deadline has passed, applicants can no longer resubmit
+    // (see ensureSubmissionOpen in applicationController.js), so nagging them by
+    // email is pointless. Skip the incomplete-reminder pass entirely in that case.
+    let pastDeadline = false;
+    try {
+      const settingsRows = await prisma.$queryRaw`
+        SELECT "application_deadline" FROM "site_settings" WHERE "id" = 'default' LIMIT 1
+      `;
+      const deadline = settingsRows[0]?.application_deadline ? new Date(settingsRows[0].application_deadline) : null;
+      pastDeadline = deadline ? now > deadline.getTime() : false;
+    } catch (err) {
+      logger.error('Failed to read application deadline for reminder gating', { message: err.message });
+    }
+
     // Missing docs / incomplete applications
-    const incompleteApps = await prisma.application.findMany({
+    const incompleteApps = pastDeadline ? [] : await prisma.application.findMany({
       where: {
         status: 'INCOMPLETE',
         NOT: {

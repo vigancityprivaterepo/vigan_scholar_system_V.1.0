@@ -114,6 +114,7 @@ export default function CORSubmission() {
             COR submission is only available after your application is approved.
             {application.status === 'COR_SUBMITTED' && ' Your COR is currently under review.'}
             {application.status === 'ACCEPTED' && ' Your COR has been accepted and you are a confirmed scholar.'}
+            {application.status === 'ACCEPTED' && !application.corHardCopyReceivedAt && ' Please also bring the original COR to the Scholarship Office in person to finalize your record.'}
           </p>
         </div>
       ) : (

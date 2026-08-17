@@ -36,6 +36,8 @@ export default function ApplicationReview() {
   const [editMode, setEditMode] = useState(false)
   const [editData, setEditData] = useState({})
   const [editLoading, setEditLoading] = useState(false)
+  const [hardCopyLoading, setHardCopyLoading] = useState(false)
+  const [gwaThreshold, setGwaThreshold] = useState(83)
 
   useEffect(() => {
     adminService.getApplication(id)
@@ -46,6 +48,15 @@ export default function ApplicationReview() {
       .catch(() => toast.error('Failed to load application'))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    adminService.getSiteSettings()
+      .then(r => {
+        const threshold = r.data?.settings?.gwaThreshold
+        if (threshold != null) setGwaThreshold(Number(threshold))
+      })
+      .catch(() => {})
+  }, [])
 
   const doAction = async (newStatus, extra = {}) => {
     if (CONFIRM_REQUIRED.includes(newStatus) && confirmText !== 'CONFIRM') {
@@ -84,6 +95,19 @@ export default function ApplicationReview() {
     else doAction(action.status, action.extra || {})
   }
 
+  const handleHardCopyToggle = async (received) => {
+    setHardCopyLoading(true)
+    try {
+      const r = await adminService.markCorHardCopyReceived(id, received)
+      setApp(a => ({ ...a, ...r.data.application }))
+      toast.success(received ? 'Marked hard copy received' : 'Reverted hard copy status')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update')
+    } finally {
+      setHardCopyLoading(false)
+    }
+  }
+
   if (loading) return (
     <div className="flex flex-col gap-4">
       {[1, 2, 3].map(i => <div key={i} className="card h-32 animate-pulse bg-gray-100" />)}
@@ -96,6 +120,10 @@ export default function ApplicationReview() {
     PENDING_REVIEW: [
       { label: 'Mark Complete to Eligibility', status: 'ELIGIBILITY_SCREENING', color: 'portal-button-primary', hint: 'All requirements are complete' },
       { label: 'Mark Incomplete', status: 'INCOMPLETE', color: 'portal-button-secondary !border-amber-300 !text-amber-700 hover:!border-amber-500 hover:!text-amber-800', needsRemarks: true },
+      { label: 'Reject Application', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+    ],
+    INCOMPLETE: [
+      { label: 'Reject (Missing Documents)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use this once the applicant can no longer submit requirements (e.g. deadline passed). This stops further reminder emails.' },
     ],
     ELIGIBILITY_SCREENING: [
       { label: 'Qualify to Exam/Interview', status: 'EXAM_INTERVIEW', color: 'portal-button-primary' },
@@ -111,9 +139,15 @@ export default function ApplicationReview() {
     FAILED_EXAM: [
       { label: 'Finalize Rejection', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
+    APPROVED: [
+      { label: 'Reject (No COR Submitted)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use once the applicant can no longer submit a COR (e.g. deadline passed). Stops further reminder emails.' },
+    ],
     COR_SUBMITTED: [
       { label: 'Approve COR to Accept', status: 'ACCEPTED', color: 'portal-button-primary' },
       { label: 'Reject COR', status: 'COR_REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+    ],
+    COR_REJECTED: [
+      { label: 'Reject (No Resubmission)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use once the applicant can no longer resubmit a corrected COR.' },
     ],
   }
 
@@ -538,7 +572,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                     ))}
                     <div>
                       <p className="text-xs font-medium text-slate-500">General Average (SHS)</p>
-                      <p className={clsx('mt-0.5 font-mono text-2xl font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>
+                      <p className={clsx('mt-0.5 font-mono text-2xl font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </p>
                     </div>
@@ -766,6 +800,40 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
               </div>
             )}
 
+            {app.status === 'ACCEPTED' && (
+              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-1 text-sm font-semibold text-brand-primary">Physical COR Hard Copy</p>
+                {app.corHardCopyReceivedAt ? (
+                  <>
+                    <p className="flex items-center gap-1.5 text-sm text-emerald-700">
+                      <CheckCircleIcon className="h-4 w-4" /> Received {formatDateTime(app.corHardCopyReceivedAt)}
+                    </p>
+                    {app.corHardCopyReceivedBy?.fullName && (
+                      <p className="mt-0.5 text-xs text-slate-500">Logged by {app.corHardCopyReceivedBy.fullName}</p>
+                    )}
+                    <button
+                      onClick={() => handleHardCopyToggle(false)}
+                      disabled={hardCopyLoading}
+                      className="portal-button-secondary mt-2 w-full text-xs"
+                    >
+                      {hardCopyLoading ? 'Updating...' : 'Undo (mistaken entry)'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-2 text-xs text-slate-500">Not yet received. Mark this once the applicant brings the original COR to the office in person.</p>
+                    <button
+                      onClick={() => handleHardCopyToggle(true)}
+                      disabled={hardCopyLoading}
+                      className="portal-button-primary w-full text-xs"
+                    >
+                      {hardCopyLoading ? 'Saving...' : 'Mark Hard Copy Received'}
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
             {showConfirm && (
               <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4">
                 <div className="mb-2 flex items-center gap-2 text-red-700">
@@ -793,7 +861,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             <h4 className="mb-3 font-semibold text-brand-primary">Quick Info</h4>
             <div className="flex flex-col gap-2 text-slate-600">
               <div className="flex justify-between"><span>Files</span><span className="font-medium">{app.requirementFiles?.length || 0}</span></div>
-              <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('font-mono font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
+              <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('font-mono font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
               {app.examScore && <div className="flex justify-between"><span>General Score</span><span className="font-mono font-bold">{parseFloat(app.examScore).toFixed(2)}</span></div>}
               <div className="flex justify-between"><span>Submitted</span><span>{formatDate(app.submittedAt)}</span></div>
             </div>

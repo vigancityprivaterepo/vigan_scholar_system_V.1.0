@@ -11,6 +11,7 @@ const { toAcademicYear, parseAcademicYearRange } = require('../utils/academicYea
 const { getPrimaryAdminEmail, isPrimaryAdminEmail, getEffectiveRole } = require('../utils/primaryAdmin');
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 const { formatManilaDate, formatManilaDateTime, parseManilaScheduleInput } = require('../utils/scheduleDateTime');
+const { getGwaThreshold } = require('../utils/gwaThreshold');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
@@ -346,16 +347,21 @@ const applyStatusUpdate = async ({
     throw new AppError(`Rejection reason is required when setting status to ${status}.`, 400);
   }
 
-  // Check General Average threshold (percentage scale: higher is better)
-  const avgValue = application.generalAverage !== null && application.generalAverage !== undefined
-    ? parseFloat(application.generalAverage)
-    : null;
-  if (status === 'EXAM_INTERVIEW' && avgValue !== null) {
-    const settingsRows = await prisma.$queryRaw`SELECT "gwa_threshold" FROM "site_settings" WHERE "id" = 'default' LIMIT 1`;
-    const threshold = settingsRows[0] ? parseFloat(settingsRows[0].gwa_threshold) : 83;
-    if (avgValue < threshold) {
+  // Check General Average threshold (percentage scale: higher is better) — required for
+  // both Eligibility Screening and Exam/Interview qualification. A null/missing average
+  // blocks the transition (fail closed): generalAverage should always be populated at
+  // submission, so null here can only mean legacy data or a manual admin edit that
+  // cleared the field, and eligibility cannot be verified without a number.
+  if (['ELIGIBILITY_SCREENING', 'EXAM_INTERVIEW'].includes(status)) {
+    const threshold = await getGwaThreshold(prisma);
+    const avgValue = application.generalAverage !== null && application.generalAverage !== undefined
+      ? parseFloat(application.generalAverage)
+      : null;
+    if (avgValue === null || avgValue < threshold) {
       throw new AppError(
-        `Applicant General Average (${avgValue}%) does not meet the minimum threshold of ${threshold}%.`,
+        avgValue === null
+          ? `Applicant General Average is missing. A recorded average of at least ${threshold}% is required before moving to ${STATUS_LABELS[status]}.`
+          : `Applicant General Average (${avgValue}%) does not meet the minimum threshold of ${threshold}%.`,
         400
       );
     }
@@ -520,6 +526,7 @@ const getApplication = async (req, res, next) => {
           applicant: { select: { id: true, email: true, fullName: true, createdAt: true } },
           requirementFiles: true,
           corFiles: { orderBy: { uploadedAt: 'desc' } },
+          corHardCopyReceivedBy: { select: { fullName: true } },
           activityLogs: {
             orderBy: { createdAt: 'desc' },
             include: { performedBy: { select: { fullName: true, role: true } } },
@@ -1452,6 +1459,39 @@ const reviewCOR = async (req, res, next) => {
   }
 };
 
+const markCorHardCopyReceived = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const received = req.body.received !== false; // default true; explicit false = undo
+
+    const application = await prisma.application.findUnique({ where: { id } });
+    if (!application) throw new AppError('Application not found', 404);
+    if (application.status !== 'ACCEPTED') {
+      throw new AppError('Hard-copy COR can only be marked for accepted applications.', 400);
+    }
+
+    const updated = await prisma.application.update({
+      where: { id },
+      data: received
+        ? { corHardCopyReceivedAt: new Date(), corHardCopyReceivedById: req.user.id }
+        : { corHardCopyReceivedAt: null, corHardCopyReceivedById: null },
+      include: { corHardCopyReceivedBy: { select: { fullName: true } } },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        applicationId: id,
+        performedById: req.user.id,
+        action: received ? 'Physical COR hard copy received' : 'Physical COR hard copy receipt reversed',
+      },
+    });
+
+    res.json({ success: true, application: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getDashboardStats = async (req, res, next) => {
   try {
     const academicYear = String(req.query.academicYear || '').trim();
@@ -2253,6 +2293,7 @@ module.exports = {
   bulkScheduleExam,
   listExamScheduleRecords,
   reviewCOR,
+  markCorHardCopyReceived,
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,

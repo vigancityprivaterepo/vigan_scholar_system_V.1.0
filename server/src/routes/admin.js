@@ -15,6 +15,7 @@ const {
   bulkScheduleExam,
   listExamScheduleRecords,
   reviewCOR,
+  markCorHardCopyReceived,
   getDashboardStats,
   sendManualNotification,
   getActivityLogs,
@@ -65,6 +66,7 @@ router.patch('/applications/:id/fields', requireReviewer, updateApplicationField
 router.post('/applications/bulk-schedule', requireScheduler, bulkScheduleExam);
 router.post('/applications/:id/schedule', requireScheduler, scheduleExam);
 router.patch('/applications/:id/cor', requireReviewer, reviewCOR);
+router.patch('/applications/:id/cor-hardcopy', requireReviewer, markCorHardCopyReceived);
 router.post('/notify/:id', sendManualNotification);
 router.get('/logs/:id', getActivityLogs);
 router.get('/notifications', getAdminNotifications);

@@ -5,6 +5,7 @@ const { isValidTransition } = require('../utils/statusTransitions');
 const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear } = require('../utils/academicYear');
+const { getGwaThreshold } = require('../utils/gwaThreshold');
 
 const prisma = new PrismaClient();
 const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022']);
@@ -112,6 +113,14 @@ const submitApplication = async (req, res, next) => {
 
     if (!school || !yearGraduated || normalizedGeneralAverage === null) {
       throw new AppError('All academic fields are required', 400);
+    }
+
+    const gwaThreshold = await getGwaThreshold(prisma);
+    if (normalizedGeneralAverage < gwaThreshold) {
+      throw new AppError(
+        `General Average (${normalizedGeneralAverage}%) does not meet the minimum threshold of ${gwaThreshold}%.`,
+        400
+      );
     }
 
     const application = await prisma.application.create({
@@ -261,6 +270,16 @@ const resubmit = async (req, res, next) => {
 
     const normalizedGeneralAverage = roundToTwoDecimals(generalAverage);
     const normalizedGwa = normalizedGeneralAverage ?? roundToTwoDecimals(gwa);
+
+    if (normalizedGeneralAverage !== null) {
+      const gwaThreshold = await getGwaThreshold(prisma);
+      if (normalizedGeneralAverage < gwaThreshold) {
+        throw new AppError(
+          `General Average (${normalizedGeneralAverage}%) does not meet the minimum threshold of ${gwaThreshold}%.`,
+          400
+        );
+      }
+    }
 
     const updated = await prisma.application.update({
       where: { id: application.id },

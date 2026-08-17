@@ -13,6 +13,7 @@ export default function StatusTracker() {
   const [communications, setCommunications] = useState([])
   const [appeals, setAppeals] = useState([])
   const [renewal, setRenewal] = useState(null)
+  const [currentAcademicYear, setCurrentAcademicYear] = useState(null)
   const [appealReason, setAppealReason] = useState('')
   const [appealLoading, setAppealLoading] = useState(false)
 
@@ -21,13 +22,14 @@ export default function StatusTracker() {
       applicationService.getMine(),
       applicationService.getCommunications(),
       applicationService.getAppeals(),
-      applicationService.getMyRenewal().catch(() => ({ data: { renewal: null } })),
+      applicationService.getMyRenewal().catch(() => ({ data: { renewal: null, currentAcademicYear: null } })),
     ])
       .then(([appRes, commRes, appealRes, renewalRes]) => {
         setApplication(appRes.data.application)
         setCommunications(commRes.data.timeline || [])
         setAppeals(appealRes.data.appeals || [])
         setRenewal(renewalRes.data.renewal || null)
+        setCurrentAcademicYear(renewalRes.data.currentAcademicYear || null)
       })
       .catch(err => toast.error(err.response?.data?.message || 'Failed to load status data.'))
       .finally(() => setLoading(false))
@@ -54,6 +56,7 @@ export default function StatusTracker() {
   const isCORRejected = application.status === 'COR_REJECTED'
   const isRejected = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM'].includes(application.status)
   const pendingAppeal = appeals.find((appeal) => appeal.status === 'PENDING')
+  const isCurrentCycleRenewal = !!renewal && renewal.academicYear === currentAcademicYear
 
   const submitAppeal = async () => {
     if (!appealReason.trim()) {
@@ -175,11 +178,25 @@ export default function StatusTracker() {
         {application.status === 'ACCEPTED' && (
           <>
             <p className="mb-4 text-sm text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You may submit a renewal application for the next academic year below.</p>
+            {!application.corHardCopyReceivedAt && (
+              <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-4">
+                <div className="mb-1 flex items-center gap-2 text-amber-800">
+                  <AlertTriangleIcon className="h-4 w-4" />
+                  <p className="text-sm font-semibold">Bring Your Original COR to the Office</p>
+                </div>
+                <p className="text-sm text-amber-800">Your acceptance is confirmed, but you still need to bring the original (physical) Certificate of Registration to the Scholarship Office in person to complete your enrollment record.</p>
+              </div>
+            )}
             {/* Renewal status card */}
-            {!renewal ? (
+            {!isCurrentCycleRenewal ? (
               <div className="rounded-md border border-slate-200 bg-white p-4">
                 <p className="mb-2 text-sm font-medium text-brand-primary">Scholarship Renewal</p>
                 <p className="mb-3 text-sm text-slate-600">Ready to renew? Submit your COR and latest grades to continue your scholarship.</p>
+                {renewal?.academicYear && (
+                  <p className="mb-3 text-xs text-slate-500">
+                    Last renewed: {renewal.academicYear} · {renewal.status === 'APPROVED' ? 'Approved' : renewal.status === 'REJECTED' ? 'Rejected' : renewal.status.replace(/_/g, ' ')}
+                  </p>
+                )}
                 <Link to="/applicant/renewal" className="portal-button-primary inline-flex text-sm">
                   Submit Renewal Application
                 </Link>
