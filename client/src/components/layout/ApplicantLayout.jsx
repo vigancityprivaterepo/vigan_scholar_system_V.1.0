@@ -46,20 +46,20 @@ export default function ApplicantLayout() {
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="sticky top-0 z-40 border-b border-slate-300 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] text-white">
+        <div className="bg-[#064e3b] text-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
             <NavLink to="/applicant/dashboard" className="flex min-w-0 items-center gap-3">
               <img src={logo} alt="Vigan City Seal" className="h-10 w-10 shrink-0 object-contain" />
               <div className="min-w-0">
-                <p className="truncate text-[11px] uppercase tracking-[0.18em] text-slate-200">Vigan Scholarship Management System</p>
                 <p className="truncate font-display text-xl font-bold text-white">City Government of Vigan</p>
+                <p className="truncate text-xs text-emerald-100">Scholarship Program</p>
               </div>
             </NavLink>
 
             <div className="flex items-center gap-3">
               <div className="hidden text-right md:block">
-                <p className="text-xs uppercase tracking-[0.16em] text-slate-200">Applicant Account</p>
                 <p className="text-sm font-medium text-white">{user?.fullName}</p>
+                <p className="text-xs text-emerald-100">Applicant</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -71,7 +71,7 @@ export default function ApplicantLayout() {
               <button
                 className="relative inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
                 onClick={() => { setMenuOpen(false); navigate('/applicant/notifications') }}
-                aria-label="Notifications"
+                aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
               >
                 <BellIcon className="h-5 w-5" />
                 {unreadCount > 0 && (
@@ -83,7 +83,8 @@ export default function ApplicantLayout() {
               <button
                 className="inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
                 onClick={() => setMenuOpen(!menuOpen)}
-                aria-label="Toggle menu"
+                aria-label="Menu"
+                aria-expanded={menuOpen}
               >
                 <MenuIcon className="h-5 w-5" />
               </button>
@@ -114,7 +115,6 @@ export default function ApplicantLayout() {
                 </NavLink>
               ))}
             </nav>
-            <p className="hidden text-sm text-slate-500 lg:block">Track your application progress and scholarship requirements online.</p>
           </div>
         </div>
 

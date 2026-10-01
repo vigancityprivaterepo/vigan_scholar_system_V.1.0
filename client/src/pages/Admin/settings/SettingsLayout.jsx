@@ -23,9 +23,7 @@ export default function SettingsLayout() {
   return (
     <div className="max-w-6xl">
       <div className="mb-6">
-        <p className="portal-kicker">Administrative Configuration</p>
-        <h1 className="portal-page-title mt-2">Settings</h1>
-        <p className="portal-page-subtitle">Use focused sections instead of one long settings page.</p>
+        <h1 className="portal-page-title">Settings</h1>
       </div>
 
       {/* Horizontal tab bar */}
@@ -45,9 +43,7 @@ export default function SettingsLayout() {
               }`
             }
           >
-            {({ isActive }) => (
-              <span>{item.label}</span>
-            )}
+            {item.label}
           </NavLink>
         ))}
       </nav>

@@ -8,11 +8,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import Stepper from '../../components/ui/Stepper'
 import { fromNow, formatDate } from '../../utils/formatDate'
 import {
-  ArrowRightIcon,
   CheckCircleIcon,
-  ClockIcon,
-  FileTextIcon,
-  GraduationCapIcon,
   InfoIcon,
   AlertTriangleIcon,
   DocumentIcon,
@@ -21,7 +17,7 @@ import {
 const ACTION_MAP = {
   PENDING_REVIEW: { msg: 'Your application is under review. We will notify you of any updates.', cta: null },
   INCOMPLETE: { msg: 'Your application is incomplete. Please review admin remarks and resubmit.', cta: { to: '/applicant/status', label: 'View & Resubmit' } },
-  ELIGIBILITY_SCREENING: { msg: 'Your application is being reviewed for eligibility. Hang tight!', cta: null },
+  ELIGIBILITY_SCREENING: { msg: 'Your requirements are complete and your application is being checked against the eligibility rules. You will be notified of the result.', cta: null },
   NOT_QUALIFIED: { msg: 'Unfortunately, your application did not meet eligibility requirements.', cta: null },
   EXAM_INTERVIEW: { msg: 'Congratulations. You are invited for exam/interview. Watch for your schedule.', cta: { to: '/applicant/status', label: 'View Schedule' } },
   FAILED_EXAM: { msg: 'We regret that you did not pass the exam/interview.', cta: null },
@@ -48,9 +44,9 @@ export default function ApplicantDashboard() {
   const unreadNotifs = notifications.filter(n => !n.isRead).slice(0, 5)
   const action = application ? ACTION_MAP[application.status] : null
   const summaryCards = application ? [
-    { label: 'Submitted', value: formatDate(application.submittedAt), note: fromNow(application.submittedAt), Icon: ClockIcon, accent: 'border-blue-100 bg-blue-50 text-blue-700' },
-    { label: 'Reference ID', value: `#${application.id.slice(0, 8).toUpperCase()}`, note: 'Use this ID for scholarship inquiries.', Icon: FileTextIcon, accent: 'border-teal-100 bg-teal-50 text-teal-700' },
-    { label: 'School', value: application.school || '-', note: application.course || 'No course listed', Icon: GraduationCapIcon, accent: 'border-violet-100 bg-violet-50 text-violet-700' },
+    { label: 'Submitted', value: formatDate(application.submittedAt), note: fromNow(application.submittedAt) },
+    { label: 'Reference ID', value: `#${application.id.slice(0, 8).toUpperCase()}`, note: 'Quote this ID when you contact the office.' },
+    { label: 'School', value: application.school || '-', note: application.course || 'No course listed' },
   ] : []
 
   const notificationIcon = (type) => {
@@ -71,26 +67,9 @@ export default function ApplicantDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="portal-surface overflow-hidden">
-        <div className="border-b border-slate-300 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-6 py-6 text-white">
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-200">Applicant Dashboard</p>
-          <h1 className="mt-2 font-display text-3xl font-bold">Welcome back, {user?.fullName?.split(' ')[0]}</h1>
-          <p className="mt-2 text-sm leading-7 text-slate-100">Track your scholarship application progress and review the latest updates below.</p>
-        </div>
-        <div className="grid gap-4 px-6 py-5 md:grid-cols-3">
-          <div className="portal-panel p-4">
-            <p className="portal-kicker">Portal Access</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">Submit forms, upload requirements, and monitor status from a single applicant account.</p>
-          </div>
-          <div className="portal-panel p-4">
-            <p className="portal-kicker">Current Cycle</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">All updates are posted according to the official scholarship review process.</p>
-          </div>
-          <div className="portal-panel p-4">
-            <p className="portal-kicker">Notifications</p>
-            <p className="mt-2 text-sm leading-7 text-slate-600">Unread portal notices appear here and in the notifications section.</p>
-          </div>
-        </div>
+      <div>
+        <h1 className="portal-page-title">Welcome back, {user?.fullName?.split(' ')[0]}</h1>
+        <p className="portal-page-subtitle">Your application, what to do next, and the latest notices from the scholarship office.</p>
       </div>
 
       {loading ? (
@@ -102,12 +81,24 @@ export default function ApplicantDashboard() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-brand-primary">
             <DocumentIcon className="h-6 w-6" />
           </div>
-          <h2 className="mt-5 font-display text-2xl font-bold text-brand-primary">No Application Yet</h2>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">Start your scholarship application to create an official applicant record in the portal.</p>
+          <h2 className="mt-5 font-display text-2xl font-bold text-brand-primary">You haven't applied yet</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">The application has five steps: personal, family and academic details, then your documents and a final review. Have your Form 138 and other requirements ready as files before you start.</p>
           <Link to="/applicant/apply" className="portal-button-primary mt-6 inline-flex">Apply Now</Link>
         </div>
       ) : (
         <>
+          {action && (
+            <div className={`portal-surface border-l-4 p-5 ${actionTone}`}>
+              <h2 className="text-base font-semibold">What to do next</h2>
+              <p className="mt-2 text-sm leading-7">{action.msg}</p>
+              {action.cta && (
+                <Link to={action.cta.to} className="portal-button-primary mt-4 inline-flex text-sm">
+                  {action.cta.label}
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="portal-surface overflow-x-auto p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-brand-primary">Application Progress</h2>
@@ -116,31 +107,15 @@ export default function ApplicantDashboard() {
             <Stepper currentStatus={application.status} />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            {summaryCards.map(({ label, value, note, Icon, accent }) => (
-              <div key={label} className="portal-surface p-5">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-md border ${accent}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <p className="mt-4 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">{label}</p>
-                <p className="mt-1 font-semibold text-brand-primary">{value}</p>
-                <p className="mt-1 text-xs text-slate-500">{note}</p>
+          <dl className="portal-surface grid gap-4 p-5 sm:grid-cols-3">
+            {summaryCards.map(({ label, value, note }) => (
+              <div key={label}>
+                <dt className="text-xs font-medium text-slate-500">{label}</dt>
+                <dd className="mt-1 font-semibold text-brand-primary">{value}</dd>
+                <dd className="mt-0.5 text-xs text-slate-500">{note}</dd>
               </div>
             ))}
-          </div>
-
-          {action && (
-            <div className={`portal-surface border-l-4 p-5 ${actionTone}`}>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em]">Current Guidance</p>
-              <p className="mt-2 text-sm leading-7">{action.msg}</p>
-              {action.cta && (
-                <Link to={action.cta.to} className="portal-button-primary mt-4 inline-flex text-sm">
-                  {action.cta.label}
-                  <ArrowRightIcon className="h-4 w-4" />
-                </Link>
-              )}
-            </div>
-          )}
+          </dl>
 
           {unreadNotifs.length > 0 && (
             <div className="portal-surface p-6">

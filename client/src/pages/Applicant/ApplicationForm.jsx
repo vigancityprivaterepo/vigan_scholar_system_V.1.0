@@ -478,8 +478,7 @@ export default function ApplicationForm() {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-8">
-        <p className="portal-kicker">Scholarship Application</p>
-        <h1 className="portal-page-title mt-2">
+        <h1 className="portal-page-title">
           {existingApplication?.status === 'INCOMPLETE' ? 'Resubmit your application' : 'Submit your application'}
         </h1>
         <p className="portal-page-subtitle">
@@ -491,7 +490,7 @@ export default function ApplicationForm() {
 
       {(settings.applicationDeadline || !settings.applicationOpen) && (
         <div className={`portal-surface mb-6 border-l-4 p-5 ${submissionsBlocked ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}>
-          <p className={`portal-kicker ${submissionsBlocked ? 'text-red-700' : 'text-blue-700'}`}>Application Window</p>
+          <h2 className={`text-sm font-semibold ${submissionsBlocked ? 'text-red-700' : 'text-blue-800'}`}>Application window</h2>
           {!settings.applicationOpen ? (
             <p className="mt-2 text-sm text-red-700">Application submissions are currently closed by the administrator.</p>
           ) : (
@@ -506,7 +505,7 @@ export default function ApplicationForm() {
 
       {existingApplication?.status === 'INCOMPLETE' && existingApplication.adminRemarks && (
         <div className="portal-surface mb-6 border-l-4 border-amber-300 bg-amber-50 p-5">
-          <p className="portal-kicker text-amber-800">Admin Remarks</p>
+          <h2 className="text-sm font-semibold text-amber-800">What the office asked you to fix</h2>
           <p className="mt-2 text-sm leading-7 text-slate-700">{existingApplication.adminRemarks}</p>
         </div>
       )}
@@ -542,34 +541,34 @@ export default function ApplicationForm() {
             {/* Name row */}
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Last Name <span className="text-red-500">*</span></label>
-                <input className={inputClass('lastName')} value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="dela Cruz" />
+                <label htmlFor="af-1" className="mb-1 block text-sm font-medium text-slate-700">Last Name <span className="text-red-500">*</span></label>
+                <input id="af-1" className={inputClass('lastName')} value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="Last name" />
                 {err('lastName')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">First Name <span className="text-red-500">*</span></label>
-                <input className={inputClass('firstName')} value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="Juan" />
+                <label htmlFor="af-2" className="mb-1 block text-sm font-medium text-slate-700">First Name <span className="text-red-500">*</span></label>
+                <input id="af-2" className={inputClass('firstName')} value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="First name" />
                 {err('firstName')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Middle Name</label>
-                <input className="portal-input" value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Santos" />
+                <label htmlFor="af-3" className="mb-1 block text-sm font-medium text-slate-700">Middle Name</label>
+                <input id="af-3" className="portal-input" value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Middle name" />
               </div>
             </div>
 
             {/* Address */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Barangay <span className="text-red-500">*</span></label>
-                <select className={inputClass('barangay')} value={form.barangay} onChange={e => set('barangay', e.target.value)}>
+                <label htmlFor="af-4" className="mb-1 block text-sm font-medium text-slate-700">Barangay <span className="text-red-500">*</span></label>
+                <select id="af-4" className={inputClass('barangay')} value={form.barangay} onChange={e => set('barangay', e.target.value)}>
                   <option value="">Select barangay</option>
                   {VIGAN_BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
                 {err('barangay')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">House No. / Street</label>
-                <input className="portal-input" value={form.streetNo} onChange={e => set('streetNo', e.target.value)} placeholder="e.g. 12 Burgos St." />
+                <label htmlFor="af-5" className="mb-1 block text-sm font-medium text-slate-700">House No. / Street</label>
+                <input id="af-5" className="portal-input" value={form.streetNo} onChange={e => set('streetNo', e.target.value)} placeholder="e.g. 12 Burgos St." />
               </div>
             </div>
             <div className="portal-panel px-4 py-2 text-xs text-slate-500">
@@ -579,18 +578,18 @@ export default function ApplicationForm() {
             {/* Place of Birth / Birthdate / Age */}
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Place of Birth <span className="text-red-500">*</span></label>
-                <input className={inputClass('placeOfBirth')} value={form.placeOfBirth} onChange={e => set('placeOfBirth', e.target.value)} placeholder="Vigan City, Ilocos Sur" />
+                <label htmlFor="af-6" className="mb-1 block text-sm font-medium text-slate-700">Place of Birth <span className="text-red-500">*</span></label>
+                <input id="af-6" className={inputClass('placeOfBirth')} value={form.placeOfBirth} onChange={e => set('placeOfBirth', e.target.value)} placeholder="Vigan City, Ilocos Sur" />
                 {err('placeOfBirth')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Birthdate <span className="text-red-500">*</span></label>
-                <input type="date" className={inputClass('birthdate')} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+                <label htmlFor="af-7" className="mb-1 block text-sm font-medium text-slate-700">Birthdate <span className="text-red-500">*</span></label>
+                <input id="af-7" type="date" className={inputClass('birthdate')} value={form.birthdate} onChange={e => set('birthdate', e.target.value)} max={new Date().toISOString().slice(0, 10)} />
                 {err('birthdate')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Age</label>
-                <input type="number" className="portal-input bg-slate-50" value={form.age} readOnly placeholder="Auto-calculated" />
+                <label htmlFor="af-8" className="mb-1 block text-sm font-medium text-slate-700">Age</label>
+                <input id="af-8" type="number" className="portal-input bg-slate-50" value={form.age} readOnly placeholder="Auto-calculated" />
               </div>
             </div>
 
@@ -609,8 +608,8 @@ export default function ApplicationForm() {
                 {err('sex')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Gender <span className="text-red-500">*</span></label>
-                <select className={inputClass('gender')} value={form.gender} onChange={e => set('gender', e.target.value)}>
+                <label htmlFor="af-9" className="mb-1 block text-sm font-medium text-slate-700">Gender <span className="text-red-500">*</span></label>
+                <select id="af-9" className={inputClass('gender')} value={form.gender} onChange={e => set('gender', e.target.value)}>
                   <option value="">Select gender identity</option>
                   {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
@@ -620,8 +619,8 @@ export default function ApplicationForm() {
 
             {/* Contact */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Contact No. <span className="text-red-500">*</span></label>
-              <input className={inputClass('contact')} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="09XX XXX XXXX" />
+              <label htmlFor="af-10" className="mb-1 block text-sm font-medium text-slate-700">Contact No. <span className="text-red-500">*</span></label>
+              <input id="af-10" className={inputClass('contact')} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="09XX XXX XXXX" />
               {err('contact')}
             </div>
           </div>
@@ -634,37 +633,37 @@ export default function ApplicationForm() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Name of Father <span className="text-red-500">*</span></label>
-                <input className={inputClass('fatherName')} value={form.fatherName} onChange={e => set('fatherName', e.target.value)} placeholder="Full name" />
+                <label htmlFor="af-11" className="mb-1 block text-sm font-medium text-slate-700">Name of Father <span className="text-red-500">*</span></label>
+                <input id="af-11" className={inputClass('fatherName')} value={form.fatherName} onChange={e => set('fatherName', e.target.value)} placeholder="Full name" />
                 {err('fatherName')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
-                <input className="portal-input" value={form.fatherOccupation} onChange={e => set('fatherOccupation', e.target.value)} placeholder="e.g. Farmer, OFW" />
+                <label htmlFor="af-12" className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
+                <input id="af-12" className="portal-input" value={form.fatherOccupation} onChange={e => set('fatherOccupation', e.target.value)} placeholder="e.g. Farmer, OFW" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Name of Mother <span className="text-red-500">*</span></label>
-                <input className={inputClass('motherName')} value={form.motherName} onChange={e => set('motherName', e.target.value)} placeholder="Full name" />
+                <label htmlFor="af-13" className="mb-1 block text-sm font-medium text-slate-700">Name of Mother <span className="text-red-500">*</span></label>
+                <input id="af-13" className={inputClass('motherName')} value={form.motherName} onChange={e => set('motherName', e.target.value)} placeholder="Full name" />
                 {err('motherName')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
-                <input className="portal-input" value={form.motherOccupation} onChange={e => set('motherOccupation', e.target.value)} placeholder="e.g. Housewife, Teacher" />
+                <label htmlFor="af-14" className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
+                <input id="af-14" className="portal-input" value={form.motherOccupation} onChange={e => set('motherOccupation', e.target.value)} placeholder="e.g. Housewife, Teacher" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">No. of Dependents in the Family <span className="text-red-500">*</span></label>
-                <input type="number" min="0" className={inputClass('numDependents')} value={form.numDependents} onChange={e => set('numDependents', e.target.value)} placeholder="e.g. 4" />
+                <label htmlFor="af-15" className="mb-1 block text-sm font-medium text-slate-700">No. of Dependents in the Family <span className="text-red-500">*</span></label>
+                <input id="af-15" type="number" min="0" className={inputClass('numDependents')} value={form.numDependents} onChange={e => set('numDependents', e.target.value)} placeholder="e.g. 4" />
                 {err('numDependents')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Combined Monthly Family Income (₱) <span className="text-red-500">*</span></label>
-                <input type="number" min="0" step="0.01" className={inputClass('familyIncome')} value={form.familyIncome} onChange={e => set('familyIncome', e.target.value)} placeholder="e.g. 7000" />
+                <label htmlFor="af-16" className="mb-1 block text-sm font-medium text-slate-700">Combined Monthly Family Income (₱) <span className="text-red-500">*</span></label>
+                <input id="af-16" type="number" min="0" step="0.01" className={inputClass('familyIncome')} value={form.familyIncome} onChange={e => set('familyIncome', e.target.value)} placeholder="e.g. 7000" />
                 {err('familyIncome')}
               </div>
             </div>
@@ -726,8 +725,8 @@ export default function ApplicationForm() {
                 {err('school')}
                 {form.school === 'Others' && (
                   <div className="mt-2">
-                    <label className="mb-1 block text-sm font-medium text-slate-700">Please specify <span className="text-red-500">*</span></label>
-                    <input
+                    <label htmlFor="af-17" className="mb-1 block text-sm font-medium text-slate-700">Please specify <span className="text-red-500">*</span></label>
+                    <input id="af-17"
                       className={inputClass('schoolOther')}
                       value={form.schoolOther}
                       onChange={e => set('schoolOther', e.target.value)}
@@ -738,20 +737,20 @@ export default function ApplicationForm() {
                 )}
               </div>
               <div className="min-w-0">
-                <label className="mb-1 block text-sm font-medium text-slate-700">School Address</label>
-                <input className="portal-input" value={form.schoolAddress} onChange={e => set('schoolAddress', e.target.value)} placeholder="City / Municipality, Province" />
+                <label htmlFor="af-18" className="mb-1 block text-sm font-medium text-slate-700">School Address</label>
+                <input id="af-18" className="portal-input" value={form.schoolAddress} onChange={e => set('schoolAddress', e.target.value)} placeholder="City / Municipality, Province" />
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Year Graduated (SHS) <span className="text-red-500">*</span></label>
-                <input type="number" className={inputClass('yearGraduated')} value={form.yearGraduated} onChange={e => set('yearGraduated', e.target.value)} placeholder={String(new Date().getFullYear())} min="2000" max={new Date().getFullYear() + 1} />
+                <label htmlFor="af-19" className="mb-1 block text-sm font-medium text-slate-700">Year Graduated (SHS) <span className="text-red-500">*</span></label>
+                <input id="af-19" type="number" className={inputClass('yearGraduated')} value={form.yearGraduated} onChange={e => set('yearGraduated', e.target.value)} placeholder={String(new Date().getFullYear())} min="2000" max={new Date().getFullYear() + 1} />
                 {err('yearGraduated')}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">General Average (SHS) <span className="text-red-500">*</span></label>
-                <input
+                <label htmlFor="af-20" className="mb-1 block text-sm font-medium text-slate-700">General Average (SHS) <span className="text-red-500">*</span></label>
+                <input id="af-20"
                   type="number"
                   step="0.01"
                   min={settings.gwaThreshold}
@@ -783,22 +782,22 @@ export default function ApplicationForm() {
               <div className="space-y-3 sm:hidden">
                 {form.collegePreferences.map((pref, i) => (
                   <div key={i} className="rounded-md border border-slate-200 p-3 space-y-2 bg-slate-50">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Choice #{i + 1}</p>
+                    <p className="text-xs font-semibold text-slate-500">Choice {i + 1}</p>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Name of School</label>
-                      <input className="portal-input text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
+                      <label htmlFor={`af-21-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Name of School</label>
+                      <input id={`af-21-${i}`} className="portal-input text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Location</label>
-                      <input className="portal-input text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
+                      <label htmlFor={`af-22-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Location</label>
+                      <input id={`af-22-${i}`} className="portal-input text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Course of Study</label>
-                      <input className="portal-input text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
+                      <label htmlFor={`af-23-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Course of Study</label>
+                      <input id={`af-23-${i}`} className="portal-input text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-500">Accepted (Y/N)</label>
-                      <select className="portal-input text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
+                      <label htmlFor={`af-24-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Accepted (Y/N)</label>
+                      <select id={`af-24-${i}`} className="portal-input text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
                         <option value=""></option>
                         <option value="Y">Y</option>
                         <option value="N">N</option>
@@ -978,8 +977,7 @@ export default function ApplicationForm() {
 
             {/* Current document card */}
             <div className="portal-panel rounded-md p-4">
-              <p className="portal-kicker">Document {docSubStep + 1} of {REQUIRED_DOCS.length}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-700">{REQUIRED_DOCS[docSubStep]}</p>
+              <p className=" text-sm leading-6 text-slate-700">{REQUIRED_DOCS[docSubStep]}</p>
             </div>
 
             {/* Dropzone — shown when slot is empty or user wants to replace */}
@@ -1068,7 +1066,7 @@ export default function ApplicationForm() {
             <div className="portal-panel divide-y divide-slate-100 p-4">
 
               <div className="pb-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Personal Information</p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">Personal Information</p>
                 <div className="grid gap-2 text-sm sm:grid-cols-2">
                   <div><span className="text-slate-500">Last Name:</span> <span className="font-medium text-brand-primary">{form.lastName}</span></div>
                   <div><span className="text-slate-500">First Name:</span> <span className="font-medium text-brand-primary">{form.firstName}</span></div>
@@ -1084,7 +1082,7 @@ export default function ApplicationForm() {
               </div>
 
               <div className="py-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Family Information</p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">Family Information</p>
                 <div className="grid gap-2 text-sm sm:grid-cols-2">
                   <div><span className="text-slate-500">Father:</span> <span className="font-medium text-brand-primary">{form.fatherName}{form.fatherOccupation && ` (${form.fatherOccupation})`}</span></div>
                   <div><span className="text-slate-500">Mother:</span> <span className="font-medium text-brand-primary">{form.motherName}{form.motherOccupation && ` (${form.motherOccupation})`}</span></div>
@@ -1095,7 +1093,7 @@ export default function ApplicationForm() {
               </div>
 
               <div className="py-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Academic Information</p>
+                <p className="mb-3 text-sm font-semibold text-slate-700">Academic Information</p>
                 <div className="grid gap-2 text-sm sm:grid-cols-2">
                   <div><span className="text-slate-500">SHS Attended:</span> <span className="font-medium text-brand-primary">{form.school}</span></div>
                   {form.schoolAddress && <div><span className="text-slate-500">School Address:</span> <span className="font-medium text-brand-primary">{form.schoolAddress}</span></div>}
@@ -1113,7 +1111,7 @@ export default function ApplicationForm() {
               </div>
 
               <div className="pt-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                <p className="mb-3 text-sm font-semibold text-slate-700">
                   Documents ({REQUIRED_DOCS.filter((_, i) => isSlotFilled(i)).length} / {REQUIRED_DOCS.length} uploaded)
                 </p>
                 <div className="flex flex-col gap-2">

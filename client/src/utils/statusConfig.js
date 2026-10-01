@@ -54,7 +54,7 @@ export const STATUS_CONFIG = {
     step: 5,
   },
   ACCEPTED: {
-    label: 'Accepted ✓',
+    label: 'Accepted',
     color: 'bg-green-100 text-green-700',
     dot: 'bg-green-500',
     step: 6,

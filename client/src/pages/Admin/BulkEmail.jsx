@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { clsx } from 'clsx'
 import { adminService } from '../../services/adminService'
@@ -489,13 +488,9 @@ export default function BulkEmail() {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Communications</p>
-          <h1 className="portal-page-title mt-2">Bulk Email Applicants</h1>
+          <h1 className="portal-page-title">Bulk Email Applicants</h1>
           <p className="portal-page-subtitle">Send one message to selected applicants or a filtered group by status/search.</p>
         </div>
-        <Link to="/admin/applicants" className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
-          Back to Applicants
-        </Link>
       </div>
 
       <div className="portal-surface p-3">
@@ -624,8 +619,8 @@ export default function BulkEmail() {
       <div className={clsx('portal-surface border border-sky-200 bg-sky-50 p-5', !['compose', 'review'].includes(activeSection) && 'hidden')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Bulk Email</p>
-            <p className="mt-1 text-sm text-sky-900">
+            <p className="text-sm font-semibold text-sky-900">Recipients</p>
+            <p className="mt-0.5 text-sm text-sky-900">
               {emailScope === 'selected'
                 ? `${selectedIds.length} selected applicant(s)`
                 : `${filteredRecipientCount} applicant(s) in current filter`}
@@ -644,6 +639,7 @@ export default function BulkEmail() {
           <>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <select
+                aria-label="Message template"
                 className="portal-input"
                 value={selectedTemplate}
                 onChange={(e) => applyTemplate(e.target.value)}
@@ -652,31 +648,37 @@ export default function BulkEmail() {
                   <option key={template.id} value={template.id}>{template.label}</option>
                 ))}
               </select>
-              <select className="portal-input" value={emailScope} onChange={(e) => setEmailScope(e.target.value)}>
+              <select aria-label="Who receives this email" className="portal-input" value={emailScope} onChange={(e) => setEmailScope(e.target.value)}>
                 <option value="selected">Recipients: Selected applications</option>
                 <option value="filtered">Recipients: Current status/search filter</option>
               </select>
-              <input
-                type="text"
-                className="portal-input"
-                placeholder="Email subject"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-              />
-              <textarea
-                className="portal-input md:col-span-2"
-                rows={2}
-                placeholder="Greeting (optional)"
-                value={emailGreeting}
-                onChange={(e) => setEmailGreeting(e.target.value)}
-              />
-              <textarea
-                className="portal-input md:col-span-2"
-                rows={5}
-                placeholder="Write your message..."
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-              />
+              <label className="block md:col-span-2">
+                <span className="mb-1 block text-xs font-medium text-slate-600">Subject</span>
+                <input
+                  type="text"
+                  className="portal-input"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="mb-1 block text-xs font-medium text-slate-600">Greeting (optional)</span>
+                <textarea
+                  className="portal-input"
+                  rows={2}
+                  value={emailGreeting}
+                  onChange={(e) => setEmailGreeting(e.target.value)}
+                />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="mb-1 block text-xs font-medium text-slate-600">Message</span>
+                <textarea
+                  className="portal-input"
+                  rows={5}
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                />
+              </label>
             </div>
             <div className="mt-3 flex justify-between">
               <button type="button" className="portal-button-secondary" onClick={() => setActiveSection('audience')}>
@@ -720,6 +722,7 @@ export default function BulkEmail() {
             <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
               <input
                 type="datetime-local"
+                aria-label="Send at"
                 className="portal-input"
                 value={scheduleRunAt}
                 onChange={(e) => setScheduleRunAt(e.target.value)}
@@ -853,8 +856,7 @@ export default function BulkEmail() {
       <div className={clsx('portal-surface p-5', activeSection !== 'history' && 'hidden')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="portal-kicker">Audit Trail</p>
-            <h2 className="portal-page-title mt-2 text-xl">Bulk Email History</h2>
+            <h2 className="portal-page-title text-xl">Bulk Email History</h2>
             <p className="portal-page-subtitle">{historyData.pagination?.total || 0} log entries</p>
           </div>
         </div>
@@ -892,7 +894,7 @@ export default function BulkEmail() {
 
         <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Scheduled Email Jobs</p>
+            <h3 className="text-sm font-semibold text-slate-700">Scheduled emails</h3>
             <button onClick={fetchJobs} className="text-xs font-medium text-brand-primary hover:underline">Refresh</button>
           </div>
           {jobLoading ? (

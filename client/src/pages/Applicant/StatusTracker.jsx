@@ -81,11 +81,10 @@ export default function StatusTracker() {
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Application Tracking</p>
-          <h1 className="portal-page-title mt-2">Application Status</h1>
+          <h1 className="portal-page-title">Application Status</h1>
           <p className="portal-page-subtitle">Reference ID: <span className="font-mono font-bold">#{application.id.slice(0, 8).toUpperCase()}</span></p>
         </div>
-        <StatusBadge status={application.status} size="lg" />
+        <StatusBadge status={application.status} />
       </div>
 
       <div className="portal-surface overflow-x-auto p-6">
@@ -134,15 +133,16 @@ export default function StatusTracker() {
             <p className="mb-2 text-sm text-slate-700">Unfortunately, your application was not successful.</p>
             {application.rejectionReason && <div className="portal-panel p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
             <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Appeal / Reconsideration</p>
+              <h4 className="mb-2 text-sm font-semibold text-slate-700">Ask for reconsideration</h4>
               {pendingAppeal ? (
                 <p className="text-sm text-amber-700">You already have a pending appeal under review.</p>
               ) : (
                 <>
                   <textarea
+                    aria-label="Reason for reconsideration"
                     className="portal-input"
                     rows={3}
-                    placeholder="State your reconsideration request and supporting context."
+                    placeholder="Explain why the decision should be reviewed, and mention any document that supports it."
                     value={appealReason}
                     onChange={(e) => setAppealReason(e.target.value)}
                   />
@@ -164,7 +164,7 @@ export default function StatusTracker() {
             <p className="text-slate-700">Date: <strong>{formatScheduleDateTime(application.examSchedules[0].scheduledAt)}</strong></p>
             {application.examSchedules[0].location && <p className="text-slate-700">Location: <strong>{application.examSchedules[0].location}</strong></p>}
             {application.examSchedules[0].examiner?.fullName && <p className="text-slate-700">Examiner: <strong>{application.examSchedules[0].examiner.fullName}</strong></p>}
-            <p className="text-slate-700">Type: <strong>{application.examSchedules[0].type}</strong></p>
+            <p className="text-slate-700">Type: <strong>{{ EXAM: 'Exam', INTERVIEW: 'Interview', BOTH: 'Exam and interview' }[application.examSchedules[0].type] || application.examSchedules[0].type}</strong></p>
           </div>
         )}
 
@@ -277,7 +277,7 @@ export default function StatusTracker() {
       <div className="portal-surface p-6">
         <h3 className="mb-4 text-lg font-semibold text-brand-primary">Communication Timeline</h3>
         {communications.length === 0 ? (
-          <p className="text-sm text-slate-500">No communication records yet.</p>
+          <p className="text-sm text-slate-500">No messages yet. Emails and notices the office sends you will be listed here.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {communications.slice(0, 50).map((item) => (
@@ -286,7 +286,7 @@ export default function StatusTracker() {
                   <p className="text-sm font-semibold text-brand-primary">{item.title || item.source}</p>
                   <span className="text-[11px] text-slate-400">{formatDateTime(item.createdAt)}</span>
                 </div>
-                <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500">{item.source}</p>
+                <p className="mt-1 text-xs text-slate-500">{{ EMAIL: 'Email', NOTIFICATION: 'Portal notice', ACTIVITY: 'Status update' }[item.source] || item.source}</p>
                 <p className="mt-2 text-sm text-slate-700">{item.message || '-'}</p>
               </div>
             ))}

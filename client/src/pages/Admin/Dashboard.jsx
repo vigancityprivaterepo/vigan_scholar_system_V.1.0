@@ -1,97 +1,49 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PieChart, Pie, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { adminService } from '../../services/adminService'
-import StatusBadge from '../../components/shared/StatusBadge'
 import { fromNow } from '../../utils/formatDate'
-import {
-  FileTextIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  GraduationCapIcon,
-  ShieldCheckIcon,
-  ClipboardIcon,
-  DocumentIcon,
-  UsersIcon,
-  ArrowRightIcon,
-  SearchIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from '../../components/ui/PortalIcons'
+import { getAcademicYearOptions, getCurrentAcademicYear } from '../../utils/academicYear'
+import { escapeHtml } from '../../utils/escapeHtml'
 
-const STATUS_COLORS = {
-  PENDING_REVIEW: '#6B7280',
-  INCOMPLETE: '#F59E0B',
-  ELIGIBILITY_SCREENING: '#3B82F6',
-  NOT_QUALIFIED: '#EF4444',
-  EXAM_INTERVIEW: '#8B5CF6',
-  FAILED_EXAM: '#EF4444',
-  APPROVED: '#0D9488',
-  COR_SUBMITTED: '#0D9488',
-  COR_REJECTED: '#F59E0B',
-  ACCEPTED: '#10B981',
-  REJECTED: '#DC2626',
-}
+// Work a staff member can act on, in the order an application moves through the office.
+const OPEN_WORK = [
+  { key: 'pendingReview', label: 'Pending review', hint: 'New applications to check for completeness', to: '/admin/applicants?status=PENDING_REVIEW' },
+  { key: 'eligibilityScreening', label: 'Eligibility screening', hint: 'Check grades against the GWA threshold', to: '/admin/eligibility' },
+  { key: 'examInterview', label: 'Exam / interview', hint: 'Schedule and record scores', to: '/admin/exam' },
+  { key: 'corSubmitted', label: 'COR to verify', hint: 'Certificates of registration awaiting review', to: '/admin/cor' },
+  { key: 'renewals', label: 'Renewals', hint: 'Scholars requesting renewal', to: '/admin/renewals' },
+  { key: 'appeals', label: 'Appeals', hint: 'Requests for reconsideration', to: '/admin/appeals' },
+]
 
-const STATUS_LINKS = {
-  PENDING_REVIEW: '/admin/applicants?status=PENDING_REVIEW',
-  INCOMPLETE: '/admin/applicants?status=INCOMPLETE',
-  ELIGIBILITY_SCREENING: '/admin/applicants?status=ELIGIBILITY_SCREENING',
-  NOT_QUALIFIED: '/admin/applicants?status=NOT_QUALIFIED',
-  EXAM_INTERVIEW: '/admin/applicants?status=EXAM_INTERVIEW',
-  FAILED_EXAM: '/admin/applicants?status=FAILED_EXAM',
-  APPROVED: '/admin/applicants?status=APPROVED',
-  COR_SUBMITTED: '/admin/applicants?status=COR_SUBMITTED',
-  COR_REJECTED: '/admin/applicants?status=COR_REJECTED',
-  ACCEPTED: '/admin/applicants?status=ACCEPTED',
-  REJECTED: '/admin/applicants?status=REJECTED',
-}
+const PIPELINE_ACTIVE = [
+  ['PENDING_REVIEW', 'Pending review'],
+  ['INCOMPLETE', 'Incomplete'],
+  ['ELIGIBILITY_SCREENING', 'Eligibility screening'],
+  ['EXAM_INTERVIEW', 'Exam / interview'],
+  ['APPROVED', 'Approved'],
+  ['COR_SUBMITTED', 'COR submitted'],
+  ['COR_REJECTED', 'COR returned'],
+  ['ACCEPTED', 'Accepted'],
+]
 
-const PRIORITY_RANK = {
-  Critical: 3,
-  High: 2,
-  Medium: 1,
-  Low: 0,
-}
+const PIPELINE_ENDED = [
+  ['NOT_QUALIFIED', 'Not qualified'],
+  ['FAILED_EXAM', 'Failed exam'],
+  ['REJECTED', 'Rejected'],
+]
 
-const SORTABLE_QUEUE_FIELDS = ['status', 'count', 'priority']
-const SORTABLE_ACTIVITY_FIELDS = ['actor', 'action', 'time']
-
-const formatStatus = (value) => String(value || '').replace(/_/g, ' ')
-
-const getPriority = (status, count) => {
-  if (status === 'PENDING_REVIEW' && count > 0) return 'Critical'
-  if (['ELIGIBILITY_SCREENING', 'COR_SUBMITTED', 'EXAM_INTERVIEW'].includes(status) && count > 0) return 'High'
-  if (['INCOMPLETE', 'APPROVED', 'COR_REJECTED'].includes(status) && count > 0) return 'Medium'
-  return 'Low'
-}
-
-const getPriorityBadgeClass = (priority) => {
-  if (priority === 'Critical') return 'bg-danger-lt'
-  if (priority === 'High') return 'bg-warning-lt'
-  if (priority === 'Medium') return 'bg-info-lt'
-  return 'bg-success-lt'
-}
-
-const compareValues = (a, b, direction = 'asc') => {
-  if (a === b) return 0
-  const result = a > b ? 1 : -1
-  return direction === 'asc' ? result : result * -1
-}
+const ALL_YEARS = ''
+const CHART_FILL = '#059669'
 
 export default function AdminDashboard() {
+  const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
+  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYear())
   const [stats, setStats] = useState(null)
+  const [allYearsStats, setAllYearsStats] = useState(null)
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
-  const [queueSearch, setQueueSearch] = useState('')
-  const [queueSortBy, setQueueSortBy] = useState('count')
-  const [queueSortOrder, setQueueSortOrder] = useState('desc')
-  const [queuePage, setQueuePage] = useState(1)
-  const [activitySearch, setActivitySearch] = useState('')
-  const [activitySortBy, setActivitySortBy] = useState('time')
-  const [activitySortOrder, setActivitySortOrder] = useState('desc')
-  const [activityPage, setActivityPage] = useState(1)
 
   const barangayChartRef = useRef(null)
   const schoolsChartRef = useRef(null)
@@ -99,10 +51,15 @@ export default function AdminDashboard() {
 
   const fetchDashboard = () => {
     setLoading(true)
-    adminService.getStats()
-      .then((response) => {
-        setStats(response.data.stats)
-        setActivity(response.data.recentActivity || [])
+    // Open work is counted across all years (same request the sidebar badges use);
+    // the rest of the page follows the selected academic year.
+    const allYears = adminService.getStats()
+    const selectedYear = academicYear ? adminService.getStats({ academicYear }) : allYears
+    Promise.all([allYears, selectedYear])
+      .then(([allResponse, yearResponse]) => {
+        setAllYearsStats(allResponse.data.stats)
+        setStats(yearResponse.data.stats)
+        setActivity(yearResponse.data.recentActivity || [])
         setLoadError(false)
       })
       .catch(() => setLoadError(true))
@@ -111,7 +68,31 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboard()
-  }, [])
+  }, [academicYear])
+
+  const yearLabel = academicYear ? `AY ${academicYear}` : 'All academic years'
+  const openWorkCounts = allYearsStats ? {
+    pendingReview: allYearsStats.byStatus?.PENDING_REVIEW || 0,
+    eligibilityScreening: allYearsStats.byStatus?.ELIGIBILITY_SCREENING || 0,
+    examInterview: allYearsStats.byStatus?.EXAM_INTERVIEW || 0,
+    corSubmitted: allYearsStats.byStatus?.COR_SUBMITTED || 0,
+    renewals: allYearsStats.pendingRenewals || 0,
+    appeals: allYearsStats.appeals?.PENDING || 0,
+  } : {}
+  const openWork = OPEN_WORK.map((item) => ({ ...item, count: openWorkCounts[item.key] || 0 }))
+  const waiting = openWork.filter((item) => item.count > 0)
+
+  const byStatus = stats?.byStatus || {}
+  const toRows = (entries) => entries.map(([status, label]) => ({ status, label, count: byStatus[status] || 0 }))
+  const activeRows = toRows(PIPELINE_ACTIVE)
+  const endedRows = toRows(PIPELINE_ENDED).filter((row) => row.count > 0)
+  const pipelineMax = Math.max(1, ...activeRows.map((row) => row.count), ...endedRows.map((row) => row.count))
+
+  const breakdowns = [
+    { title: 'Applicants by barangay', ref: barangayChartRef, data: stats?.trends?.barangays || [], empty: 'No applicant addresses matched a Vigan barangay.', png: 'applicants-by-barangay.png' },
+    { title: 'Applicants by school', ref: schoolsChartRef, data: stats?.trends?.schools || [], empty: 'No school recorded on applications.', png: 'applicants-by-school.png' },
+    { title: 'First-choice courses', ref: coursesChartRef, data: stats?.trends?.courses || [], empty: 'No college preferences recorded on applications.', png: 'first-choice-courses.png' },
+  ]
 
   const svgToCanvas = (ref, callback) => {
     const svg = ref.current?.querySelector('svg')
@@ -155,12 +136,12 @@ export default function AdminDashboard() {
 
       win.document.write(
         `<!DOCTYPE html><html><head><title>${title}</title>` +
-        `<style>body{margin:0;padding:28px 32px;font-family:DM Sans,sans-serif}` +
+        `<style>body{margin:0;padding:28px 32px;font-family:Arial,sans-serif}` +
         `h2{font-size:15px;font-weight:600;margin:0 0 14px;color:#1e293b}` +
         `img{max-width:100%;display:block;border:1px solid #e2e8f0;border-radius:6px}` +
-        `p{font-size:11px;color:#94a3b8;margin:10px 0 0}` +
+        `p{font-size:11px;color:#64748b;margin:10px 0 0}` +
         `@media print{body{padding:16px}}</style></head>` +
-        `<body><h2>${title}</h2><img src="${dataUrl}"/>` +
+        `<body><h2>${title} (${yearLabel})</h2><img src="${dataUrl}"/>` +
         `<p>Vigan City Scholarship System | Generated ${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>` +
         `<script>window.onload=function(){window.print()}<\/script></body></html>`
       )
@@ -168,110 +149,14 @@ export default function AdminDashboard() {
     })
   }
 
-  const chartData = stats
-    ? Object.entries(stats.byStatus || {}).map(([status, count]) => ({
-        name: formatStatus(status),
-        count,
-        status,
-      }))
-    : []
-
-  const urgentStatuses = ['PENDING_REVIEW', 'ELIGIBILITY_SCREENING', 'COR_SUBMITTED']
-  const urgentCounts = stats
-    ? urgentStatuses
-        .map((status) => ({ status, count: stats.byStatus?.[status] || 0 }))
-        .filter((item) => item.count > 0)
-    : []
-
-  const statCards = [
-    { label: 'Total Applications', value: stats?.total || 0, Icon: FileTextIcon, tone: 'bg-blue-50 text-blue-700', link: '/admin/applicants' },
-    { label: 'Pending Review', value: stats?.pendingReview || 0, Icon: ClockIcon, tone: 'bg-amber-50 text-amber-700', link: '/admin/applicants?status=PENDING_REVIEW' },
-    { label: 'Approved', value: stats?.approved || 0, Icon: CheckCircleIcon, tone: 'bg-teal-50 text-teal-700', link: '/admin/applicants?status=APPROVED' },
-    { label: 'Accepted Scholars', value: stats?.accepted || 0, Icon: GraduationCapIcon, tone: 'bg-emerald-50 text-emerald-700', link: '/admin/masterlist' },
+  const exportRows = () => [
+    ...openWork.map((item) => ['Open work (all years)', item.label, item.count]),
+    [yearLabel, 'Total applications', stats?.total || 0],
+    ...[...activeRows, ...toRows(PIPELINE_ENDED)].map((row) => [yearLabel, row.label, row.count]),
   ]
-
-  const quickLinks = [
-    { to: '/admin/eligibility', label: 'Eligibility', Icon: ShieldCheckIcon },
-    { to: '/admin/exam', label: 'Exam / Interview', Icon: ClipboardIcon },
-    { to: '/admin/cor', label: 'COR Review', Icon: DocumentIcon },
-    { to: '/admin/scholar-posts', label: 'Scholar Posts', Icon: FileTextIcon },
-    { to: '/admin/applicants', label: 'All Applicants', Icon: UsersIcon },
-  ]
-
-  const queueRows = Object.entries(stats?.byStatus || {})
-    .map(([status, count]) => ({
-      status,
-      label: formatStatus(status),
-      count,
-      priority: getPriority(status, count),
-      link: STATUS_LINKS[status] || '/admin/applicants',
-    }))
-    .filter((row) => row.count > 0)
-
-  const filteredQueueRows = queueRows
-    .filter((row) => row.label.toLowerCase().includes(queueSearch.trim().toLowerCase()))
-    .sort((left, right) => {
-      if (queueSortBy === 'priority') {
-        return compareValues(PRIORITY_RANK[left.priority], PRIORITY_RANK[right.priority], queueSortOrder)
-      }
-      return compareValues(left[queueSortBy], right[queueSortBy], queueSortOrder)
-    })
-
-  const queuePageSize = 5
-  const queuePages = Math.max(1, Math.ceil(filteredQueueRows.length / queuePageSize))
-  const visibleQueueRows = filteredQueueRows.slice((queuePage - 1) * queuePageSize, queuePage * queuePageSize)
-
-  const filteredActivity = activity
-    .map((item) => ({
-      ...item,
-      actor: item.performedBy?.fullName || 'System',
-      applicant: item.application?.applicant?.fullName || 'System event',
-      time: new Date(item.createdAt).getTime(),
-    }))
-    .filter((item) => {
-      const haystack = `${item.actor} ${item.action} ${item.applicant}`.toLowerCase()
-      return haystack.includes(activitySearch.trim().toLowerCase())
-    })
-    .sort((left, right) => compareValues(left[activitySortBy], right[activitySortBy], activitySortOrder))
-
-  const activityPageSize = 5
-  const activityPages = Math.max(1, Math.ceil(filteredActivity.length / activityPageSize))
-  const visibleActivity = filteredActivity.slice((activityPage - 1) * activityPageSize, activityPage * activityPageSize)
-
-  const toggleQueueSort = (field) => {
-    if (!SORTABLE_QUEUE_FIELDS.includes(field)) return
-    if (queueSortBy === field) {
-      setQueueSortOrder((current) => current === 'asc' ? 'desc' : 'asc')
-    } else {
-      setQueueSortBy(field)
-      setQueueSortOrder(field === 'status' ? 'asc' : 'desc')
-    }
-    setQueuePage(1)
-  }
-
-  const toggleActivitySort = (field) => {
-    if (!SORTABLE_ACTIVITY_FIELDS.includes(field)) return
-    if (activitySortBy === field) {
-      setActivitySortOrder((current) => current === 'asc' ? 'desc' : 'asc')
-    } else {
-      setActivitySortBy(field)
-      setActivitySortOrder(field === 'time' ? 'desc' : 'asc')
-    }
-    setActivityPage(1)
-  }
-
-  const sortIcon = (field, activeField, order) => {
-    if (field !== activeField) return <ChevronUpIcon className="h-3.5 w-3.5 text-slate-300" />
-    return order === 'asc'
-      ? <ChevronUpIcon className="h-3.5 w-3.5 text-emerald-600" />
-      : <ChevronDownIcon className="h-3.5 w-3.5 text-emerald-600" />
-  }
 
   const exportAnalyticsCSV = () => {
-    const headers = ['Metric', 'Value']
-    const metricRows = statCards.map((item) => [item.label, item.value || 0])
-    const statusRows = chartData.map((item) => [`Status: ${item.name}`, item.count])
-    const csv = [headers, ...metricRows, ...statusRows]
+    const csv = [['Scope', 'Metric', 'Value'], ...exportRows()]
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
       .join('\n')
 
@@ -279,7 +164,7 @@ export default function AdminDashboard() {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `dashboard-analytics-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.download = `dashboard-${academicYear || 'all-years'}-${new Date().toISOString().slice(0, 10)}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -288,18 +173,27 @@ export default function AdminDashboard() {
     const win = window.open('', '_blank', 'width=900,height=700')
     if (!win) return
 
-    const statusRows = chartData.map((item) => `<tr><td>${item.name}</td><td>${item.count}</td></tr>`).join('')
+    const rows = exportRows()
+      .map(([scope, metric, value]) => `<tr><td>${escapeHtml(scope)}</td><td>${escapeHtml(metric)}</td><td>${value}</td></tr>`)
+      .join('')
     win.document.write(`
-      <html><head><title>Dashboard Analytics</title></head><body>
-      <h2>Dashboard Analytics Report</h2>
-      <h3>Core Metrics</h3>
-      <ul>${statCards.map((item) => `<li>${item.label}: ${item.value || 0}</li>`).join('')}</ul>
-      <h3>Status Funnel</h3>
-      <table border="1" cellspacing="0" cellpadding="6"><thead><tr><th>Status</th><th>Count</th></tr></thead><tbody>${statusRows}</tbody></table>
-      <script>window.print();</script></body></html>
+      <!DOCTYPE html><html><head><title>Scholarship Dashboard Report</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#0c2340;padding:28px}
+        h2{margin:0 0 4px}p{margin:0 0 16px;color:#64748b;font-size:12px}
+        table{border-collapse:collapse;width:100%;font-size:12px}
+        th,td{border:1px solid #cbd5e1;padding:6px 10px;text-align:left}
+        th{background:#f0fdf4}
+      </style></head><body>
+      <h2>Scholarship Dashboard Report</h2>
+      <p>${yearLabel} · Generated ${new Date().toLocaleString('en-PH')}</p>
+      <table><thead><tr><th>Scope</th><th>Metric</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>
+      <script>window.onload=function(){window.print()}<\/script></body></html>
     `)
     win.document.close()
   }
+
+  const showData = !loading && stats
 
   return (
     <div className="flex flex-col gap-6">
@@ -307,8 +201,8 @@ export default function AdminDashboard() {
         <div className="card border-red-200 bg-red-50 text-red-700">
           <div className="card-body flex items-center justify-between gap-4">
             <div>
-              <div className="subheader text-red-600">Data unavailable</div>
-              <p className="mt-1 text-sm">Could not load dashboard statistics. Check the connection and try again.</p>
+              <p className="font-semibold">Dashboard data could not be loaded</p>
+              <p className="mt-1 text-sm">The figures below are not current. Check the connection and try again.</p>
             </div>
             <button type="button" onClick={fetchDashboard} className="btn border-red-200 bg-white text-red-700 hover:bg-red-100">
               Retry
@@ -317,419 +211,234 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="page-header">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="page-header mb-0">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <div className="page-pretitle">Overview</div>
-            <h1 className="page-title">Admin Dashboard</h1>
-            <p className="page-subtitle">Tabler-style command view for scholarship operations, approvals, and daily queues.</p>
+            <h1 className="page-title">Dashboard</h1>
+            <p className="page-subtitle">Work waiting on the office, and where this year's applications stand.</p>
           </div>
-          <div className="btn-list">
-            <button type="button" onClick={exportAnalyticsCSV} className="btn">Export CSV</button>
-            <button type="button" onClick={exportAnalyticsPDF} className="btn">Export PDF</button>
-            <button type="button" onClick={fetchDashboard} className="btn btn-primary">Refresh data</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="dashboard-ay">Academic year</label>
+            <select
+              id="dashboard-ay"
+              value={academicYear}
+              onChange={(event) => setAcademicYear(event.target.value)}
+              className="form-control w-auto py-2"
+            >
+              {academicYearOptions.map((year) => <option key={year} value={year}>AY {year}</option>)}
+              <option value={ALL_YEARS}>All academic years</option>
+            </select>
+            <button type="button" onClick={exportAnalyticsCSV} disabled={!stats} className="btn py-2">Export CSV</button>
+            <button type="button" onClick={exportAnalyticsPDF} disabled={!stats} className="btn py-2">Export PDF</button>
+            <button type="button" onClick={fetchDashboard} disabled={loading} className="btn btn-primary py-2">
+              {loading ? 'Refreshing…' : 'Refresh'}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {statCards.map(({ label, value, Icon, tone, link }) => (
-          <Link key={label} to={link} className="card transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="card-body">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="subheader">KPI</div>
-                  <div className="mt-2 text-3xl font-bold text-slate-900">{loading ? '-' : value}</div>
-                </div>
-                <span className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl ${tone}`}>
-                  <Icon className="h-5 w-5" />
-                </span>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-slate-600">{label}</p>
-                <ArrowRightIcon className="h-4 w-4 text-slate-400" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* NEEDS ACTION — the reason staff open this page, so it leads */}
+      <section className="card" aria-labelledby="needs-action-title">
+        <div className="card-header">
+          <div>
+            <h2 id="needs-action-title" className="card-title">Needs action</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Across all academic years</p>
+          </div>
+        </div>
+        {loading && !stats ? (
+          <div className="grid gap-px bg-slate-100 sm:grid-cols-2 xl:grid-cols-3">
+            {OPEN_WORK.slice(0, 3).map((item) => <div key={item.key} className="h-20 animate-pulse bg-white" />)}
+          </div>
+        ) : !stats ? (
+          <p className="card-body text-sm text-slate-500">Open work is unavailable until the dashboard loads.</p>
+        ) : waiting.length === 0 ? (
+          <p className="card-body text-sm text-slate-600">
+            Nothing is waiting. New applications, renewals and appeals will appear here as they come in.
+          </p>
+        ) : (
+          <ul className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-3">
+            {waiting.map((item) => (
+              <li key={item.key} className="bg-white">
+                <Link to={item.to} className="flex h-full items-center gap-4 px-5 py-4 transition-colors hover:bg-emerald-50/60 focus:outline-none focus-visible:bg-emerald-50">
+                  <span className="min-w-[3ch] text-3xl font-bold tabular-nums text-brand-primary">{item.count}</span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-slate-900">{item.label}</span>
+                    <span className="block text-sm text-slate-500">{item.hint}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <div className="card">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        {/* PIPELINE */}
+        <section className="card" aria-labelledby="pipeline-title">
           <div className="card-header">
             <div>
-              <div className="subheader">Pipeline</div>
-              <div className="card-title">Applications by status</div>
+              <h2 id="pipeline-title" className="card-title">Where applications are now</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{yearLabel}</p>
+            </div>
+            {/* The total frames every bar below, so it sits at the top of this section */}
+            <div className="text-right">
+              <p className="text-3xl font-bold tabular-nums text-brand-primary">
+                {showData ? stats.total.toLocaleString('en-PH') : '—'}
+              </p>
+              <p className="text-xs text-slate-500">total applications</p>
             </div>
           </div>
           <div className="card-body">
             {loading ? (
-              <div className="h-72 animate-pulse rounded-2xl bg-slate-100" />
-            ) : chartData.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">No status data available yet.</div>
-            ) : (
-              <div className="grid gap-6 lg:grid-cols-[minmax(240px,340px)_minmax(0,1fr)] lg:items-center">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Tooltip formatter={(value) => [value, 'Count']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 12 }} />
-                      <Pie
-                        data={chartData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={58}
-                        outerRadius={108}
-                        paddingAngle={2}
-                      >
-                        {chartData.map((entry) => (
-                          <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#6B7280'} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  {chartData.map((entry) => (
-                    <Link
-                      key={entry.status}
-                      to={STATUS_LINKS[entry.status] || '/admin/applicants'}
-                      className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-slate-100"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: STATUS_COLORS[entry.status] || '#6B7280' }} />
-                        <span className="truncate text-sm font-medium text-slate-700">{entry.name}</span>
-                      </div>
-                      <span className="text-sm font-bold text-slate-900">{entry.count}</span>
-                    </Link>
-                  ))}
-                </div>
+              <div className="space-y-3">
+                {PIPELINE_ACTIVE.map(([status]) => <div key={status} className="h-6 animate-pulse rounded bg-slate-100" />)}
               </div>
+            ) : !stats ? (
+              <p className="text-sm text-slate-500">Status counts are unavailable until the dashboard loads.</p>
+            ) : stats.total === 0 ? (
+              <p className="text-sm text-slate-600">No applications for {yearLabel} yet. They will appear here once applicants submit.</p>
+            ) : (
+              <>
+                <PipelineList rows={activeRows} max={pipelineMax} barClass="bg-emerald-600" />
+                {endedRows.length > 0 && (
+                  <>
+                    <h3 className="mb-2 mt-6 text-sm font-semibold text-slate-700">Did not continue</h3>
+                    <PipelineList rows={endedRows} max={pipelineMax} barClass="bg-slate-400" />
+                  </>
+                )}
+              </>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="card">
+        {/* REJECTION REASONS */}
+        <section className="card" aria-labelledby="reasons-title">
           <div className="card-header">
             <div>
-              <div className="subheader">Daily focus</div>
-              <div className="card-title">Urgent actions</div>
+              <h2 id="reasons-title" className="card-title">Why applications were turned down</h2>
+              <p className="mt-0.5 text-xs text-slate-500">{yearLabel} · most common reasons recorded by reviewers</p>
             </div>
           </div>
           <div className="card-body">
             {loading ? (
-              <div className="flex flex-col gap-3">
-                {[1, 2, 3].map((item) => <div key={item} className="h-16 animate-pulse rounded-2xl bg-slate-100" />)}
-              </div>
-            ) : urgentCounts.length === 0 ? (
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
-                No urgent actions require immediate review.
-              </div>
+              <div className="h-40 animate-pulse rounded bg-slate-100" />
+            ) : !stats?.rejectionReasons?.length ? (
+              <p className="text-sm text-slate-500">No rejection reasons recorded for {yearLabel}.</p>
             ) : (
-              <div className="space-y-3">
-                {urgentCounts.map(({ status, count }) => (
-                  <Link key={status} to={STATUS_LINKS[status]} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition hover:bg-slate-100">
-                    <div>
-                      <StatusBadge status={status} size="sm" />
-                      <p className="mt-2 text-sm text-slate-500">Needs reviewer attention</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-slate-900">{count}</div>
-                      <div className="text-xs uppercase tracking-[0.14em] text-slate-400">items</div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-5 border-t border-slate-200 pt-5">
-              <div className="subheader mb-3">Quick links</div>
-              <div className="grid grid-cols-2 gap-2">
-                {quickLinks.map(({ to, label, Icon }) => (
-                  <Link key={to} to={to} className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900">
-                    <Icon className="h-4 w-4 shrink-0 text-emerald-600" />
-                    <span className="truncate">{label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="subheader">Conversion</div>
-              <div className="card-title">Funnel snapshot</div>
-            </div>
-          </div>
-          <div className="card-body space-y-3 text-sm text-slate-700">
-            <div className="flex items-center justify-between"><span>Submitted</span><strong>{stats?.funnel?.submitted || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Screened</span><strong>{stats?.funnel?.screened || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Exam stage</span><strong>{stats?.funnel?.exam || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Approved</span><strong>{stats?.funnel?.approved || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Accepted</span><strong>{stats?.funnel?.accepted || 0}</strong></div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="subheader">Risk signals</div>
-              <div className="card-title">Top rejection reasons</div>
-            </div>
-          </div>
-          <div className="card-body">
-            {!stats?.rejectionReasons?.length ? (
-              <p className="text-sm text-slate-500">No rejection reasons available yet.</p>
-            ) : (
-              <div className="space-y-3">
+              <ul className="divide-y divide-slate-100">
                 {stats.rejectionReasons.map((item) => (
-                  <div key={item.reason} className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm text-slate-600">{item.reason}</span>
-                    <span className="badge bg-danger-lt">{item.count}</span>
-                  </div>
+                  <li key={item.reason} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                    <span className="text-sm text-slate-700">{item.reason}</span>
+                    <span className="text-sm font-semibold tabular-nums text-slate-900">{item.count}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="subheader">Appeals</div>
-              <div className="card-title">Appeals overview</div>
-            </div>
-          </div>
-          <div className="card-body space-y-3 text-sm text-slate-700">
-            <div className="flex items-center justify-between"><span>Pending</span><strong>{stats?.appeals?.PENDING || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Approved</span><strong>{stats?.appeals?.APPROVED || 0}</strong></div>
-            <div className="flex items-center justify-between"><span>Denied</span><strong>{stats?.appeals?.DENIED || 0}</strong></div>
-          </div>
-        </div>
+        </section>
       </div>
 
+      {/* BREAKDOWNS */}
       <div className="grid gap-6 xl:grid-cols-3">
-        {[
-          { title: 'Top Barangays', ref: barangayChartRef, data: stats?.trends?.barangays || [], fill: '#10b981', empty: 'No barangay data yet.', png: 'top-barangays.png' },
-          { title: 'Top Schools', ref: schoolsChartRef, data: stats?.trends?.schools || [], fill: '#3b82f6', empty: 'No school trend data.', png: 'top-schools.png' },
-          { title: 'Top Preferred Courses', ref: coursesChartRef, data: stats?.trends?.courses || [], fill: '#8b5cf6', empty: 'No college preference data yet.', png: 'top-preferred-courses.png' },
-        ].map((card) => (
-          <div key={card.title} className="card">
+        {breakdowns.map((card) => (
+          <section key={card.title} className="card">
             <div className="card-header">
               <div>
-                <div className="subheader">Trends</div>
-                <div className="card-title">{card.title}</div>
+                <h2 className="card-title">{card.title}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">{yearLabel} · top 8</p>
               </div>
-              {card.data.length > 0 && (
+              {showData && card.data.length > 0 && (
                 <div className="btn-list">
-                  <button type="button" onClick={() => downloadChartAsPng(card.ref, card.png)} className="btn px-3 py-2 text-xs">PNG</button>
-                  <button type="button" onClick={() => downloadChartAsPdf(card.ref, card.title)} className="btn px-3 py-2 text-xs">PDF</button>
+                  <button type="button" onClick={() => downloadChartAsPng(card.ref, card.png)} className="btn px-3 py-1.5 text-xs">PNG</button>
+                  <button type="button" onClick={() => downloadChartAsPdf(card.ref, card.title)} className="btn px-3 py-1.5 text-xs">PDF</button>
                 </div>
               )}
             </div>
             <div className="card-body">
               {loading ? (
-                <div className="h-60 animate-pulse rounded-2xl bg-slate-100" />
+                <div className="h-60 animate-pulse rounded bg-slate-100" />
               ) : card.data.length ? (
                 <div ref={card.ref}>
                   <ResponsiveContainer width="100%" height={Math.max(card.data.length * 38, 220)}>
                     <BarChart data={card.data} layout="vertical" margin={{ left: 0, right: 12, top: 2, bottom: 2 }}>
-                      <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                      <YAxis type="category" dataKey="label" tick={{ fontSize: 9 }} width={120} />
-                      <Tooltip formatter={(value) => [value, 'Applicants']} contentStyle={{ fontFamily: 'DM Sans', fontSize: 12, borderRadius: 12 }} />
-                      <Bar dataKey="count" fill={card.fill} radius={[0, 6, 6, 0]} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={130} />
+                      <Tooltip formatter={(value) => [value, 'Applicants']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                      <Bar dataKey="count" fill={CHART_FILL} radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">{card.empty}</p>
+                <p className="text-sm text-slate-500">{stats ? card.empty : 'Unavailable until the dashboard loads.'}</p>
               )}
             </div>
-          </div>
+          </section>
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="subheader">Workload</div>
-              <div className="card-title">Operations queue</div>
-            </div>
-            <div className="input-icon w-full max-w-xs">
-              <input
-                type="search"
-                className="form-control"
-                placeholder="Filter statuses"
-                value={queueSearch}
-                onChange={(event) => {
-                  setQueueSearch(event.target.value)
-                  setQueuePage(1)
-                }}
-              />
-              <span className="input-icon-addon">
-                <SearchIcon className="h-4 w-4" />
-              </span>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="table table-vcenter card-table">
-              <thead>
-                <tr>
-                  <th>
-                    <button type="button" onClick={() => toggleQueueSort('status')} className="inline-flex items-center gap-1">
-                      Workflow {sortIcon('status', queueSortBy, queueSortOrder)}
-                    </button>
-                  </th>
-                  <th>
-                    <button type="button" onClick={() => toggleQueueSort('count')} className="inline-flex items-center gap-1">
-                      Count {sortIcon('count', queueSortBy, queueSortOrder)}
-                    </button>
-                  </th>
-                  <th>
-                    <button type="button" onClick={() => toggleQueueSort('priority')} className="inline-flex items-center gap-1">
-                      Priority {sortIcon('priority', queueSortBy, queueSortOrder)}
-                    </button>
-                  </th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  [...Array(5)].map((_, index) => (
-                    <tr key={index}>
-                      <td colSpan={4}><div className="h-8 animate-pulse rounded-xl bg-slate-100" /></td>
-                    </tr>
-                  ))
-                ) : visibleQueueRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-10 text-center text-sm text-slate-500">No queue rows match your filter.</td>
-                  </tr>
-                ) : (
-                  visibleQueueRows.map((row) => (
-                    <tr key={row.status}>
-                      <td>
-                        <div className="font-medium text-slate-900">{row.label}</div>
-                        <div className="mt-1 text-xs text-slate-500">Status route</div>
-                      </td>
-                      <td>
-                        <span className="text-base font-semibold text-slate-900">{row.count}</span>
-                      </td>
-                      <td>
-                        <span className={`badge ${getPriorityBadgeClass(row.priority)}`}>{row.priority}</span>
-                      </td>
-                      <td>
-                        <div className="table-actions">
-                          <Link to={row.link} className="btn px-3 py-2 text-xs">Open queue</Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="card-body border-t border-slate-200 py-4">
-            <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
-              <span>Page {queuePage} of {queuePages}</span>
-              <div className="btn-list">
-                <button type="button" className="btn px-3 py-2 text-xs" disabled={queuePage === 1} onClick={() => setQueuePage((current) => Math.max(1, current - 1))}>Prev</button>
-                <button type="button" className="btn px-3 py-2 text-xs" disabled={queuePage >= queuePages} onClick={() => setQueuePage((current) => Math.min(queuePages, current + 1))}>Next</button>
-              </div>
-            </div>
+      {/* RECENT ACTIVITY */}
+      <section className="card" aria-labelledby="activity-title">
+        <div className="card-header">
+          <div>
+            <h2 id="activity-title" className="card-title">Recent activity</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Latest 10 actions, all academic years</p>
           </div>
         </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="subheader">Activity feed</div>
-              <div className="card-title">Recent actions</div>
-            </div>
-            <div className="input-icon w-full max-w-xs">
-              <input
-                type="search"
-                className="form-control"
-                placeholder="Search activity"
-                value={activitySearch}
-                onChange={(event) => {
-                  setActivitySearch(event.target.value)
-                  setActivityPage(1)
-                }}
-              />
-              <span className="input-icon-addon">
-                <SearchIcon className="h-4 w-4" />
-              </span>
-            </div>
+        {loading && !activity.length ? (
+          <div className="card-body space-y-3">
+            {[1, 2, 3].map((item) => <div key={item} className="h-6 animate-pulse rounded bg-slate-100" />)}
           </div>
-          <div className="overflow-x-auto">
-            <table className="table table-vcenter card-table">
-              <thead>
-                <tr>
-                  <th>
-                    <button type="button" onClick={() => toggleActivitySort('actor')} className="inline-flex items-center gap-1">
-                      Actor {sortIcon('actor', activitySortBy, activitySortOrder)}
-                    </button>
-                  </th>
-                  <th>
-                    <button type="button" onClick={() => toggleActivitySort('action')} className="inline-flex items-center gap-1">
-                      Action {sortIcon('action', activitySortBy, activitySortOrder)}
-                    </button>
-                  </th>
-                  <th>
-                    <button type="button" onClick={() => toggleActivitySort('time')} className="inline-flex items-center gap-1">
-                      Time {sortIcon('time', activitySortBy, activitySortOrder)}
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  [...Array(5)].map((_, index) => (
-                    <tr key={index}>
-                      <td colSpan={3}><div className="h-8 animate-pulse rounded-xl bg-slate-100" /></td>
-                    </tr>
-                  ))
-                ) : visibleActivity.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="py-10 text-center text-sm text-slate-500">No recent activity matches your filter.</td>
-                  </tr>
-                ) : (
-                  visibleActivity.map((log) => (
-                    <tr key={log.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <span className="avatar h-9 w-9 bg-emerald-50 text-emerald-700">{log.actor[0] || 'S'}</span>
-                          <div>
-                            <div className="font-medium text-slate-900">{log.actor}</div>
-                            <div className="text-xs text-slate-500">{log.applicant}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-slate-700">{log.action}</td>
-                      <td className="text-slate-500">{fromNow(log.createdAt)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="card-body border-t border-slate-200 py-4">
-            <div className="flex items-center justify-between gap-3 text-sm text-slate-500">
-              <span>Page {activityPage} of {activityPages}</span>
-              <div className="btn-list">
-                <button type="button" className="btn px-3 py-2 text-xs" disabled={activityPage === 1} onClick={() => setActivityPage((current) => Math.max(1, current - 1))}>Prev</button>
-                <button type="button" className="btn px-3 py-2 text-xs" disabled={activityPage >= activityPages} onClick={() => setActivityPage((current) => Math.min(activityPages, current + 1))}>Next</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        ) : activity.length === 0 ? (
+          <p className="card-body text-sm text-slate-500">
+            {stats ? 'No actions recorded yet. Reviews, status changes and uploads will be logged here.' : 'Activity is unavailable until the dashboard loads.'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {activity.map((log) => {
+              const actor = log.performedBy?.fullName || 'System'
+              const applicant = log.application?.applicant?.fullName
+              return (
+                <li key={log.id} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                  <p className="min-w-0 text-sm text-slate-700">
+                    <span className="font-medium text-slate-900">{actor}</span>
+                    {' · '}{log.action}
+                    {applicant && log.applicationId && (
+                      <>
+                        {' · '}
+                        <Link to={`/admin/applicants/${log.applicationId}`} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+                          {applicant}
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                  <time dateTime={log.createdAt} className="shrink-0 text-xs text-slate-500">{fromNow(log.createdAt)}</time>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
     </div>
+  )
+}
+
+function PipelineList({ rows, max, barClass }) {
+  return (
+    <ul className="space-y-1">
+      {rows.map((row) => (
+        <li key={row.status}>
+          <Link
+            to={`/admin/applicants?status=${row.status}`}
+            className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3.5rem] items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-100"
+          >
+            <span className={`truncate text-sm ${row.count ? 'text-slate-700' : 'text-slate-400'}`}>{row.label}</span>
+            <span className="h-2.5 rounded-sm bg-slate-100" aria-hidden="true">
+              <span className={`block h-full rounded-sm ${barClass}`} style={{ width: `${(row.count / max) * 100}%` }} />
+            </span>
+            <span className={`text-right text-sm font-semibold tabular-nums ${row.count ? 'text-slate-900' : 'text-slate-400'}`}>{row.count}</span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

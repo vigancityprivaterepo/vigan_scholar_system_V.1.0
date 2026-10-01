@@ -202,8 +202,7 @@ export default function Masterlist() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Scholar Records</p>
-          <h1 className="portal-page-title mt-2">Masterlist of Accepted Scholars</h1>
+          <h1 className="portal-page-title">Masterlist of Accepted Scholars</h1>
           <p className="portal-page-subtitle">{pagination.total} accepted scholar{pagination.total !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-wrap gap-2">

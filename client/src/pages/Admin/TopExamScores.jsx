@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { SearchIcon, ChartIcon } from '../../components/ui/PortalIcons'
 import { formatDate } from '../../utils/formatDate'
+import { getStatusBadge } from '../../utils/statusConfig'
 
 const getAcademicYearOptions = () => {
   const now = new Date()
@@ -13,14 +14,13 @@ const getAcademicYearOptions = () => {
   })
 }
 
-const STATUS_LABELS = {
-  APPROVED: { label: 'Approved', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-  ACCEPTED: { label: 'Accepted / Scholar', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-  COR_SUBMITTED: { label: 'COR Submitted', color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
-  COR_REJECTED: { label: 'COR Rejected', color: 'text-orange-700 bg-orange-50 border-orange-200' },
-  FAILED_EXAM: { label: 'Failed Exam', color: 'text-red-700 bg-red-50 border-red-200' },
-  EXAM_INTERVIEW: { label: 'Pending Result', color: 'text-slate-600 bg-slate-50 border-slate-200' },
-}
+// Same colours as StatusBadge everywhere else; only the exam-stage label is specific to this page.
+const STATUS_LABELS = Object.fromEntries(
+  ['APPROVED', 'ACCEPTED', 'COR_SUBMITTED', 'COR_REJECTED', 'FAILED_EXAM', 'EXAM_INTERVIEW'].map((status) => {
+    const badge = getStatusBadge(status)
+    return [status, { label: status === 'EXAM_INTERVIEW' ? 'Pending Result' : badge.label, color: badge.color }]
+  })
+)
 
 const toDisplayName = (app) => {
   if (app.lastName) {
@@ -220,8 +220,7 @@ export default function TopExamScores() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Assessment Results</p>
-          <h1 className="portal-page-title mt-2">General Average / Total Score</h1>
+          <h1 className="portal-page-title">Top Scores</h1>
           <p className="portal-page-subtitle">{pagination.total} applicant{pagination.total !== 1 ? 's' : ''} with recorded scores</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -327,7 +326,7 @@ export default function TopExamScores() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${statusInfo.color}`}>
+                        <span className={`badge text-xs ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
                       </td>

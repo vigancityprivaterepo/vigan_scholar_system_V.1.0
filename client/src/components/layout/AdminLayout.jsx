@@ -64,6 +64,8 @@ const NAV_SECTIONS = [
 
 const ALL_NAV_ITEMS = NAV_SECTIONS.flatMap((section) => section.items)
 
+const ROLE_LABELS = { SUPER_ADMIN: 'Super admin', ADMIN: 'Admin', REVIEWER: 'Reviewer', SCHEDULER: 'Scheduler' }
+
 const matchesPath = (pathname, to) => pathname === to || pathname.startsWith(`${to}/`)
 
 const getInitials = (name) => {
@@ -146,9 +148,16 @@ export default function AdminLayout() {
         setNotifOpen(false)
       }
     }
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setNotifOpen(false)
+    }
 
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
   }, [])
 
   const handleMarkAllRead = async () => {
@@ -298,7 +307,7 @@ export default function AdminLayout() {
                             <NavLink to={to} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                               <Icon className="h-4 w-4 shrink-0" />
                               <span className="min-w-0 flex-1 truncate">{label}</span>
-                              {badge > 0 && <span className="badge bg-danger-lt">{badge}</span>}
+                              {badge > 0 && <span className="badge bg-white text-slate-700 ring-1 ring-emerald-300" aria-label={`${badge} waiting`}>{badge}</span>}
                             </NavLink>
                           </li>
                         )
@@ -311,20 +320,20 @@ export default function AdminLayout() {
           </div>
 
           <div className="border-t border-emerald-200 p-2.5">
-            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-[#eef8f2] to-[#dceee5] p-2.5">
+            <div className="rounded-2xl border border-emerald-200 bg-[#eef8f2] p-2.5">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={openProfileImagePicker}
                   disabled={uploadingProfileImage}
-                  className="shrink-0 rounded-full transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
+                  className="shrink-0 rounded-full disabled:cursor-not-allowed disabled:opacity-70"
                   aria-label="Upload profile picture"
                 >
                   {renderAvatar('avatar bg-emerald-200 text-slate-800')}
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-semibold text-slate-900">{user?.fullName || 'Administrator'}</p>
-                  <p className="truncate text-[10px] uppercase tracking-[0.14em] text-slate-500">{user?.role || 'Admin'}</p>
+                  <p className="truncate text-xs text-slate-500">{ROLE_LABELS[user?.role] || 'Staff'}</p>
                   <button
                     type="button"
                     onClick={openProfileImagePicker}
@@ -345,7 +354,7 @@ export default function AdminLayout() {
       </aside>
 
       <div className="page-wrapper">
-        <header className="navbar sticky top-0 z-20 border-b-0 bg-gradient-to-r from-[#0b5d46] via-[#0e6f51] to-[#0f7f59] text-white shadow-lg backdrop-blur">
+        <header className="navbar sticky top-0 z-20 border-b-0 bg-[#0e6f51] text-white shadow-lg">
           <div className="flex w-full flex-col gap-4 px-4 py-4 md:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -364,7 +373,6 @@ export default function AdminLayout() {
                     {activeSection && <li className="breadcrumb-item">{activeSection.label}</li>}
                     {activeItem && <li className="breadcrumb-item font-medium text-white">{activeItem.label}</li>}
                   </ol>
-                  <div className="mt-1 text-lg font-semibold text-white">{activeItem?.label || 'Dashboard'}</div>
                 </div>
               </div>
 
@@ -389,7 +397,9 @@ export default function AdminLayout() {
                     type="button"
                     className="relative inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white transition hover:bg-white/20"
                     onClick={() => setNotifOpen((current) => !current)}
-                    aria-label="Notifications"
+                    aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+                    aria-haspopup="true"
+                    aria-expanded={notifOpen}
                   >
                     <BellIcon className="h-4 w-4" />
                     {unreadCount > 0 && (
@@ -402,10 +412,7 @@ export default function AdminLayout() {
                   {notifOpen && (
                     <div className="dropdown-card absolute right-0 top-full z-30 mt-2 w-[22rem] max-w-[calc(100vw-2rem)]">
                       <div className="card-header">
-                        <div>
-                          <div className="subheader">Updates</div>
-                          <div className="card-title">Notifications</div>
-                        </div>
+                        <div className="card-title">Notifications</div>
                         {unreadCount > 0 && (
                           <button type="button" onClick={handleMarkAllRead} className="btn btn-ghost-secondary px-2 py-1 text-xs">
                             Mark all read
@@ -414,7 +421,7 @@ export default function AdminLayout() {
                       </div>
                       <div className="max-h-80 overflow-y-auto">
                         {notifications.length === 0 ? (
-                          <p className="px-5 py-8 text-center text-sm text-slate-500">No notifications</p>
+                          <p className="px-5 py-8 text-center text-sm text-slate-500">You're up to date. New submissions and status changes will show here.</p>
                         ) : (
                           notifications.map((notification) => (
                             <button
@@ -443,14 +450,14 @@ export default function AdminLayout() {
                     type="button"
                     onClick={openProfileImagePicker}
                     disabled={uploadingProfileImage}
-                    className="shrink-0 rounded-full transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70"
+                    className="shrink-0 rounded-full disabled:cursor-not-allowed disabled:opacity-70"
                     aria-label="Upload profile picture"
                   >
                     {renderAvatar('avatar h-9 w-9 bg-white/15 text-white')}
                   </button>
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-semibold text-white">{user?.fullName || 'Administrator'}</p>
-                    <p className="truncate text-xs text-emerald-100/80">{user?.email || 'admin@scholarship.local'}</p>
+                    {user?.email && <p className="truncate text-xs text-emerald-100/80">{user.email}</p>}
                   </div>
                 </div>
               </div>

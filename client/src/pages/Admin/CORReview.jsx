@@ -5,7 +5,7 @@ import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, DocumentIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
 
 const PAGE_SIZE = 20
 
@@ -47,8 +47,7 @@ export default function CORReview() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="portal-kicker">COR Review Queue</p>
-        <h1 className="portal-page-title mt-2">COR Review</h1>
+        <h1 className="portal-page-title">COR Review</h1>
         <p className="portal-page-subtitle">{pagination.total} COR submission(s) pending review</p>
       </div>
 
@@ -116,6 +115,7 @@ export default function CORReview() {
 
                   <div className="flex flex-col gap-3">
                     <textarea
+                      aria-label="Rejection reason"
                       className="portal-input text-sm"
                       rows={2}
                       placeholder="Rejection reason (required if rejecting)"
@@ -124,11 +124,9 @@ export default function CORReview() {
                     />
                     <div className="flex gap-3">
                       <button onClick={() => review(app.id, true)} disabled={acting[app.id]} className="portal-button-primary flex-1">
-                        <CheckCircleIcon className="h-4 w-4" />
                         Approve COR
                       </button>
                       <button onClick={() => review(app.id, false)} disabled={acting[app.id]} className="portal-button-secondary flex-1 !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800">
-                        <AlertTriangleIcon className="h-4 w-4" />
                         Reject COR
                       </button>
                     </div>

@@ -19,6 +19,16 @@ const REQUIREMENT_CHECKLIST_ITEMS = [
   'Picture (Passport Size with Printed Name)',
 ]
 
+// Open on the tab holding what staff decide at each stage.
+const TAB_FOR_STATUS = {
+  PENDING_REVIEW: 'requirements',
+  INCOMPLETE: 'requirements',
+  ELIGIBILITY_SCREENING: 'academic',
+  EXAM_INTERVIEW: 'academic',
+  COR_SUBMITTED: 'requirements',
+  COR_REJECTED: 'requirements',
+}
+
 export default function ApplicationReview() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -44,6 +54,7 @@ export default function ApplicationReview() {
       .then(r => {
         setApp(r.data.application)
         setRequirementChecklist(r.data.application?.requirementChecklist || {})
+        setActiveTab(TAB_FOR_STATUS[r.data.application?.status] || 'personal')
       })
       .catch(() => toast.error('Failed to load application'))
       .finally(() => setLoading(false))
@@ -114,11 +125,16 @@ export default function ApplicationReview() {
     </div>
   )
 
-  if (!app) return <div className="portal-empty"><p className="text-slate-500">Application not found</p></div>
+  if (!app) return (
+    <div className="portal-empty">
+      <p className="text-slate-700">This application could not be loaded.</p>
+      <p className="mt-1 text-sm text-slate-500">It may have been deleted, or the connection dropped. Go back to the applicant list and try again.</p>
+    </div>
+  )
 
   const ACTIONS = {
     PENDING_REVIEW: [
-      { label: 'Mark Complete to Eligibility', status: 'ELIGIBILITY_SCREENING', color: 'portal-button-primary', hint: 'All requirements are complete' },
+      { label: 'Requirements complete: send to Eligibility', status: 'ELIGIBILITY_SCREENING', color: 'portal-button-primary', hint: 'All requirements are complete' },
       { label: 'Mark Incomplete', status: 'INCOMPLETE', color: 'portal-button-secondary !border-amber-300 !text-amber-700 hover:!border-amber-500 hover:!text-amber-800', needsRemarks: true },
       { label: 'Reject Application', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
@@ -126,15 +142,15 @@ export default function ApplicationReview() {
       { label: 'Reject (Missing Documents)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use this once the applicant can no longer submit requirements (e.g. deadline passed). This stops further reminder emails.' },
     ],
     ELIGIBILITY_SCREENING: [
-      { label: 'Qualify to Exam/Interview', status: 'EXAM_INTERVIEW', color: 'portal-button-primary' },
-      { label: 'Not Qualified to Reject', status: 'NOT_QUALIFIED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Qualify for Exam / Interview', status: 'EXAM_INTERVIEW', color: 'portal-button-primary' },
+      { label: 'Mark Not Qualified', status: 'NOT_QUALIFIED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
     NOT_QUALIFIED: [
       { label: 'Finalize Rejection', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
     EXAM_INTERVIEW: [
-      { label: 'Mark Passed to Approved', status: 'APPROVED', color: 'portal-button-primary' },
-      { label: 'Mark Failed to Reject', status: 'FAILED_EXAM', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Passed: approve', status: 'APPROVED', color: 'portal-button-primary' },
+      { label: 'Failed exam / interview', status: 'FAILED_EXAM', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
     FAILED_EXAM: [
       { label: 'Finalize Rejection', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
@@ -143,7 +159,7 @@ export default function ApplicationReview() {
       { label: 'Reject (No COR Submitted)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use once the applicant can no longer submit a COR (e.g. deadline passed). Stops further reminder emails.' },
     ],
     COR_SUBMITTED: [
-      { label: 'Approve COR to Accept', status: 'ACCEPTED', color: 'portal-button-primary' },
+      { label: 'Approve COR: accept as scholar', status: 'ACCEPTED', color: 'portal-button-primary' },
       { label: 'Reject COR', status: 'COR_REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
     ],
     COR_REJECTED: [
@@ -353,12 +369,12 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
           </h1>
           <p className="truncate font-mono text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()} • {app.applicant?.email}</p>
         </div>
-        <button onClick={downloadApplication} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">⬇ Download</button>
+        <button onClick={downloadApplication} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Download</button>
         {!editMode
-          ? <button onClick={startEdit} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">✎ Edit</button>
+          ? <button onClick={startEdit} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">Edit</button>
           : <>
-              <button onClick={saveEdit} disabled={editLoading} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">{editLoading ? 'Saving…' : '✔ Save'}</button>
-              <button onClick={cancelEdit} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">✕ Cancel</button>
+              <button onClick={saveEdit} disabled={editLoading} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">{editLoading ? 'Saving…' : 'Save'}</button>
+              <button onClick={cancelEdit} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Cancel</button>
             </>
         }
         <StatusBadge status={app.status} />
@@ -372,6 +388,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  aria-pressed={activeTab === tab}
                   className={clsx(
                     'whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors sm:flex-1 sm:px-4 sm:py-2 sm:text-sm',
                     activeTab === tab ? 'bg-brand-primary text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-brand-primary'

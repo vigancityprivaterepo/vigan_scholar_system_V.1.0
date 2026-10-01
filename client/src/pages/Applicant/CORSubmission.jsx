@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate } from '../../utils/formatDate'
-import { DocumentIcon, UploadIcon, XIcon, CheckCircleIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
+import { DocumentIcon, UploadIcon, XIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
 
 export default function CORSubmission() {
   const [application, setApplication] = useState(null)
@@ -69,8 +69,7 @@ export default function CORSubmission() {
     <div className="mx-auto max-w-3xl">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Certificate of Registration</p>
-          <h1 className="portal-page-title mt-2">COR Submission</h1>
+          <h1 className="portal-page-title">COR Submission</h1>
           <p className="portal-page-subtitle">Upload the official Certificate of Registration from your school registrar.</p>
         </div>
         <StatusBadge status={application.status} />
@@ -106,15 +105,16 @@ export default function CORSubmission() {
 
       {!canSubmit ? (
         <div className="portal-empty bg-slate-50">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-white text-brand-primary">
-            <CheckCircleIcon className="h-6 w-6" />
-          </div>
-          <p className="mt-4 font-semibold text-brand-primary">COR Submission Not Available</p>
+          <p className="font-semibold text-brand-primary">
+            {application.status === 'COR_SUBMITTED' ? 'Your COR is under review'
+              : application.status === 'ACCEPTED' ? 'Your COR has been approved'
+              : 'COR upload opens after approval'}
+          </p>
           <p className="mt-2 text-sm text-slate-600">
-            COR submission is only available after your application is approved.
-            {application.status === 'COR_SUBMITTED' && ' Your COR is currently under review.'}
-            {application.status === 'ACCEPTED' && ' Your COR has been accepted and you are a confirmed scholar.'}
-            {application.status === 'ACCEPTED' && !application.corHardCopyReceivedAt && ' Please also bring the original COR to the Scholarship Office in person to finalize your record.'}
+            {application.status === 'COR_SUBMITTED' && 'The office is checking the COR you uploaded. You will be notified of the result.'}
+            {application.status === 'ACCEPTED' && 'You are a confirmed scholar.'}
+            {application.status === 'ACCEPTED' && !application.corHardCopyReceivedAt && ' Please also bring the original COR to the Scholarship Office in person to complete your record.'}
+            {!['COR_SUBMITTED', 'ACCEPTED'].includes(application.status) && 'You can upload your Certificate of Registration once your application is approved after the exam and interview.'}
           </p>
         </div>
       ) : (
@@ -149,7 +149,7 @@ export default function CORSubmission() {
                   <p className="text-xs text-slate-500">{(file.size / 1024).toFixed(0)} KB</p>
                 </div>
               </div>
-              <button onClick={() => setFile(null)} className="text-red-500 hover:text-red-700">
+              <button onClick={() => setFile(null)} aria-label="Remove selected file" className="text-red-500 hover:text-red-700">
                 <XIcon className="h-4 w-4" />
               </button>
             </div>

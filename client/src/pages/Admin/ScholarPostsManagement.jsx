@@ -148,8 +148,7 @@ export default function ScholarPostsManagement() {
         />
       )}
       <div>
-        <p className="portal-kicker">Landing Page Publishing</p>
-        <h1 className="portal-page-title mt-2">Scholar Posts</h1>
+        <h1 className="portal-page-title">Scholar Posts</h1>
         <p className="portal-page-subtitle">
           Manage the official accepted-scholar posting shown on the public landing page.
         </p>
@@ -183,9 +182,7 @@ export default function ScholarPostsManagement() {
               Select all, select specific scholars, or clear the entire public posting from one place.
             </p>
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            {postedScholars.length} Posted
-          </span>
+          <span className="text-sm text-slate-600">{postedScholars.length} posted</span>
         </div>
 
         {loading ? (
@@ -240,7 +237,7 @@ export default function ScholarPostsManagement() {
                     className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold uppercase tracking-[0.08em] text-brand-primary">
+                    <p className="text-sm font-semibold text-brand-primary">
                       {scholar.applicant_name}
                     </p>
                     <p className="mt-1 text-sm text-slate-600">

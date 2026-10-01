@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
@@ -47,8 +47,7 @@ export default function RenewalList() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="portal-kicker">Admin</p>
-        <h1 className="portal-page-title mt-2">Scholarship Renewals</h1>
+        <h1 className="portal-page-title">Scholarship Renewals</h1>
         <p className="portal-page-subtitle">Review and act on scholar renewal applications.</p>
       </div>
 
@@ -69,6 +68,7 @@ export default function RenewalList() {
             <button
               key={opt}
               onClick={() => setFilter(opt)}
+              aria-pressed={filter === opt}
               className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 filter === opt
                   ? 'bg-brand-primary text-white'
@@ -87,7 +87,11 @@ export default function RenewalList() {
         </div>
       ) : displayed.length === 0 ? (
         <div className="portal-surface p-12 text-center">
-          <p className="text-slate-500">No renewal applications found.</p>
+          <p className="text-slate-500">
+            {filter === 'PENDING_REVIEW' && !search.trim()
+              ? 'No renewals are waiting for review.'
+              : 'No renewals match this filter.'}
+          </p>
         </div>
       ) : (
         <div className="portal-surface overflow-hidden">
@@ -109,7 +113,13 @@ export default function RenewalList() {
                   className="cursor-pointer transition-colors hover:bg-slate-50"
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-brand-primary">{r.applicant?.fullName || '—'}</p>
+                    <Link
+                      to={`/admin/renewals/${r.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-brand-primary underline-offset-2 hover:underline"
+                    >
+                      {r.applicant?.fullName || 'Unnamed scholar'}
+                    </Link>
                     <p className="text-xs text-slate-500">{r.applicant?.email || ''}</p>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">

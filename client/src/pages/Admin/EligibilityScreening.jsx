@@ -56,8 +56,7 @@ export default function EligibilityScreening() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="portal-kicker">Eligibility Review</p>
-        <h1 className="portal-page-title mt-2">Eligibility Screening</h1>
+        <h1 className="portal-page-title">Eligibility Screening</h1>
         <p className="portal-page-subtitle">
           Min. General Average: ≥ {threshold.toFixed(0)}% &bull; {pagination.total} pending
         </p>

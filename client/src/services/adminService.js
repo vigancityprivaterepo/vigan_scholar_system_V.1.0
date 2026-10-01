@@ -1,7 +1,7 @@
 import api from './api'
 
 export const adminService = {
-  getStats: () => api.get('/admin/stats'),
+  getStats: (params) => api.get('/admin/stats', { params }),
   listApplications: (params) => api.get('/admin/applications', { params }),
   getApplication: (id) => api.get(`/admin/applications/${id}`),
   deleteApplicant: (id) => api.delete(`/admin/applications/${id}/applicant`),

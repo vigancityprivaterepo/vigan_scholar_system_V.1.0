@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import logo from '../../assets/logo.png'
+import { escapeHtml } from '../../utils/escapeHtml'
 
 
 function IconBase({ children, className = 'h-6 w-6' }) {
@@ -295,12 +296,7 @@ function ScholarCarousel() {
                   />
                 </div>
                 <div className={`${hasText ? 'mt-3' : 'mt-0'} shrink-0`}>
-                  <div className={`${hasText ? 'block' : 'hidden'}`}>
-                    <span className="inline-block rounded-full border border-emerald-300/60 bg-emerald-500/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-100 sm:text-xs">
-                      Academic Year 2026
-                    </span>
-                  </div>
-                  <div className={`${hasText ? 'mt-3 max-w-full sm:max-w-3xl' : 'hidden'}`}>
+                  <div className={`${hasText ? 'max-w-full sm:max-w-3xl' : 'hidden'}`}>
                 {hasText ? (
                       <>
                         {slide.label ? (
@@ -409,7 +405,7 @@ function DeadlineBanner({ deadline }) {
       <div role="alert" className="z-40 w-full bg-red-600 text-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 md:px-8">
           <div className="flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0 animate-pulse" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 shrink-0" aria-hidden="true">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -512,7 +508,7 @@ const benefits = [
   },
   {
     title: 'Book & Clothing',
-    desc: 'Scholars shall received Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.',
+    desc: 'Scholars shall receive Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.',
     Icon: BanknoteIcon,
   },
   {
@@ -536,8 +532,8 @@ const faqs = [
     ],
   },
   { q: 'When is the application deadline?', a: 'Applications are accepted during the announced scholarship period for each semester. Please refer to the latest announcements for the current cycle.' },
-  { q: 'How long does the process take?', a: 'The full review process typically (takes 3 to 5 Days) depending on application volume and schedule of assessments.' },
-  { q: 'Is there a monetary benefit?', a: 'Yes. Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester, scholars shall received Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.' },
+  { q: 'How long does the process take?', a: 'The full review process typically takes 3 to 5 days, depending on application volume and schedule of assessments.' },
+  { q: 'Is there a monetary benefit?', a: 'Yes. Scholars shall receive an allowance of Five Thousand Pesos (₱ 5,000.00) per Semester, and Three Thousand Pesos (₱ 3,000.00) as clothing and book allowance every school year.' },
   { q: 'Can I reapply if I was not accepted?', a: 'Yes. Applicants who were not selected may apply again in the next application period if they still meet the program requirements.' },
 ]
 
@@ -561,15 +557,6 @@ function formatBoardExamName(fullName = '') {
   const middleNames = parts.map((part) => `${part.charAt(0).toUpperCase()}.`).join(' ')
 
   return [lastName, suffix].filter(Boolean).join(' ') + ', ' + [firstName, middleNames].filter(Boolean).join(' ')
-}
-
-function escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 }
 
 export default function LandingPage() {
@@ -822,11 +809,170 @@ export default function LandingPage() {
     printWindow.document.close()
   }
 
+  const statItems = [
+    { value: siteSettings.statsAwarded, label: 'Total Awarded', sub: 'Disbursed to scholars' },
+    { value: siteSettings.statsScholars, label: 'Active Scholars', sub: 'Currently enrolled' },
+    { value: siteSettings.statsSchools, label: 'Partner Schools', sub: 'Across Vigan City Ilocos Sur' },
+    { value: siteSettings.statsSuccessRate, label: 'Success Rate', sub: 'Academic completion' },
+  ]
+
+  const scholarNotice = postedScholars.length > 0 && (
+    <section className="border-b border-slate-200 bg-white py-20 md:py-24">
+      <div className="mx-auto max-w-7xl px-4 md:px-8">
+        <div className="max-w-3xl">
+          <h2 className="font-display text-3xl font-bold text-[#0c2340] md:text-4xl xl:text-5xl">
+            Accepted scholars public notice
+          </h2>
+          <p className="mt-4 text-lg leading-8 text-slate-600">
+            Official list of accepted scholarship applicants released for public viewing.
+          </p>
+        </div>
+
+        <div className="mt-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[#065f46] px-5 py-3 text-white">
+            <p className="text-sm font-medium text-white">Official list of accepted scholars</p>
+            <button
+              type="button"
+              onClick={downloadScholarNotice}
+              className="inline-flex items-center justify-center rounded-lg border border-[#10b981]/40 bg-[#10b981]/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#10b981]/35"
+            >
+              Download Notice
+            </button>
+          </div>
+
+          {postedScholars.length > SCHOLARS_PER_PAGE && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]">
+                Showing {scholarRangeStart}–{scholarRangeEnd} of {postedScholars.length} scholars
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScholarPage((page) => Math.max(0, page - 1))}
+                  disabled={currentScholarPage === 0}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition-colors hover:border-[#10b981] hover:text-[#059669] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous scholar page"
+                >
+                  <ArrowLeftIcon />
+                </button>
+                <span className="min-w-[92px] text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                  Page {currentScholarPage + 1} of {totalScholarPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setScholarPage((page) => Math.min(totalScholarPages - 1, page + 1))}
+                  disabled={currentScholarPage === totalScholarPages - 1}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition-colors hover:border-[#10b981] hover:text-[#059669] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next scholar page"
+                >
+                  <ArrowRightIcon />
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-gradient-to-b from-slate-50 to-white px-3 py-4 sm:px-6 md:px-10 md:py-8">
+            <div className="mx-auto max-w-5xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 md:p-10">
+              <div className="border-b border-slate-200 pb-5">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="shrink-0">
+                    <SealPlaceholder small />
+                  </div>
+                  <div className="flex-1 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">City Government of Vigan</p>
+                    <h3 className="mt-3 font-display text-2xl font-bold uppercase tracking-[0.08em] text-[#0c2340] sm:text-3xl md:text-4xl">
+                      Official Results Posting
+                    </h3>
+                    <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-600 sm:text-sm sm:tracking-[0.18em]">
+                      Accepted Scholarship Applicants for Public Viewing
+                    </p>
+                  </div>
+                  <div className="hidden h-10 w-10 shrink-0 md:block" aria-hidden="true" />
+                </div>
+              </div>
+
+              <div className="mt-6 hidden overflow-hidden rounded-lg border border-slate-200 md:block">
+                <div className="grid grid-cols-[68px_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-slate-200 bg-[#f0fdf4] text-[11px] font-semibold uppercase tracking-[0.18em] text-[#065f46]">
+                  <div className="border-r border-slate-200 px-3 py-3 text-center">No.</div>
+                  <div className="border-r border-slate-200 px-4 py-3">Name of Scholar</div>
+                  <div className="border-r border-slate-200 px-4 py-3">School</div>
+                  <div className="px-4 py-3">Course</div>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {visibleScholars.map((scholar, index) => (
+                    <article
+                      key={scholar.application_id}
+                      className="grid grid-cols-[68px_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] bg-white text-sm text-slate-700 transition-colors hover:bg-emerald-50/40"
+                    >
+                      <div className="border-r border-slate-100 px-3 py-4 text-center font-semibold text-slate-500">
+                        {String(currentScholarPage * SCHOLARS_PER_PAGE + index + 1).padStart(2, '0')}
+                      </div>
+                      <div className="border-r border-slate-100 px-4 py-4">
+                        <p className="font-semibold uppercase tracking-[0.06em] text-[#0c2340]">
+                          {formatBoardExamName(scholar.applicant_name)}
+                        </p>
+                      </div>
+                      <div className="border-r border-slate-100 px-4 py-4 text-slate-600">
+                        {scholar.school || 'Not specified'}
+                      </div>
+                      <div className="px-4 py-4 text-slate-600">
+                        {scholar.course || 'Not specified'}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile cards */}
+              <div className="mt-6 flex flex-col gap-3 md:hidden">
+                {visibleScholars.map((scholar, index) => (
+                  <article key={scholar.application_id} className="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
+                    <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Entry No.</p>
+                        <p className="mt-1 text-base font-semibold text-slate-700">
+                          {String(currentScholarPage * SCHOLARS_PER_PAGE + index + 1).padStart(2, '0')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scholar</p>
+                        <p className="mt-1 max-w-[180px] font-semibold uppercase tracking-[0.05em] text-[#0c2340]">
+                          {formatBoardExamName(scholar.applicant_name)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">School</p>
+                        <p className="mt-1 text-slate-600">{scholar.school || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Course</p>
+                        <p className="mt-1 text-slate-600">{scholar.course || 'Not specified'}</p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 text-xs uppercase tracking-[0.14em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <p>Document released for public viewing</p>
+                <p>{postedScholars.length} accepted scholar{postedScholars.length === 1 ? '' : 's'} listed</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+
   return (
     <div className="min-h-screen bg-white text-[#0c2340]">
 
       {/* TOP UTILITY BAR */}
-      <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] border-b border-[#10b981]/30">
+      <div className="bg-[#064e3b] border-b border-[#10b981]/30">
         <div className="mx-auto flex max-w-7xl flex-wrap items-start justify-between gap-x-3 gap-y-1 px-4 py-2 text-[10px] sm:items-center sm:text-xs md:px-8">
           <p className="max-w-[58%] leading-tight uppercase tracking-[0.18em] text-emerald-50/95 sm:max-w-none sm:tracking-[0.2em]">Republic of the Philippines</p>
           <div className="flex shrink-0 items-center gap-3 text-emerald-50/95 sm:gap-4">
@@ -838,8 +984,7 @@ export default function LandingPage() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 shadow-lg">
-        {/* Main brand area — blue-to-teal gradient */}
-        <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] text-white">
+        <div className="bg-[#065f46] text-white">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:gap-6 md:px-8 md:py-5">
             <div className="flex items-center gap-3 md:gap-5">
               <SealPlaceholder />
@@ -900,16 +1045,11 @@ export default function LandingPage() {
           <ScholarCarousel />
         </section>
 
-        {/* STATS BAND — deep emerald green */}
-        <section className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857]">
+        {/* STATS BAND */}
+        <section className="bg-[#064e3b]">
           <div className="mx-auto max-w-7xl">
             <div className="grid grid-cols-2 divide-x divide-y divide-white/10 lg:grid-cols-4">
-              {[
-                { value: siteSettings.statsAwarded, label: 'Total Awarded', sub: 'Disbursed to scholars' },
-                { value: siteSettings.statsScholars, label: 'Active Scholars', sub: 'Currently enrolled' },
-                { value: siteSettings.statsSchools, label: 'Partner Schools', sub: 'Across Vigan City Ilocos Sur' },
-                { value: siteSettings.statsSuccessRate, label: 'Success Rate', sub: 'Academic completion' },
-              ].map(({ value, label, sub }) => (
+              {statItems.map(({ value, label, sub }) => (
                 <div key={label} className="px-6 py-10 md:px-10 md:py-12">
                   <p className="font-display text-4xl font-bold text-[#6ee7b7] md:text-5xl">{value}</p>
                   <p className="mt-2.5 text-sm font-semibold uppercase tracking-[0.12em] text-white">{label}</p>
@@ -919,6 +1059,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* SCHOLARS PUBLIC NOTICE — placed high so returning visitors find results without scrolling past the applicant guide */}
+        {scholarNotice}
 
         {/* PROCESS STEPS */}
         <section id="how-it-works" className="bg-slate-50 py-20 md:py-28">
@@ -937,19 +1080,15 @@ export default function LandingPage() {
               {processSteps.map(({ n, title, desc, Icon }) => (
                 <article
                   key={n}
-                  className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-[#10b981]/40 hover:shadow-xl"
+                  className="rounded-xl border border-slate-200 bg-white p-7"
                 >
-                  {/* Ghost step number */}
-                  <span className="pointer-events-none absolute -right-1 -top-1 select-none font-mono text-8xl font-black text-slate-100 transition-colors duration-300 group-hover:text-[#10b981]/12">
-                    {n}
-                  </span>
-                  <div className="relative">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-[#10b981]/20 bg-emerald-50 transition-all duration-300 group-hover:border-[#10b981]/50 group-hover:bg-emerald-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-[#10b981]/20 bg-emerald-50">
                       <Icon />
                     </div>
-                    <div className="mt-3 h-0.5 w-8 rounded-full bg-[#10b981]" />
+                    <span className="text-sm font-semibold text-slate-500">Step {n}</span>
                   </div>
-                  <h3 className="mt-4 text-xl font-bold text-[#0c2340]">{title}</h3>
+                  <h3 className="mt-5 text-xl font-bold text-[#0c2340]">{title}</h3>
                   <p className="mt-3 text-sm leading-7 text-slate-600">{desc}</p>
                 </article>
               ))}
@@ -957,8 +1096,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* BENEFITS — deep navy section */}
-        <section id="benefits" className="bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#047857] py-20 md:py-28">
+        {/* BENEFITS */}
+        <section id="benefits" className="bg-[#065f46] py-20 md:py-28">
           <div className="mx-auto max-w-7xl px-4 md:px-8">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#6ee7b7]">Scholarship Benefits</p>
@@ -974,9 +1113,9 @@ export default function LandingPage() {
               {benefits.map(({ title, desc, Icon }) => (
                 <article
                   key={title}
-                  className="group rounded-xl border border-white/10 bg-white/5 p-8 transition-all duration-300 hover:border-[#10b981]/40 hover:bg-white/10"
+                  className="rounded-xl border border-white/10 bg-white/5 p-8"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#10b981]/25 bg-[#10b981]/15 text-[#6ee7b7] transition-all duration-300 group-hover:border-[#10b981]/50 group-hover:bg-[#10b981]/25">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#10b981]/25 bg-[#10b981]/15 text-[#6ee7b7]">
                     <Icon />
                   </div>
                   <h3 className="mt-6 font-display text-2xl font-bold text-white">{title}</h3>
@@ -1031,16 +1170,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* CTA — blue-to-green gradient */}
+        {/* CTA — the only gradient on the page, so the final call to action stands apart from the solid bands */}
         <section className="relative overflow-hidden py-20 md:py-28">
           <div className="absolute inset-0 bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#047857]" />
-          {/* Decorative blobs */}
-          <div className="pointer-events-none absolute -right-40 -top-40 h-[500px] w-[500px] rounded-full bg-[#10b981]/10 blur-3xl" />
-          <div className="pointer-events-none absolute -left-40 -bottom-40 h-[500px] w-[500px] rounded-full bg-[#0c2340]/22 blur-3xl" />
 
           <div className="relative mx-auto max-w-5xl px-4 text-center md:px-8 md:text-right">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#6ee7b7]">Online Services</p>
-            <h2 className="mt-4 font-display text-4xl font-bold text-white md:text-5xl xl:text-6xl">
+            <h2 className="font-display text-4xl font-bold text-white md:text-5xl xl:text-6xl">
               Begin your scholarship application
             </h2>
             <p className="mt-5 text-lg leading-8 text-slate-100/90">
@@ -1063,177 +1198,12 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* SCHOLARS PUBLIC NOTICE */}
-        {postedScholars.length > 0 && (
-          <section className="bg-slate-50 py-20 md:py-24">
-            <div className="mx-auto max-w-7xl px-4 md:px-8">
-              <div className="max-w-3xl">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#059669]">Public Posting</p>
-                <h2 className="mt-3 font-display text-3xl font-bold text-[#0c2340] md:text-4xl xl:text-5xl">
-                  Accepted scholars public notice
-                </h2>
-                <p className="mt-4 text-lg leading-8 text-slate-600">
-                  Official list of accepted scholarship applicants released for public viewing.
-                </p>
-              </div>
-
-              <div className="mt-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                {/* Toolbar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-5 py-3 text-white">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-100/95">Public PDF View</p>
-                    <p className="mt-1 text-sm font-medium text-white">Official list of accepted scholars</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={downloadScholarNotice}
-                      className="inline-flex items-center justify-center rounded-lg border border-[#10b981]/40 bg-[#10b981]/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#10b981]/35"
-                    >
-                      Download Notice
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full bg-rose-400" />
-                      <span className="h-3 w-3 rounded-full bg-amber-400" />
-                      <span className="h-3 w-3 rounded-full bg-emerald-400" />
-                    </div>
-                  </div>
-                </div>
-
-                {postedScholars.length > SCHOLARS_PER_PAGE && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-slate-600">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em]">
-                      Showing {scholarRangeStart}–{scholarRangeEnd} of {postedScholars.length} scholars
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setScholarPage((page) => Math.max(0, page - 1))}
-                        disabled={currentScholarPage === 0}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition-colors hover:border-[#10b981] hover:text-[#059669] disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label="Previous scholar page"
-                      >
-                        <ArrowLeftIcon />
-                      </button>
-                      <span className="min-w-[92px] text-center text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-                        Page {currentScholarPage + 1} of {totalScholarPages}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setScholarPage((page) => Math.min(totalScholarPages - 1, page + 1))}
-                        disabled={currentScholarPage === totalScholarPages - 1}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 transition-colors hover:border-[#10b981] hover:text-[#059669] disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label="Next scholar page"
-                      >
-                        <ArrowRightIcon />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-gradient-to-b from-slate-50 to-white px-3 py-4 sm:px-6 md:px-10 md:py-8">
-                  <div className="mx-auto max-w-5xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 md:p-10">
-                    <div className="border-b border-slate-200 pb-5">
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="shrink-0">
-                          <SealPlaceholder small />
-                        </div>
-                        <div className="flex-1 text-center">
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">City Government of Vigan</p>
-                          <h3 className="mt-3 font-display text-2xl font-bold uppercase tracking-[0.08em] text-[#0c2340] sm:text-3xl md:text-4xl">
-                            Official Results Posting
-                          </h3>
-                          <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-600 sm:text-sm sm:tracking-[0.18em]">
-                            Accepted Scholarship Applicants for Public Viewing
-                          </p>
-                        </div>
-                        <div className="hidden h-10 w-10 shrink-0 md:block" aria-hidden="true" />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 hidden overflow-hidden rounded-lg border border-slate-200 md:block">
-                      <div className="grid grid-cols-[68px_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-slate-200 bg-[#f0fdf4] text-[11px] font-semibold uppercase tracking-[0.18em] text-[#065f46]">
-                        <div className="border-r border-slate-200 px-3 py-3 text-center">No.</div>
-                        <div className="border-r border-slate-200 px-4 py-3">Name of Scholar</div>
-                        <div className="border-r border-slate-200 px-4 py-3">School</div>
-                        <div className="px-4 py-3">Course</div>
-                      </div>
-
-                      <div className="divide-y divide-slate-100">
-                        {visibleScholars.map((scholar, index) => (
-                          <article
-                            key={scholar.application_id}
-                            className="grid grid-cols-[68px_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] bg-white text-sm text-slate-700 transition-colors hover:bg-emerald-50/40"
-                          >
-                            <div className="border-r border-slate-100 px-3 py-4 text-center font-semibold text-slate-500">
-                              {String(currentScholarPage * SCHOLARS_PER_PAGE + index + 1).padStart(2, '0')}
-                            </div>
-                            <div className="border-r border-slate-100 px-4 py-4">
-                              <p className="font-semibold uppercase tracking-[0.06em] text-[#0c2340]">
-                                {formatBoardExamName(scholar.applicant_name)}
-                              </p>
-                            </div>
-                            <div className="border-r border-slate-100 px-4 py-4 text-slate-600">
-                              {scholar.school || 'Not specified'}
-                            </div>
-                            <div className="px-4 py-4 text-slate-600">
-                              {scholar.course || 'Not specified'}
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Mobile cards */}
-                    <div className="mt-6 flex flex-col gap-3 md:hidden">
-                      {visibleScholars.map((scholar, index) => (
-                        <article key={scholar.application_id} className="rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-sm">
-                          <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Entry No.</p>
-                              <p className="mt-1 text-base font-semibold text-slate-700">
-                                {String(currentScholarPage * SCHOLARS_PER_PAGE + index + 1).padStart(2, '0')}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Scholar</p>
-                              <p className="mt-1 max-w-[180px] font-semibold uppercase tracking-[0.05em] text-[#0c2340]">
-                                {formatBoardExamName(scholar.applicant_name)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="mt-3 grid gap-3">
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">School</p>
-                              <p className="mt-1 text-slate-600">{scholar.school || 'Not specified'}</p>
-                            </div>
-                            <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Course</p>
-                              <p className="mt-1 text-slate-600">{scholar.course || 'Not specified'}</p>
-                            </div>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-
-                    <div className="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 text-xs uppercase tracking-[0.14em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                      <p>Document released for public viewing</p>
-                      <p>{postedScholars.length} accepted scholar{postedScholars.length === 1 ? '' : 's'} listed</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* FACEBOOK */}
         {siteSettings.facebookPageUrl && (
           <section className="bg-white py-16 border-t border-slate-100">
             <div className="mx-auto max-w-5xl px-4 md:px-8">
               <div className="mx-auto max-w-3xl text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#059669]">Socials</p>
-                <h2 className="mt-3 font-display text-3xl font-bold text-[#0c2340] md:text-4xl">
+                <h2 className="font-display text-3xl font-bold text-[#0c2340] md:text-4xl">
                   Follow our official Facebook page
                 </h2>
                 <p className="mt-4 text-lg leading-8 text-slate-600">
@@ -1273,8 +1243,8 @@ export default function LandingPage() {
         )}
       </main>
 
-      {/* FOOTER — deep navy */}
-      <footer className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] py-14 text-white">
+      {/* FOOTER */}
+      <footer className="bg-[#064e3b] py-14 text-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
             <SealPlaceholder small />
@@ -1298,7 +1268,7 @@ export default function LandingPage() {
                 <Link to="/login" className="transition-colors hover:text-white">Login</Link>
                 
                 <Link to="/register" className="transition-colors hover:text-white">Apply for Scholarship</Link>
-                <Link to="https://vigancity.gov.ph/" className="transition-colors hover:text-white">Vigan City Official Website</Link>
+                <a href="https://vigancity.gov.ph/" target="_blank" rel="noreferrer" className="transition-colors hover:text-white">Vigan City Official Website</a>
               
               </div>
             </div>
@@ -1312,7 +1282,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-7xl border-t border-white/20 px-4 pt-6 text-xs text-slate-200/95 md:px-8">
-          © {new Date().getFullYear()} City Government of Vigan · By City Management Information Systems Division· All rights reserved.
+          © {new Date().getFullYear()} City Government of Vigan · By City Management Information Systems Division · All rights reserved.
         </div>
       </footer>
     </div>

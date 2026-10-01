@@ -44,7 +44,7 @@ export default function ConfirmModal({
       <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-2xl">
         {/* Header */}
         <div className={`border-b px-6 py-4 ${danger ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}>
-          <p id="confirm-modal-title" className={`text-sm font-bold uppercase tracking-widest ${danger ? 'text-red-700' : 'text-brand-primary'}`}>
+          <p id="confirm-modal-title" className={`text-base font-semibold ${danger ? 'text-red-700' : 'text-brand-primary'}`}>
             {title}
           </p>
         </div>
@@ -68,7 +68,7 @@ export default function ConfirmModal({
             onClick={onConfirm}
             disabled={loading}
             className={`flex items-center gap-2 rounded px-5 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
-              danger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-primary hover:bg-indigo-900'
+              danger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-primary hover:bg-[#0f3460]'
             }`}
           >
             {loading && (

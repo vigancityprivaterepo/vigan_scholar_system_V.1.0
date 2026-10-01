@@ -170,8 +170,7 @@ export default function RenewalForm() {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <div>
-          <p className="portal-kicker">Scholarship Renewal</p>
-          <h1 className="portal-page-title mt-2">Renewal Status</h1>
+          <h1 className="portal-page-title">Renewal Status</h1>
         </div>
 
         <div className={`portal-surface border-l-4 p-6 ${cfg.border} ${cfg.bg}`}>
@@ -215,8 +214,7 @@ export default function RenewalForm() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
-        <p className="portal-kicker">Scholarship Renewal</p>
-        <h1 className="portal-page-title mt-2">Submit Renewal Application</h1>
+        <h1 className="portal-page-title">Submit Renewal Application</h1>
         <p className="portal-page-subtitle">Upload your COR and latest grades to renew your scholarship for the next academic period.</p>
       </div>
 
@@ -261,7 +259,7 @@ export default function RenewalForm() {
         {subStep < 2 ? (
           <>
             <div className="mb-5">
-              <p className="portal-kicker">Document {subStep + 1} of 2</p>
+              <p className="text-sm text-slate-500">Document {subStep + 1} of 2</p>
               <h2 className="mt-1 text-lg font-semibold text-brand-primary">{SLOTS[subStep].label}</h2>
               <p className="mt-1 text-sm text-slate-600">{SLOTS[subStep].description}</p>
             </div>
@@ -299,7 +297,7 @@ export default function RenewalForm() {
           /* Review step */
           <>
             <div className="mb-5">
-              <p className="portal-kicker">Review & Submit</p>
+              <p className="text-sm text-slate-500">Last step</p>
               <h2 className="mt-1 text-lg font-semibold text-brand-primary">Confirm Your Documents</h2>
               <p className="mt-1 text-sm text-slate-600">Please verify the files below before submitting your renewal.</p>
             </div>
@@ -356,7 +354,7 @@ export default function RenewalForm() {
 
       <div className="flex gap-3">
         <Link to="/applicant/status" className="text-sm text-slate-500 hover:text-brand-primary">
-          ← Cancel and return to status
+          Cancel and return to status
         </Link>
       </div>
     </div>

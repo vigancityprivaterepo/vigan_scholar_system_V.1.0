@@ -68,8 +68,7 @@ export default function LandingPageSettings() {
     <section className="space-y-5">
       <section className="portal-surface p-6">
         <div className="mb-5">
-          <p className="portal-kicker">Landing Page</p>
-          <h2 className="mt-1 text-lg font-semibold text-brand-primary">Social Links</h2>
+          <h2 className=" text-lg font-semibold text-brand-primary">Social Links</h2>
           <p className="mt-2 text-sm text-slate-500">
             Add the official Facebook page applicants should follow for announcements and updates.
           </p>
@@ -117,8 +116,7 @@ export default function LandingPageSettings() {
 
       <section className="portal-surface p-6">
         <div className="mb-5">
-          <p className="portal-kicker">Landing Page</p>
-          <h2 className="mt-1 text-lg font-semibold text-brand-primary">Statistics Banner</h2>
+          <h2 className=" text-lg font-semibold text-brand-primary">Statistics Banner</h2>
           <p className="mt-2 text-sm text-slate-500">
             Update the highlight numbers shown in the stats band on the landing page.
           </p>

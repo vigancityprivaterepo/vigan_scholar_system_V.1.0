@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
-import { CheckCircleIcon, AlertTriangleIcon, DocumentIcon, ChevronLeftIcon } from '../../components/ui/PortalIcons'
+import { DocumentIcon, ChevronLeftIcon } from '../../components/ui/PortalIcons'
 
 const STATUS_BADGE = {
   PENDING_REVIEW: 'bg-amber-100 text-amber-800',
@@ -208,7 +208,6 @@ export default function RenewalReview() {
                 disabled={actionLoading}
                 className="flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
               >
-                <CheckCircleIcon className="h-4 w-4" />
                 {actionLoading ? 'Processing…' : 'Approve Renewal'}
               </button>
               <button
@@ -216,7 +215,6 @@ export default function RenewalReview() {
                 disabled={actionLoading}
                 className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 transition-colors"
               >
-                <AlertTriangleIcon className="h-4 w-4" />
                 Reject Renewal
               </button>
             </div>

@@ -34,7 +34,7 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-lg border border-red-300 bg-white shadow-2xl">
         <div className="border-b border-red-200 bg-red-50 px-6 py-4">
-          <p className="text-sm font-bold uppercase tracking-widest text-red-700">Confirm Backup Restore</p>
+          <p className="text-base font-semibold text-red-700">Confirm Backup Restore</p>
         </div>
         <div className="space-y-4 px-6 py-5">
           <p className="text-sm text-slate-700">
@@ -205,8 +205,7 @@ export default function BackupRestore() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal VSMS</p>
-          <h1 className="mt-1 text-2xl font-bold text-brand-primary">Backup &amp; Restore</h1>
+          <h1 className="text-2xl font-bold text-brand-primary">Backup &amp; Restore</h1>
           <p className="mt-1 text-sm text-slate-500">Create either a lightweight data-only backup or a full backup that also includes uploaded files. Accessible to Super Admin only.</p>
         </div>
         <div className="flex min-w-[280px] flex-col gap-2">
@@ -222,7 +221,7 @@ export default function BackupRestore() {
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="inline-flex items-center justify-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-900 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0f3460] disabled:opacity-60"
           >
             {creating
               ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -242,7 +241,7 @@ export default function BackupRestore() {
 
       <div className="border border-slate-300 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-300 bg-slate-50 px-6 py-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">
+          <p className="text-sm font-semibold text-slate-700">
             Stored Backups ({backups.length})
           </p>
         </div>
@@ -256,7 +255,7 @@ export default function BackupRestore() {
               <path d="M4.5 6.5v4c0 1.38 3.358 2.5 7.5 2.5s7.5-1.12 7.5-2.5v-4" />
               <path d="M4.5 10.5v4c0 1.38 3.358 2.5 7.5 2.5s7.5-1.12 7.5-2.5v-4" />
             </svg>
-            <p className="text-sm">No backups yet. Click "Create Backup" to generate one.</p>
+            <p className="text-sm">No backups yet. Use the create button above to make the first one.</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -288,7 +287,7 @@ export default function BackupRestore() {
                     <button
                       onClick={() => setRestoreTarget(b.filename)}
                       disabled={restoring || creating}
-                      className="rounded border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-40"
+                      className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-brand-primary hover:bg-slate-50 disabled:opacity-40"
                     >
                       Restore
                     </button>
@@ -312,14 +311,15 @@ export default function BackupRestore() {
 
       <div className="border border-slate-300 bg-white shadow-sm">
         <div className="border-b border-slate-300 bg-slate-50 px-6 py-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">Restore from External File</p>
+          <p className="text-sm font-semibold text-slate-700">Restore from External File</p>
         </div>
         <div className="p-6">
           <p className="mb-4 text-sm text-slate-600">
             Upload a <code className="font-mono text-xs bg-slate-100 px-1 rounded">.json.gz</code> backup file downloaded from a previous export.
             Newer backups can include both database records and uploaded files. Large restore files are processed on server disk first before restore begins.
           </p>
-          <div
+          <button
+            type="button"
             onClick={() => fileRef.current?.click()}
             className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded border-2 border-dashed border-slate-300 bg-slate-50 py-8 text-slate-500 transition-colors hover:border-brand-primary hover:text-brand-primary"
           >
@@ -339,7 +339,7 @@ export default function BackupRestore() {
                 <span className="text-xs text-slate-400">.json.gz - max 4 GB</span>
               </>
             )}
-          </div>
+          </button>
           <input
             ref={fileRef}
             type="file"

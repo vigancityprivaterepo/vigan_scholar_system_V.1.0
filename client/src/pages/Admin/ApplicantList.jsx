@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/authStore'
 import StatusBadge from '../../components/shared/StatusBadge'
 import ConfirmModal from '../../components/shared/ConfirmModal'
 import { formatDate } from '../../utils/formatDate'
+import { getStatusBadge } from '../../utils/statusConfig'
 import { ArrowRightIcon, SearchIcon, ChevronUpIcon, ChevronDownIcon } from '../../components/ui/PortalIcons'
 
 const SAVED_VIEWS_KEY = 'adminApplicantList.savedViews.v1'
@@ -319,6 +320,25 @@ export default function ApplicantList() {
     }
   }
 
+  const hasFilters = Boolean(search.trim() || statusFilter || academicYear)
+  const clearFilters = () => {
+    setSearch('')
+    setStatusFilter('')
+    setAcademicYear('')
+    setSelectedViewId('')
+    setPage(1)
+  }
+  const emptyState = hasFilters ? (
+    <>
+      <p className="text-sm text-slate-700">No applications match these filters.</p>
+      <button type="button" onClick={clearFilters} className="mt-2 text-sm font-medium text-brand-primary underline-offset-2 hover:underline">
+        Clear filters
+      </button>
+    </>
+  ) : (
+    <p className="text-sm text-slate-500">No applications yet. They appear here as soon as applicants submit the form.</p>
+  )
+
   return (
     <div className="flex flex-col gap-6">
       {confirm && (
@@ -344,13 +364,12 @@ export default function ApplicantList() {
       )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="portal-kicker">Application Queue</p>
-          <h1 className="portal-page-title mt-2">Applicants</h1>
+          <h1 className="portal-page-title">Applicants</h1>
           <p className="portal-page-subtitle">{data.pagination.total} total applications</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/admin/bulk-email" className="portal-button-primary whitespace-nowrap !px-4 !py-2 text-sm">
-            Bulk Email Module
+          <Link to="/admin/bulk-email" className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
+            Email applicants
           </Link>
           <button
             onClick={() => exportToCSV(search, statusFilter, academicYear)}
@@ -366,28 +385,30 @@ export default function ApplicantList() {
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              type="search"
+              aria-label="Search applications"
               className="portal-input pl-10"
-              placeholder="Search by name, email, or Ref. ID (e.g. #A1B2C3D4)..."
+              placeholder="Search by name, email, or Ref. ID (e.g. #A1B2C3D4)"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
           </div>
-          <button onClick={fetchData} className="portal-button-primary whitespace-nowrap">Search</button>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-500 whitespace-nowrap">Filter:</span>
           <select
+            aria-label="Status"
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
             className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
           >
             <option value="">All Statuses</option>
             {ALL_STATUSES.map(s => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+              <option key={s} value={s}>{getStatusBadge(s).label}</option>
             ))}
           </select>
           <select
+            aria-label="Academic year"
             value={academicYear}
             onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
             className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
@@ -401,8 +422,9 @@ export default function ApplicantList() {
 
         <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input
+            aria-label="Name for this view"
             className="portal-input"
-            placeholder="Saved view name (e.g., Accepted 2026)"
+            placeholder="Name this view to reuse it (e.g. Accepted 2026)"
             value={viewName}
             onChange={(e) => setViewName(e.target.value)}
           />
@@ -411,6 +433,7 @@ export default function ApplicantList() {
           </button>
           <div className="flex gap-2">
             <select
+              aria-label="Saved views"
               value={selectedViewId}
               onChange={(e) => applySavedView(e.target.value)}
               className="portal-input min-w-[180px]"
@@ -431,8 +454,8 @@ export default function ApplicantList() {
         <div className="portal-surface border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Batch Action</p>
-              <p className="mt-1 text-sm text-emerald-900">{selectedIds.length} selected application(s)</p>
+              <p className="text-sm font-semibold text-emerald-900">Change status of selected</p>
+              <p className="mt-0.5 text-sm text-emerald-900">{selectedIds.length} selected application(s)</p>
             </div>
             <button
               type="button"
@@ -444,20 +467,22 @@ export default function ApplicantList() {
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <select className="portal-input" value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}>
+            <select aria-label="New status" className="portal-input" value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}>
               <option value="">Select target status</option>
               {ALL_STATUSES.map((status) => (
-                <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+                <option key={status} value={status}>{getStatusBadge(status).label}</option>
               ))}
             </select>
             <input
               type="number"
+              aria-label="General Score"
               className="portal-input"
-              placeholder="Exam score (optional)"
+              placeholder="General Score (optional)"
               value={batchExamScore}
               onChange={(e) => setBatchExamScore(e.target.value)}
             />
             <textarea
+              aria-label="Remarks"
               className="portal-input"
               rows={2}
               placeholder="Admin remarks (optional)"
@@ -465,6 +490,7 @@ export default function ApplicantList() {
               onChange={(e) => setBatchRemarks(e.target.value)}
             />
             <textarea
+              aria-label="Rejection reason"
               className="portal-input"
               rows={2}
               placeholder="Rejection reason (optional)"
@@ -501,7 +527,7 @@ export default function ApplicantList() {
                   { label: 'Status', col: 'status' },
                   { label: 'Submitted', col: 'submittedAt' },
                   { label: 'Review', col: null },
-                  { label: 'Delete', col: null },
+                  ...(canDeleteApplicants ? [{ label: 'Delete', col: null }] : []),
                 ].map(({ label, col }) => (
                   <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                     {col ? (
@@ -517,15 +543,15 @@ export default function ApplicantList() {
               {loading ? (
                 [...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-slate-100">
-                    {[1, 2, 3, 4, 5, 6, 7].map(j => (
+                    {Array.from({ length: canDeleteApplicants ? 7 : 6 }, (_, j) => j).map(j => (
                       <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded bg-gray-100" /></td>
                     ))}
                   </tr>
                 ))
               ) : data.applications.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <p>No applications found</p>
+                  <td colSpan={canDeleteApplicants ? 8 : 7} className="py-12 text-center">
+                    {emptyState}
                   </td>
                 </tr>
               ) : (
@@ -562,8 +588,8 @@ export default function ApplicantList() {
                         Review <ArrowRightIcon className="h-4 w-4" />
                       </Link>
                     </td>
+                    {canDeleteApplicants && (
                     <td className="px-4 py-3">
-                      {canDeleteApplicants ? (
                         <button
                           type="button"
                           onClick={() => setPendingApplicantDelete(app)}
@@ -572,10 +598,8 @@ export default function ApplicantList() {
                         >
                           {deletingApplicantId === app.id ? 'Deleting...' : 'Delete'}
                         </button>
-                      ) : (
-                        <span className="text-xs text-slate-300">-</span>
-                      )}
                     </td>
+                    )}
                   </tr>
                 ))
               )}
@@ -592,7 +616,7 @@ export default function ApplicantList() {
               </div>
             ))
           ) : data.applications.length === 0 ? (
-            <p className="py-10 text-center text-sm text-slate-500">No applications found</p>
+            <div className="py-10 text-center">{emptyState}</div>
           ) : (
             data.applications.map((app) => (
               <div key={app.id} className="flex items-start gap-3 p-4">

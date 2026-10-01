@@ -74,8 +74,7 @@ export default function GeneralSettings() {
   return (
     <section className="portal-surface p-6">
       <div className="mb-5">
-        <p className="portal-kicker">General</p>
-        <h2 className="mt-1 text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
+        <h2 className="text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
         <p className="mt-2 text-sm text-slate-500">Manage application rules and submission availability.</p>
       </div>
 
@@ -87,8 +86,8 @@ export default function GeneralSettings() {
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Minimum General Average (%)</label>
               <p className="mb-2 text-xs text-slate-500">
-                Applicants must have a General Average of at least this percentage to qualify for eligibility screening.
-                The requirement is &ge; 83% with no grade lower than 80% in both semesters.
+                Applications below this General Average cannot be moved to Eligibility Screening or Exam / Interview.
+                Reviewers still check the &ldquo;no grade lower than 80%&rdquo; rule on Form 138.
               </p>
               <div className="flex items-center gap-2">
                 <input
@@ -106,12 +105,15 @@ export default function GeneralSettings() {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</label>
+              <p id="accept-applications-label" className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</p>
               <p className="mb-3 text-xs text-slate-500">Close submissions when applications should stop.</p>
               <button
                 type="button"
                 onClick={() => setField('applicationOpen', !form.applicationOpen)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                role="switch"
+                aria-checked={form.applicationOpen}
+                aria-labelledby="accept-applications-label"
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
                   form.applicationOpen ? 'bg-[#10b981]' : 'bg-slate-300'
                 }`}
               >

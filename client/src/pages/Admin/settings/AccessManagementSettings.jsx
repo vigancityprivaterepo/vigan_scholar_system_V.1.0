@@ -109,8 +109,7 @@ export default function AccessManagementSettings() {
   return (
     <section className="portal-surface p-6">
       <div className="mb-5">
-        <p className="portal-kicker">Access Management</p>
-        <h2 className="mt-1 text-lg font-semibold text-brand-primary">User Control</h2>
+        <h2 className="text-lg font-semibold text-brand-primary">User Control</h2>
         <p className="mt-2 text-sm text-slate-500">
           Manage user accounts separately from scholarship and landing page settings.
         </p>
@@ -118,20 +117,21 @@ export default function AccessManagementSettings() {
 
       {!isPrimaryAdmin && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Only <strong>data@vigancity.gov.ph</strong> can manage user accounts. This section is visible for transparency,
-          but invite, role, and delete actions are restricted.
+          Only the primary administrator account can invite staff, change roles, or delete accounts.
+          Ask the primary administrator if someone's access needs to change.
         </div>
       )}
 
       {isPrimaryAdmin && (
         <>
           <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-emerald-700">Invite New Admin</p>
+            <h3 className="text-sm font-semibold text-emerald-900">Invite a staff member</h3>
             <p className="mt-1 text-sm text-emerald-900">
               Create an admin invitation. The user will receive an email link to set their password.
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <input
+                aria-label="Full name"
                 className="portal-input sm:col-span-1"
                 placeholder="Full name"
                 value={inviteForm.fullName}
@@ -139,6 +139,8 @@ export default function AccessManagementSettings() {
                 disabled={inviteLoading}
               />
               <input
+                type="email"
+                aria-label="Email address"
                 className="portal-input sm:col-span-1"
                 placeholder="Email address"
                 value={inviteForm.email}
@@ -158,6 +160,7 @@ export default function AccessManagementSettings() {
 
           <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <select
+              aria-label="Account type"
               className="portal-input sm:max-w-[220px]"
               value={userRoleFilter}
               onChange={(e) => setUserRoleFilter(e.target.value)}
@@ -170,6 +173,7 @@ export default function AccessManagementSettings() {
               <option value="SCHEDULER">Scheduler</option>
             </select>
             <input
+              aria-label="Search users"
               className="portal-input"
               placeholder="Search by full name or email"
               value={userSearch}
@@ -184,8 +188,8 @@ export default function AccessManagementSettings() {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-slate-200">
-            <table className="w-full">
+          <div className="overflow-x-auto rounded-md border border-slate-200">
+            <table className="w-full min-w-[640px]">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
@@ -218,6 +222,7 @@ export default function AccessManagementSettings() {
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <select
+                              aria-label={`Role for ${u.fullName}`}
                               className="portal-input !py-1.5 text-xs"
                               value={u.role}
                               disabled={isSelf || roleUpdatingId === u.id || isDeleting}

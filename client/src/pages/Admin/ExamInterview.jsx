@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, CalendarIcon, ChartIcon, AlertTriangleIcon, UsersIcon, SearchIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, CalendarIcon, SearchIcon } from '../../components/ui/PortalIcons'
 
 const PAGE_SIZE = 20
 
@@ -103,8 +103,7 @@ export default function ExamInterview() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="portal-kicker">Assessment Stage</p>
-        <h1 className="portal-page-title mt-2">Exam / Interview</h1>
+        <h1 className="portal-page-title">Exam / Interview</h1>
         <p className="portal-page-subtitle">{pagination.total} applicants at this stage</p>
       </div>
 
@@ -130,6 +129,7 @@ export default function ExamInterview() {
             <CalendarIcon className="h-6 w-6" />
           </div>
           <p className="mt-4 font-display text-xl font-bold text-brand-primary">No applicants at this stage</p>
+          <p className="mt-1 text-sm text-slate-500">Applicants appear here once they are qualified on the Eligibility page.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -137,8 +137,7 @@ export default function ExamInterview() {
           {/* ── Bulk Schedule Panel ── */}
           <div className="portal-surface p-5">
             <div className="mb-4 flex items-center gap-2 text-brand-primary">
-              <UsersIcon className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-[0.16em]">Bulk Schedule</p>
+              <h2 className="text-sm font-semibold">Schedule selected applicants</h2>
               {selected.size > 0 && (
                 <span className="ml-auto rounded-full bg-brand-primary px-2 py-0.5 text-xs font-bold text-white">
                   {selected.size} selected
@@ -149,17 +148,20 @@ export default function ExamInterview() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <input
                 type="datetime-local"
+                aria-label="Date and time"
                 className="portal-input text-sm"
                 value={bulkForm.scheduledAt}
                 onChange={e => setBulkForm(f => ({ ...f, scheduledAt: e.target.value }))}
               />
               <input
+                aria-label="Location"
                 className="portal-input text-sm"
                 placeholder="Location (optional)"
                 value={bulkForm.location}
                 onChange={e => setBulkForm(f => ({ ...f, location: e.target.value }))}
               />
               <select
+                aria-label="Assessment type"
                 className="portal-input text-sm"
                 value={bulkForm.type}
                 onChange={e => setBulkForm(f => ({ ...f, type: e.target.value }))}
@@ -169,6 +171,7 @@ export default function ExamInterview() {
                 <option value="BOTH">Exam + Interview</option>
               </select>
               <select
+                aria-label="Examiner"
                 className="portal-input text-sm"
                 value={bulkForm.examinerId}
                 onChange={e => setBulkForm(f => ({ ...f, examinerId: e.target.value }))}
@@ -227,6 +230,7 @@ export default function ExamInterview() {
                       className="mt-1 h-4 w-4 cursor-pointer accent-brand-primary"
                       checked={isSelected}
                       onChange={() => toggleSelect(app.id)}
+                      aria-label={`Select ${app.applicant?.fullName || 'applicant'} for scheduling`}
                     />
                     <div>
                       <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
@@ -238,10 +242,7 @@ export default function ExamInterview() {
                   </Link>
                 </div>
                 <div className="portal-panel p-4">
-                  <div className="mb-3 flex items-center gap-2 text-brand-primary">
-                    <ChartIcon className="h-4 w-4" />
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em]">Record Result</p>
-                  </div>
+                  <h3 className="mb-3 text-sm font-semibold text-brand-primary">Record result</h3>
                   <div className="flex flex-col gap-2">
                     {/* General Score Input */}
                     <div>
@@ -259,6 +260,7 @@ export default function ExamInterview() {
                     </div>
 
                     <textarea
+                      aria-label="Interview notes"
                       className="portal-input text-sm"
                       rows={2}
                       placeholder="Interview notes (optional)"
@@ -270,7 +272,6 @@ export default function ExamInterview() {
                         Pass
                       </button>
                       <button onClick={() => markResult(app.id, false)} disabled={acting[`result_${app.id}`]} className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800">
-                        <AlertTriangleIcon className="h-4 w-4" />
                         Fail
                       </button>
                     </div>

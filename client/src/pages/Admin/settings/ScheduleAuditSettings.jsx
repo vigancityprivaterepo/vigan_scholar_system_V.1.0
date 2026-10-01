@@ -6,6 +6,12 @@ import { adminService } from '../../../services/adminService'
 import { formatDateTime, formatScheduleDateTime } from '../../../utils/formatDate'
 import { ArrowRightIcon, SearchIcon } from '../../../components/ui/PortalIcons'
 
+const SCHEDULE_STATUS = {
+  SCHEDULED: { label: 'Scheduled', className: 'bg-blue-50 text-blue-700' },
+  COMPLETED: { label: 'Completed', className: 'bg-emerald-50 text-emerald-700' },
+  CANCELLED: { label: 'Cancelled', className: 'bg-slate-100 text-slate-600 line-through' },
+}
+
 export default function ScheduleAuditSettings() {
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
@@ -33,8 +39,7 @@ export default function ScheduleAuditSettings() {
   return (
     <section className="portal-surface p-6">
       <div className="mb-5">
-        <p className="portal-kicker">Schedule Audit</p>
-        <h2 className="mt-1 text-lg font-semibold text-brand-primary">Exam / Interview Schedule Records</h2>
+        <h2 className="text-lg font-semibold text-brand-primary">Exam / Interview Schedule Records</h2>
         <p className="mt-2 text-sm text-slate-500">
           Review which applicants were sent a schedule, including the assigned examiner, schedule type, and send timestamp.
         </p>
@@ -75,17 +80,19 @@ export default function ScheduleAuditSettings() {
                   <p className="mt-1 truncate text-xs text-slate-500">{record.application?.school || 'School not specified'}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Scheduled for</p>
+                  <p className="text-xs font-medium text-slate-500">Scheduled for</p>
                   <p className="mt-1 text-sm font-medium text-slate-700">{formatScheduleDateTime(record.scheduledAt)}</p>
                   <p className="mt-1 text-xs text-slate-500">{record.type}{record.location ? ` | ${record.location}` : ''}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">Sent at</p>
+                  <p className="text-xs font-medium text-slate-500">Sent at</p>
                   <p className="mt-1 text-sm font-medium text-slate-700">{formatDateTime(record.createdAt)}</p>
                   <p className="mt-1 text-xs text-slate-500">{record.examiner?.fullName ? `${record.examiner.fullName} (${record.examiner.role})` : 'No examiner assigned'}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{record.status}</span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${SCHEDULE_STATUS[record.status]?.className || 'bg-slate-100 text-slate-600'}`}>
+                    {SCHEDULE_STATUS[record.status]?.label || record.status}
+                  </span>
                   <Link to={`/admin/applicants/${record.applicationId}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
                     Open <ArrowRightIcon className="h-4 w-4" />
                   </Link>

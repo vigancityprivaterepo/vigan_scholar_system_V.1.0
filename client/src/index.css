@@ -186,6 +186,9 @@
   .portal-button-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-brand-primary hover:text-brand-primary;
   }
+  .portal-button-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-brand-primary bg-white px-4 py-2.5 text-sm font-medium text-brand-primary transition-colors hover:bg-slate-50;
+  }
   .portal-kicker {
     @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
   }
@@ -212,17 +215,6 @@
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #f0fdf4; }
 ::-webkit-scrollbar-thumb { background: #0c2340; border-radius: 3px; }
-
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-  33% { transform: translate(30px, -30px) scale(1.05); opacity: 0.8; }
-  66% { transform: translate(-20px, 20px) scale(0.95); opacity: 0.5; }
-}
-
-.orb {
-  animation: orbFloat var(--duration, 8s) ease-in-out infinite;
-  animation-delay: var(--delay, 0s);
-}
 
 
 

@@ -3,6 +3,9 @@ import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { adminService } from '../../services/adminService'
 import { formatDateTime } from '../../utils/formatDate'
+import { getStatusBadge } from '../../utils/statusConfig'
+
+const APPEAL_STATUS_LABEL = { PENDING: 'Pending', APPROVED: 'Approved', DENIED: 'Denied' }
 
 export default function AppealsPage() {
   const [appeals, setAppeals] = useState([])
@@ -49,16 +52,15 @@ export default function AppealsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="portal-kicker">Appeals</p>
-          <h1 className="portal-page-title mt-2">Reconsideration Workflow</h1>
+          <h1 className="portal-page-title">Appeals</h1>
           <p className="portal-page-subtitle">Review and resolve rejected applicant appeals.</p>
         </div>
-        <Link to="/admin/applicants" className="portal-button-secondary text-sm">Back to Applicants</Link>
       </div>
 
       <div className="portal-surface p-4">
         <div className="flex gap-2">
-          <select className="portal-input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <label className="sr-only" htmlFor="appeal-filter">Show appeals</label>
+          <select id="appeal-filter" className="portal-input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Appeals</option>
             <option value="PENDING">Pending</option>
             <option value="APPROVED">Approved</option>
@@ -84,7 +86,9 @@ export default function AppealsPage() {
               {loading ? (
                 <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">Loading...</td></tr>
               ) : appeals.length === 0 ? (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">No appeals found.</td></tr>
+                <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
+                  {statusFilter === 'PENDING' ? 'No appeals are waiting for a decision.' : 'No appeals match this filter.'}
+                </td></tr>
               ) : (
                 appeals.map((appeal) => (
                   <tr key={appeal.id} className="border-t border-slate-100 align-top">
@@ -93,14 +97,18 @@ export default function AppealsPage() {
                       <p className="text-xs text-slate-500">{appeal.applicant?.email || '-'}</p>
                     </td>
                     <td className="px-3 py-3 text-xs text-slate-600">
-                      <p>#{String(appeal.application?.id || '').slice(0, 8).toUpperCase()}</p>
-                      <p>{appeal.application?.status || '-'}</p>
+                      {appeal.application?.id ? (
+                        <Link to={`/admin/applicants/${appeal.application.id}`} className="font-medium text-brand-primary underline-offset-2 hover:underline">
+                          Open application #{appeal.application.id.slice(0, 8).toUpperCase()}
+                        </Link>
+                      ) : <p>-</p>}
+                      <p>{appeal.application?.status ? getStatusBadge(appeal.application.status).label : '-'}</p>
                       <p>{appeal.application?.academicYear ? `AY ${appeal.application.academicYear}` : '-'}</p>
                       <p>{formatDateTime(appeal.createdAt)}</p>
                     </td>
                     <td className="px-3 py-3 text-sm text-slate-700">{appeal.reason}</td>
                     <td className="px-3 py-3 text-xs text-slate-700">
-                      <p className="font-semibold">{appeal.status}</p>
+                      <p className="font-semibold">{APPEAL_STATUS_LABEL[appeal.status] || appeal.status}</p>
                       {appeal.resolution && <p className="mt-1 text-slate-500">Resolution: {appeal.resolution}</p>}
                     </td>
                     <td className="px-3 py-3">

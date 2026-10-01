@@ -129,7 +129,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
         <button
           type="submit"
           disabled={saving}
-          className="flex items-center gap-2 rounded bg-brand-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-900 disabled:opacity-60"
+          className="flex items-center gap-2 rounded bg-brand-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0f3460] disabled:opacity-60"
         >
           {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
           {isEdit ? 'Save Changes' : 'Add Slide'}
@@ -195,14 +195,13 @@ export default function CarouselManagement() {
       {/* Page header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Portal VSMS</p>
-          <h1 className="mt-1 text-2xl font-bold text-brand-primary">Carousel Management</h1>
+          <h1 className="text-2xl font-bold text-brand-primary">Carousel Management</h1>
           <p className="mt-1 text-sm text-slate-500">Manage the image slides displayed on the public landing page.</p>
         </div>
         {panel === null && (
           <button
             onClick={() => setPanel('new')}
-            className="inline-flex items-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-900"
+            className="inline-flex items-center gap-2 rounded bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#0f3460]"
           >
             <span className="text-base leading-none">+</span> Add Slide
           </button>
@@ -213,7 +212,7 @@ export default function CarouselManagement() {
       {panel !== null && (
         <div className="border border-slate-300 bg-white shadow-sm">
           <div className="border-b border-slate-300 bg-slate-50 px-6 py-3">
-            <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">
+            <p className="text-sm font-semibold text-slate-700">
               {panel === 'new' ? 'New Slide' : 'Edit Slide'}
             </p>
           </div>
@@ -231,7 +230,7 @@ export default function CarouselManagement() {
       {/* Slide list */}
       <div className="border border-slate-300 bg-white shadow-sm">
         <div className="border-b border-slate-300 bg-slate-50 px-6 py-3 flex items-center justify-between">
-          <p className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-600">
+          <p className="text-sm font-semibold text-slate-700">
             Slides ({slides.length})
           </p>
           <p className="text-xs text-slate-400">Sorted by Sort Order (ascending)</p>

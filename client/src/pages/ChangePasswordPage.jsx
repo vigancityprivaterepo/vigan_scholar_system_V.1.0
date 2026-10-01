@@ -67,7 +67,7 @@ export default function ChangePasswordPage() {
 
           {/* Current Password */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">Current Password</label>
+            <label htmlFor="cp-current" className="mb-1.5 block text-sm font-medium text-slate-700">Current Password</label>
             <div className="relative">
               <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -76,6 +76,7 @@ export default function ChangePasswordPage() {
               </span>
               <input
                 type={showCurrent ? 'text' : 'password'}
+                id="cp-current"
                 className={inputClass('currentPassword')}
                 placeholder="Enter current password"
                 value={form.currentPassword}
@@ -92,7 +93,7 @@ export default function ChangePasswordPage() {
 
           {/* New Password */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">New Password</label>
+            <label htmlFor="cp-new" className="mb-1.5 block text-sm font-medium text-slate-700">New Password</label>
             <div className="relative">
               <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -101,6 +102,7 @@ export default function ChangePasswordPage() {
               </span>
               <input
                 type={showNew ? 'text' : 'password'}
+                id="cp-new"
                 className={inputClass('newPassword')}
                 placeholder="At least 8 characters"
                 value={form.newPassword}
@@ -117,7 +119,7 @@ export default function ChangePasswordPage() {
 
           {/* Confirm Password */}
           <div>
-            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-600">Confirm New Password</label>
+            <label htmlFor="cp-confirm" className="mb-1.5 block text-sm font-medium text-slate-700">Confirm New Password</label>
             <div className="relative">
               <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -126,6 +128,7 @@ export default function ChangePasswordPage() {
               </span>
               <input
                 type={showConfirm ? 'text' : 'password'}
+                id="cp-confirm"
                 className={inputClass('confirmPassword')}
                 placeholder="Repeat new password"
                 value={form.confirmPassword}
