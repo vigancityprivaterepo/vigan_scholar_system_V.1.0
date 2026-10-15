@@ -81,6 +81,8 @@ export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+  const [notificationTotal, setNotificationTotal] = useState(0)
+  const [loadingOlderNotifications, setLoadingOlderNotifications] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [navBadges, setNavBadges] = useState({})
   const [search, setSearch] = useState('')
@@ -98,13 +100,35 @@ export default function AdminLayout() {
   const activeItem = activeSection?.items.find((item) => matchesPath(location.pathname, item.to)) || null
   const unreadCount = unreadNotificationCount
 
+  // The refresh brings in the newest page and keeps any older ones already loaded with "Show older".
   const fetchNotifications = () => {
     adminService.getNotifications()
       .then((response) => {
-        setNotifications(response.data.notifications || [])
+        const latest = response.data.notifications || []
+        const latestIds = new Set(latest.map((item) => item.id))
+        setNotifications((current) => [...latest, ...current.filter((item) => !latestIds.has(item.id))])
         setUnreadNotificationCount(response.data.unreadCount || 0)
+        setNotificationTotal(response.data.total || 0)
       })
       .catch(() => {})
+  }
+
+  const loadOlderNotifications = async () => {
+    setLoadingOlderNotifications(true)
+    try {
+      const response = await adminService.getNotifications({ offset: notifications.length, limit: 20 })
+      const older = response.data.notifications || []
+      setNotifications((current) => {
+        const seen = new Set(current.map((item) => item.id))
+        return [...current, ...older.filter((item) => !seen.has(item.id))]
+      })
+      setUnreadNotificationCount(response.data.unreadCount || 0)
+      setNotificationTotal(response.data.total || 0)
+    } catch {
+      // Leave the list as it is; the button stays so they can try again.
+    } finally {
+      setLoadingOlderNotifications(false)
+    }
   }
 
   const fetchNavBadges = () => {
@@ -404,7 +428,7 @@ export default function AdminLayout() {
                     <BellIcon className="h-4 w-4" />
                     {unreadCount > 0 && (
                       <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
-                        {unreadCount}
+                        {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
                   </button>
@@ -412,7 +436,15 @@ export default function AdminLayout() {
                   {notifOpen && (
                     <div className="dropdown-card absolute right-0 top-full z-30 mt-2 w-[22rem] max-w-[calc(100vw-2rem)]">
                       <div className="card-header">
-                        <div className="card-title">Notifications</div>
+                        <div>
+                          <div className="card-title">Notifications</div>
+                          {notificationTotal > 0 && (
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              Showing {Math.min(notifications.length, notificationTotal)} of {notificationTotal}
+                              {unreadCount > 0 && ` · ${unreadCount} unread`}
+                            </p>
+                          )}
+                        </div>
                         {unreadCount > 0 && (
                           <button type="button" onClick={handleMarkAllRead} className="btn btn-ghost-secondary px-2 py-1 text-xs">
                             Mark all read
@@ -439,6 +471,16 @@ export default function AdminLayout() {
                               </div>
                             </button>
                           ))
+                        )}
+                        {notifications.length > 0 && notifications.length < notificationTotal && (
+                          <button
+                            type="button"
+                            onClick={loadOlderNotifications}
+                            disabled={loadingOlderNotifications}
+                            className="w-full px-5 py-3 text-center text-sm font-medium text-blue-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {loadingOlderNotifications ? 'Loading…' : 'Show older notifications'}
+                          </button>
                         )}
                       </div>
                     </div>

@@ -33,7 +33,7 @@ export const adminService = {
   deletePostedScholar: (applicationId) => api.delete(`/admin/scholars/posts/${applicationId}`),
 
   // Admin notifications
-  getNotifications: () => api.get('/admin/notifications'),
+  getNotifications: (params) => api.get('/admin/notifications', { params }),
   markNotificationRead: (id) => api.patch(`/admin/notifications/${id}/read`),
   markAllNotificationsRead: () => api.patch('/admin/notifications/read-all'),
   listUsers: (params) => api.get('/admin/users', { params }),
