@@ -1144,8 +1144,9 @@ export default function LandingPage() {
                   className="overflow-hidden rounded-xl border border-emerald-200 bg-white transition-all hover:border-[#10b981]/60"
                 >
                   <button
-                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left text-base font-semibold text-[#0c2340]"
+                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left text-base font-semibold text-[#0c2340] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#047857]"
                     onClick={() => setActiveFaq(activeFaq === index ? null : index)}
+                    aria-expanded={activeFaq === index}
                   >
                     <span>{faq.q}</span>
                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-200 ${activeFaq === index ? 'border-[#10b981] bg-[#10b981] text-white' : 'border-slate-300 text-slate-500'}`}>
@@ -1153,7 +1154,8 @@ export default function LandingPage() {
                     </span>
                   </button>
                   {activeFaq === index && (
-                    <div className="max-w-[70ch] border-t border-emerald-100 bg-emerald-50/60 px-6 py-5 text-base text-slate-700">
+                    <div className="border-t border-emerald-100 bg-emerald-50/60 px-6 py-5 text-base text-slate-700">
+                      <div className="max-w-[70ch]">
                       {faq.items ? (
                         <ul className="list-disc space-y-3 pl-5">
                           {faq.items.map((item) => (
@@ -1163,6 +1165,7 @@ export default function LandingPage() {
                       ) : (
                         faq.a
                       )}
+                      </div>
                     </div>
                   )}
                 </div>
