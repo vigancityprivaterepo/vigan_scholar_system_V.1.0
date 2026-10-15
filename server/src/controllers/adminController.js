@@ -12,6 +12,8 @@ const { getPrimaryAdminEmail, isPrimaryAdminEmail, getEffectiveRole } = require(
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 const { formatManilaDate, formatManilaDateTime, parseManilaScheduleInput } = require('../utils/scheduleDateTime');
 const { getGwaThreshold } = require('../utils/gwaThreshold');
+const logger = require('../utils/logger');
+const { isStaff, resetTwoFactor } = require('../services/twoFactorService');
 
 const prisma = new PrismaClient();
 const PRIMARY_ADMIN_EMAIL = getPrimaryAdminEmail();
@@ -1979,13 +1981,15 @@ const listUsers = async (req, res, next) => {
         email: true,
         role: true,
         createdAt: true,
+        totpEnabledAt: true,
       },
       take: 200,
     });
 
-    const normalizedUsers = users.map((user) => ({
+    const normalizedUsers = users.map(({ totpEnabledAt, ...user }) => ({
       ...user,
       role: getEffectiveRole(user),
+      twoFactorEnabled: Boolean(totpEnabledAt),
     }));
 
     res.json({ success: true, users: normalizedUsers });
@@ -2044,6 +2048,37 @@ const updateUserRole = async (req, res, next) => {
       message: `${updated.fullName} is now ${updated.role}.`,
       user: updated,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Primary admin only. Clears a staff member's authenticator, backup codes, trusted computers and
+// sessions, so they set two-step sign-in up again at their next sign-in. The primary admin's own
+// reset is server-only (scripts/reset-2fa.js).
+const resetUserTwoFactor = async (req, res, next) => {
+  try {
+    if (!isPrimaryAdminEmail(req.user.email)) {
+      throw new AppError('Only the primary admin can reset two-step sign-in.', 403);
+    }
+
+    const target = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, email: true, role: true, fullName: true },
+    });
+    if (!target) throw new AppError('User not found.', 404);
+    if (isPrimaryAdminEmail(target.email)) {
+      throw new AppError("The primary admin's two-step sign-in can only be reset on the server.", 400);
+    }
+    if (!isStaff(target)) throw new AppError('Only staff accounts use two-step sign-in.', 400);
+
+    await resetTwoFactor(prisma, target.id);
+    await prisma.activityLog.create({
+      data: { performedById: req.user.id, action: `Two-step sign-in reset for ${target.email}` },
+    });
+    logger.info('Two-step sign-in reset', { targetUserId: target.id, by: req.user.email });
+
+    res.json({ success: true, message: `${target.fullName || target.email} will set up two-step sign-in at their next sign-in.` });
   } catch (err) {
     next(err);
   }
@@ -2283,6 +2318,7 @@ const processDueEmailJobs = async () => {
 };
 
 module.exports = {
+  resetUserTwoFactor,
   listApplications,
   getApplication,
   updateStatus,

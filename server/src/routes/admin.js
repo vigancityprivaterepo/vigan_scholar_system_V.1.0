@@ -27,6 +27,7 @@ const {
   listUsers,
   updateUserRole,
   deleteUser,
+  resetUserTwoFactor,
   deleteApplicant,
   inviteAdminUser,
   listAppeals,
@@ -76,6 +77,7 @@ router.post('/users/invite', requireSuperAdmin, inviteAdminUser);
 router.get('/users', requireSuperAdmin, listUsers);
 router.patch('/users/:id/role', requireSuperAdmin, updateUserRole);
 router.delete('/users/:id', requireSuperAdmin, deleteUser);
+router.post('/users/:id/2fa/reset', requireSuperAdmin, resetUserTwoFactor);
 router.get('/settings', getAdminSiteSettings);
 router.patch('/settings', updateAdminSiteSettings);
 router.get('/scholars/posts', getAdminScholarPosts);

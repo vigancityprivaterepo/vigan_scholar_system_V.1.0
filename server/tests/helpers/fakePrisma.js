@@ -7,7 +7,12 @@ let failOnAccess = false;
 
 const guard = () => { if (failOnAccess) throw new Error('database was touched'); };
 const matches = (row, where = {}) => Object.entries(where).every(([key, value]) => {
+  if (key === 'AND') return value.every((clause) => matches(row, clause));
+  if (key === 'OR') return value.some((clause) => matches(row, clause));
   if (value && typeof value === 'object' && 'in' in value) return value.in.includes(row[key]);
+  if (value && typeof value === 'object' && 'contains' in value) {
+    return String(row[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
+  }
   return row[key] === value;
 });
 const pick = (row, select) => (row && select ? Object.fromEntries(Object.keys(select).map((k) => [k, row[k]])) : row);
@@ -15,7 +20,7 @@ const pick = (row, select) => (row && select ? Object.fromEntries(Object.keys(se
 const table = (name, { unique } = {}) => ({
   findUnique: async ({ where, select }) => { guard(); return pick(store[name].find((r) => matches(r, where)) || null, select); },
   findFirst: async ({ where, select } = {}) => { guard(); return pick(store[name].find((r) => matches(r, where)) || null, select); },
-  findMany: async ({ where } = {}) => { guard(); return store[name].filter((r) => matches(r, where)); },
+  findMany: async ({ where, select } = {}) => { guard(); return store[name].filter((r) => matches(r, where)).map((r) => pick(r, select)); },
   create: async ({ data }) => {
     guard();
     if (unique && store[name].some((r) => r[unique] === data[unique])) throw Object.assign(new Error('unique'), { code: 'P2002' });
