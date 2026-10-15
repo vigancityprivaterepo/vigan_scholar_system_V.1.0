@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "test": "node --test tests/"
   },
   "dependencies": {
     "@prisma/client": "^5.11.0",
@@ -22,6 +23,8 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "nodemailer": "^9.0.1",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.4",
     "resend": "^6.10.0",
     "winston": "^3.19.0"
   },
