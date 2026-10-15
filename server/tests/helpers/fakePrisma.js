@@ -10,12 +10,19 @@ const matches = (row, where = {}) => Object.entries(where).every(([key, value]) 
   if (key === 'AND') return value.every((clause) => matches(row, clause));
   if (key === 'OR') return value.some((clause) => matches(row, clause));
   if (value && typeof value === 'object' && 'in' in value) return value.in.includes(row[key]);
+  if (value && typeof value === 'object' && 'lt' in value) return row[key] != null && row[key] < value.lt;
+  if (value instanceof Date) return row[key] instanceof Date && row[key].getTime() === value.getTime();
+  if (value === null) return row[key] == null;
   if (value && typeof value === 'object' && 'contains' in value) {
     return String(row[key] || '').toLowerCase().includes(String(value.contains).toLowerCase());
   }
   return row[key] === value;
 });
-const pick = (row, select) => (row && select ? Object.fromEntries(Object.keys(select).map((k) => [k, row[k]])) : row);
+// Reads return a snapshot, like a real database: later writes don't change a row already read.
+const pick = (row, select) => {
+  if (!row) return row;
+  return select ? Object.fromEntries(Object.keys(select).map((k) => [k, row[k]])) : { ...row };
+};
 
 const table = (name, { unique } = {}) => ({
   findUnique: async ({ where, select }) => { guard(); return pick(store[name].find((r) => matches(r, where)) || null, select); },
@@ -32,8 +39,14 @@ const table = (name, { unique } = {}) => ({
     guard();
     const row = store[name].find((r) => matches(r, where));
     if (!row) throw Object.assign(new Error('not found'), { code: 'P2025' });
-    Object.assign(row, data);
-    return row;
+    Object.assign(row, data, { updatedAt: new Date() });
+    return { ...row };
+  },
+  updateMany: async ({ where, data }) => {
+    guard();
+    const rows = store[name].filter((r) => matches(r, where));
+    rows.forEach((row) => Object.assign(row, data, { updatedAt: new Date() }));
+    return { count: rows.length };
   },
   delete: async ({ where }) => {
     guard();

@@ -61,9 +61,16 @@ const twoFactorLimiter = rateLimit({
   ...common,
   windowMs: FIFTEEN_MINUTES,
   limit: 10,
+  // Only a token this server signed picks the bucket, so a forged one can't use up someone else's
+  // attempts. Expiry is ignored here; the handler still rejects an expired token.
   keyGenerator: (req) => {
-    const decoded = jwt.decode(String(req.body?.challengeToken || ''));
-    return decoded?.userId ? `2fa|${decoded.userId}` : `2fa-ip|${ipKeyGenerator(req.ip)}`;
+    try {
+      const decoded = jwt.verify(String(req.body?.challengeToken || ''), process.env.JWT_SECRET, { ignoreExpiration: true });
+      if (decoded?.purpose === '2fa-challenge' && decoded.userId) return `2fa|${decoded.userId}`;
+    } catch {
+      // fall through to the network key
+    }
+    return `2fa-ip|${ipKeyGenerator(req.ip)}`;
   },
   handler: tooMany('Too many code attempts. Please wait 15 minutes and try again.'),
 });

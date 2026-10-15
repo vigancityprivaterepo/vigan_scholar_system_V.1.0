@@ -157,6 +157,50 @@ test('setup then enable turns it on and returns 8 backup codes once', async () =
   assert.equal(res.cookies.staff_trusted_device, undefined, 'not trusted unless asked');
 });
 
+test('the same code sent twice at once signs in only once', async () => {
+  fake.reset();
+  const { user, secret } = enrolled();
+  const code = authenticator.generate(secret);
+  const attempts = await Promise.all([
+    run(verify, { body: { challengeToken: challengeFor(user.id), code }, headers: {} }),
+    run(verify, { body: { challengeToken: challengeFor(user.id), code }, headers: {} }),
+  ]);
+  assert.equal(attempts.filter((a) => a.res.body?.accessToken).length, 1);
+  const refused = attempts.find((a) => a.err);
+  assert.equal(refused?.err?.statusCode, 400);
+  assert.equal(refused?.err?.message, WRONG_CODE);
+});
+
+test('one backup code sent twice at once signs in only once', async () => {
+  fake.reset();
+  const user = staff();
+  const token = challengeFor(user.id);
+  const { res: setupRes } = await run(setup, { body: { challengeToken: token }, headers: {} });
+  const { res: enabled } = await run(enable, { body: { challengeToken: token, code: authenticator.generate(setupRes.body.manualKey) }, headers: {} });
+  const backup = enabled.body.backupCodes[0];
+  fake.store.refreshTokens = [];
+  const attempts = await Promise.all([
+    run(verify, { body: { challengeToken: challengeFor(user.id), backupCode: backup }, headers: {} }),
+    run(verify, { body: { challengeToken: challengeFor(user.id), backupCode: backup }, headers: {} }),
+  ]);
+  assert.equal(attempts.filter((a) => a.res.body?.accessToken).length, 1);
+  assert.equal(attempts.find((a) => a.err)?.err?.statusCode, 400);
+});
+
+test('setup confirmed twice at once turns it on once, so only one set of backup codes exists', async () => {
+  fake.reset();
+  const user = staff();
+  const token = challengeFor(user.id);
+  const { res: setupRes } = await run(setup, { body: { challengeToken: token }, headers: {} });
+  const code = authenticator.generate(setupRes.body.manualKey);
+  const attempts = await Promise.all([
+    run(enable, { body: { challengeToken: token, code }, headers: {} }),
+    run(enable, { body: { challengeToken: token, code }, headers: {} }),
+  ]);
+  assert.equal(attempts.filter((a) => a.res.body?.backupCodes).length, 1);
+  assert.equal(attempts.find((a) => a.err)?.err?.statusCode, 400);
+});
+
 test('a backup code signs in once and is then spent', async () => {
   fake.reset();
   const user = staff();

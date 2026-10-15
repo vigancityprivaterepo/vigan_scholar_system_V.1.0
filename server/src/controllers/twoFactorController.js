@@ -99,8 +99,9 @@ const enable = async (req, res, next) => {
     if (!result.ok) throw new AppError(WRONG_CODE, 400);
 
     const { codes, stored } = generateBackupCodes(user.id);
-    await prisma.user.update({
-      where: { id: user.id },
+    // Conditional on it still being off, so two confirms at once can't hand out two sets of codes.
+    const turnedOn = await prisma.user.updateMany({
+      where: { id: user.id, totpEnabledAt: null },
       data: {
         totpSecret: user.totpPendingSecret,
         totpPendingSecret: null,
@@ -109,6 +110,7 @@ const enable = async (req, res, next) => {
         totpBackupCodes: stored,
       },
     });
+    if (turnedOn.count === 0) throw new AppError('Two-step sign-in is already set up.', 400);
     await prisma.activityLog.create({ data: { performedById: user.id, action: 'Two-step sign-in set up' } });
 
     await finishSignIn(req, res, user, { trustDevice: Boolean(req.body?.trustDevice), extra: { backupCodes: codes } });
@@ -125,12 +127,22 @@ const verify = async (req, res, next) => {
     if (req.body?.backupCode) {
       const used = useBackupCode(user.id, user.totpBackupCodes, req.body.backupCode);
       if (!used.ok) throw new AppError(WRONG_BACKUP_CODE, 400);
-      await prisma.user.update({ where: { id: user.id }, data: { totpBackupCodes: used.stored } });
+      // Only if the row is unchanged since it was read, so one backup code can't sign in twice at once.
+      const spent = await prisma.user.updateMany({
+        where: { id: user.id, updatedAt: user.updatedAt },
+        data: { totpBackupCodes: used.stored },
+      });
+      if (spent.count === 0) throw new AppError(WRONG_BACKUP_CODE, 400);
       logger.warn('Staff signed in with a backup code', { userId: user.id, ip: req.ip });
     } else {
       const result = verifyCode(secretBox.decrypt(user.totpSecret), req.body?.code, user.totpLastUsedStep);
       if (!result.ok) throw new AppError(WRONG_CODE, 400);
-      await prisma.user.update({ where: { id: user.id }, data: { totpLastUsedStep: result.step } });
+      // Only if no request has used this step (or a later one) meanwhile: the same code can't sign in twice.
+      const recorded = await prisma.user.updateMany({
+        where: { id: user.id, OR: [{ totpLastUsedStep: null }, { totpLastUsedStep: { lt: result.step } }] },
+        data: { totpLastUsedStep: result.step },
+      });
+      if (recorded.count === 0) throw new AppError(WRONG_CODE, 400);
     }
 
     await finishSignIn(req, res, user, { trustDevice: Boolean(req.body?.trustDevice) });
