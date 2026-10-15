@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { SearchIcon, ChartIcon } from '../../components/ui/PortalIcons'
 import { formatDate } from '../../utils/formatDate'
+import { html } from '../../utils/escapeHtml'
 import { getStatusBadge } from '../../utils/statusConfig'
 
 const getAcademicYearOptions = () => {
@@ -152,7 +153,7 @@ export default function TopExamScores() {
         const score = a.examScore ? parseFloat(a.examScore) : null
         const gwa = a.generalAverage ? parseFloat(a.generalAverage).toFixed(2) + '%' : '-'
         const statusLabel = STATUS_LABELS[a.status]?.label || a.status || '-'
-        return `
+        return html`
         <tr>
           <td style="text-align:center;font-weight:bold">${i + 1}</td>
           <td>${toDisplayName(a)}</td>
@@ -162,8 +163,8 @@ export default function TopExamScores() {
           <td style="text-align:center">${statusLabel}</td>
           <td>${a.academicYear || '-'}</td>
         </tr>`
-      }).join('')
-      const html = `<!DOCTYPE html>
+      })
+      const page = html`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -201,13 +202,13 @@ export default function TopExamScores() {
       <th>AY</th>
     </tr>
   </thead>
-  <tbody>${rows || '<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">No records</td></tr>'}</tbody>
+  <tbody>${rows.length ? rows : html`<tr><td colspan="7" style="text-align:center;padding:20px;color:#888">No records</td></tr>`}</tbody>
 </table>
 <div class="footer">Printed: ${new Date().toLocaleString('en-PH')} &nbsp;|&nbsp; Vigan City Scholarship Management System</div>
 </body>
 </html>`
       const win = window.open('', '_blank')
-      win.document.write(html)
+      win.document.write(String(page))
       win.document.close()
       win.focus()
       setTimeout(() => win.print(), 400)

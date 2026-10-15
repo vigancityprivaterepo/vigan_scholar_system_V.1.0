@@ -7,6 +7,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate, formatDateTime } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
 import { STATUS_CONFIG } from '../../utils/statusConfig'
+import { html } from '../../utils/escapeHtml'
 import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon, SpinnerIcon } from '../../components/ui/PortalIcons'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
@@ -253,16 +254,16 @@ export default function ApplicationReview() {
     const fullName = app.lastName
       ? `${app.lastName}, ${app.firstName}${app.middleName ? ' ' + app.middleName : ''}`
       : app.applicant?.fullName || ''
-    const prefs = (app.collegePreferences || []).map((p, i) => `
+    const prefs = (app.collegePreferences || []).map((p, i) => html`
       <tr>
         <td>${i + 1}</td>
         <td>${p.name || ''}</td>
         <td>${p.location || ''}</td>
         <td>${p.course || ''}</td>
         <td>${p.accepted || ''}</td>
-      </tr>`).join('')
-    const docs = (app.requirementFiles || []).map(f => `<li>${f.fileName || f.originalName || 'File'}</li>`).join('')
-    const html = `<!DOCTYPE html>
+      </tr>`)
+    const docs = (app.requirementFiles || []).map(f => html`<li>${f.fileName || f.originalName || 'File'}</li>`)
+    const page = html`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -335,11 +336,11 @@ export default function ApplicationReview() {
 <div style="margin-top:10px"><strong style="font-size:9.5pt">List of Colleges/Universities in Order of Preference:</strong>
 <table>
   <thead><tr><th>#</th><th>Name of School</th><th>Location</th><th>Course of Study</th><th>Accepted (Y/N)</th></tr></thead>
-  <tbody>${prefs || '<tr><td colspan="5" style="color:#888;text-align:center">None provided</td></tr>'}</tbody>
+  <tbody>${prefs.length ? prefs : html`<tr><td colspan="5" style="color:#888;text-align:center">None provided</td></tr>`}</tbody>
 </table></div>
 
 <div class="section-title">Uploaded Documents</div>
-${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents uploaded.</p>'}
+${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#888">No documents uploaded.</p>`}
 
 <div class="status-row">
   <span>Application ID: <strong>#${app.id.slice(0, 8).toUpperCase()}</strong></span>
@@ -353,7 +354,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
 </body>
 </html>`
     const win = window.open('', '_blank')
-    win.document.write(html)
+    win.document.write(String(page))
     win.document.close()
     win.focus()
     setTimeout(() => win.print(), 400)

@@ -5,6 +5,7 @@ import { adminService } from '../../services/adminService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { formatDate } from '../../utils/formatDate'
 import { SearchIcon } from '../../components/ui/PortalIcons'
+import { html } from '../../utils/escapeHtml'
 
 const SAVED_AUDIENCE_VIEWS_KEY = 'adminBulkEmail.audienceViews.v1'
 const ALL_STATUSES = ['PENDING_REVIEW', 'INCOMPLETE', 'ELIGIBILITY_SCREENING', 'NOT_QUALIFIED', 'EXAM_INTERVIEW', 'FAILED_EXAM', 'APPROVED', 'COR_SUBMITTED', 'COR_REJECTED', 'ACCEPTED', 'REJECTED']
@@ -458,7 +459,7 @@ export default function BulkEmail() {
       return
     }
     const rows = (historyData.logs || [])
-      .map((log) => `
+      .map((log) => html`
         <tr>
           <td>${new Date(log.createdAt).toLocaleString()}</td>
           <td>${log.performedBy?.fullName || '-'}</td>
@@ -467,8 +468,7 @@ export default function BulkEmail() {
           <td>${log.notes || '-'}</td>
         </tr>
       `)
-      .join('')
-    win.document.write(`
+    win.document.write(String(html`
       <html>
         <head><title>Bulk Email History</title></head>
         <body>
@@ -480,7 +480,7 @@ export default function BulkEmail() {
           <script>window.print();</script>
         </body>
       </html>
-    `)
+    `))
     win.document.close()
   }
 
