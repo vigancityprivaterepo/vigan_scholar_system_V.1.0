@@ -103,9 +103,14 @@ export default function RegisterPage() {
     setError('')
     setGoogleLoading(true)
     try {
-      const user = await loginWithGoogle(credential)
-      toast.success(`Welcome, ${user.fullName}!`)
-      navigateForUser(user)
+      const result = await loginWithGoogle(credential)
+      if (result?.twoFactor) {
+        // A staff account: finish the code step on the sign-in page.
+        navigate('/login', { replace: true, state: { pendingTwoFactor: result } })
+        return
+      }
+      toast.success(`Welcome, ${result.fullName}!`)
+      navigateForUser(result)
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to continue with Google right now.')
     } finally {

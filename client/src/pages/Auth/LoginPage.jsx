@@ -4,6 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
 import GoogleAuthButton from '../../components/auth/GoogleAuthButton'
+import TwoFactorCode from '../../components/auth/TwoFactorCode'
+import TwoFactorSetup from '../../components/auth/TwoFactorSetup'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -19,6 +21,9 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const pendingVerificationEmail = location.state?.registrationPendingVerification ? location.state?.registrationEmail : ''
+  // Staff second step: { twoFactor: 'required' | 'setup', challengeToken }. Google sign-in on the
+  // register page hands this over through navigation state.
+  const [twoFactor, setTwoFactor] = useState(() => location.state?.pendingTwoFactor || null)
 
   useEffect(() => {
     const sameOriginReferrer = document.referrer && new URL(document.referrer).origin === window.location.origin
@@ -53,9 +58,13 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const user = await login(form.email.trim(), form.password)
-      toast.success(`Welcome back, ${user.fullName}!`)
-      navigateForUser(user)
+      const result = await login(form.email.trim(), form.password)
+      if (result?.twoFactor) {
+        setTwoFactor(result)
+        return
+      }
+      toast.success(`Welcome back, ${result.fullName}!`)
+      navigateForUser(result)
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to sign in. Please check your credentials and try again.')
     } finally {
@@ -72,14 +81,30 @@ export default function LoginPage() {
     setError('')
     setGoogleLoading(true)
     try {
-      const user = await loginWithGoogle(credential)
-      toast.success(`Welcome, ${user.fullName}!`)
-      navigateForUser(user)
+      const result = await loginWithGoogle(credential)
+      if (result?.twoFactor) {
+        setTwoFactor(result)
+        return
+      }
+      toast.success(`Welcome, ${result.fullName}!`)
+      navigateForUser(result)
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to sign in with Google right now.')
     } finally {
       setGoogleLoading(false)
     }
+  }
+
+  const finishTwoFactor = (user) => {
+    setTwoFactor(null)
+    toast.success(`Welcome back, ${user.fullName}!`)
+    navigateForUser(user)
+  }
+
+  const leaveTwoFactor = (message = '') => {
+    setTwoFactor(null)
+    setForm((current) => ({ ...current, password: '' }))
+    setError(message)
   }
 
   const setField = (key, value) => {
@@ -103,6 +128,23 @@ export default function LoginPage() {
         {/* Form area */}
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-12 sm:py-12">
           <div className="w-full max-w-md">
+            {twoFactor?.twoFactor === 'required' && (
+              <TwoFactorCode
+                challengeToken={twoFactor.challengeToken}
+                onSuccess={finishTwoFactor}
+                onExpired={leaveTwoFactor}
+                onCancel={() => leaveTwoFactor()}
+              />
+            )}
+            {twoFactor?.twoFactor === 'setup' && (
+              <TwoFactorSetup
+                challengeToken={twoFactor.challengeToken}
+                onDone={finishTwoFactor}
+                onExpired={leaveTwoFactor}
+                onCancel={() => leaveTwoFactor()}
+              />
+            )}
+            {!twoFactor && (<>
 
             <h2 className="font-display text-3xl font-bold text-[#0c2340]">Welcome Back</h2>
             <p className="mt-2 text-sm text-slate-500">Sign in to your scholarship portal account</p>
@@ -254,6 +296,7 @@ export default function LoginPage() {
                 Apply Now
               </Link>
             </p>
+            </>)}
 
           </div>
         </div>
