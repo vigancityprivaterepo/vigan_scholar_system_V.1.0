@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 // City offices and school computer labs often share one public IP, so the strict limit
@@ -54,4 +55,17 @@ const authIpLimiter = rateLimit({
   handler: tooMany('Too many requests from your network. Please wait a few minutes and try again.'),
 });
 
-module.exports = { loginLimiter, emailSendLimiter, resetLimiter, authIpLimiter };
+// Authenticator-code attempts, counted per staff member (from the challenge token) so one
+// person guessing doesn't block colleagues on the same office network.
+const twoFactorLimiter = rateLimit({
+  ...common,
+  windowMs: FIFTEEN_MINUTES,
+  limit: 10,
+  keyGenerator: (req) => {
+    const decoded = jwt.decode(String(req.body?.challengeToken || ''));
+    return decoded?.userId ? `2fa|${decoded.userId}` : `2fa-ip|${ipKeyGenerator(req.ip)}`;
+  },
+  handler: tooMany('Too many code attempts. Please wait 15 minutes and try again.'),
+});
+
+module.exports = { loginLimiter, emailSendLimiter, resetLimiter, authIpLimiter, twoFactorLimiter };

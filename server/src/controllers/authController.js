@@ -11,6 +11,7 @@ const { sendEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
 const { getEffectiveRole } = require('../utils/primaryAdmin');
 const { ADMIN_ROLES } = require('../middleware/roleGuard');
+const { startSecondStepIfStaff } = require('./twoFactorController');
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 
 const prisma = new PrismaClient();
@@ -277,6 +278,8 @@ const login = async (req, res, next) => {
       throw new AppError('Please confirm your email address before signing in.', 403);
     }
 
+    if (await startSecondStepIfStaff(req, res, user)) return;
+
     const session = await issueAuthSession(res, user.id);
     logger.info('User logged in', { userId: user.id, email: user.email, role: user.role, ip: req.ip });
     res.json({ success: true, user: session.profile, accessToken: session.accessToken });
@@ -366,8 +369,10 @@ const googleAuth = async (req, res, next) => {
 
     const linkedUser = await prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true, role: true },
+      select: { id: true, email: true, role: true, totpEnabledAt: true, totpSecret: true },
     });
+
+    if (await startSecondStepIfStaff(req, res, linkedUser)) return;
 
     const session = await issueAuthSession(res, userId);
     logger.info('User logged in with Google', {
@@ -630,5 +635,5 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, googleAuth, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile };
+module.exports = { register, login, googleAuth, verifyEmail, forgotPassword, resetPassword, refresh, logout, me, changePassword, updateProfile, issueAuthSession, parseCookies };
 

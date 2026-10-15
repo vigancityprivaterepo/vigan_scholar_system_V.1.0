@@ -30,6 +30,7 @@ const { runAutomatedReminders } = require('./services/reminderService');
 const { purgeExpiredRefreshTokens } = require('./services/cleanupService');
 const logger = require('./utils/logger');
 const { serveTypeForPath } = require('./utils/safeFileTypes');
+const { isConfigured: isTwoFactorConfigured } = require('./utils/secretBox');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -99,6 +100,10 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   logger.info(`Server started on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  if (!isTwoFactorConfigured()) {
+    // Applicants keep working; staff sign-in is refused until the key is set.
+    logger.error('TWO_FACTOR_ENCRYPTION_KEY is missing or invalid; staff sign-in will be refused');
+  }
 });
 
 setInterval(() => {
