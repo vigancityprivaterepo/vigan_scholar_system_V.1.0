@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { extensionForMime } = require('../utils/safeFileTypes');
 
 const privateUploadsDir = path.join(__dirname, '../../private_uploads');
 const publicUploadsDir = path.join(__dirname, '../../public_uploads');
@@ -15,7 +16,7 @@ const privateStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, privateUploadsDir),
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+    cb(null, unique + (extensionForMime(file.mimetype) || '.bin'));
   },
 });
 
@@ -23,7 +24,7 @@ const publicStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, publicUploadsDir),
   filename: (req, file, cb) => {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+    cb(null, unique + (extensionForMime(file.mimetype) || '.bin'));
   },
 });
 

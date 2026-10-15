@@ -29,6 +29,7 @@ const { processDueEmailJobs } = require('./controllers/adminController');
 const { runAutomatedReminders } = require('./services/reminderService');
 const { purgeExpiredRefreshTokens } = require('./services/cleanupService');
 const logger = require('./utils/logger');
+const { serveTypeForPath } = require('./utils/safeFileTypes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -67,7 +68,16 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve public uploads only (carousel assets).
-app.use('/public-uploads', express.static(path.join(__dirname, '..', 'public_uploads')));
+app.use('/public-uploads', express.static(path.join(__dirname, '..', 'public_uploads'), {
+  // Only images belong here. Anything else (including files uploaded before the type fix)
+  // is sent as a download so the browser never runs it as a page or script.
+  setHeaders: (res, filePath) => {
+    if (!serveTypeForPath(filePath)?.startsWith('image/')) {
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', 'attachment');
+    }
+  },
+}));
 
 // Routes
 

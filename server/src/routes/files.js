@@ -6,12 +6,21 @@ const { authenticate } = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const { serveTypeForPath } = require('../utils/safeFileTypes');
 
 const prisma = new PrismaClient();
 const privateUploadsDir = path.join(__dirname, '../../private_uploads');
 const legacyUploadsDir = path.join(__dirname, '../../uploads');
 
 const STAFF_ROLES = ['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'SCHEDULER'];
+
+// Images and PDFs open in the browser; any other stored file is downloaded, never rendered.
+const sendStoredFile = (res, filePath, fileName) => {
+  const type = serveTypeForPath(filePath);
+  res.type(type || 'application/octet-stream');
+  res.setHeader('Content-Disposition', `${type ? 'inline' : 'attachment'}; filename="${path.basename(fileName || 'document')}"`);
+  res.sendFile(filePath);
+};
 
 const resolveExistingFilePath = (fileUrl) => {
   const baseName = path.basename(String(fileUrl || ''));
@@ -59,8 +68,7 @@ router.get('/requirements/:id', authenticate, async (req, res, next) => {
       ip: req.ip,
     });
 
-    res.setHeader('Content-Disposition', `inline; filename="${path.basename(file.fileName || 'document')}"`);
-    res.sendFile(filePath);
+    sendStoredFile(res, filePath, file.fileName || 'document');
   } catch (err) {
     next(err);
   }
@@ -85,8 +93,7 @@ router.get('/cor/:id', authenticate, async (req, res, next) => {
       ip: req.ip,
     });
 
-    res.setHeader('Content-Disposition', `inline; filename="${path.basename(file.fileName || 'cor.pdf')}"`);
-    res.sendFile(filePath);
+    sendStoredFile(res, filePath, file.fileName || 'cor.pdf');
   } catch (err) {
     next(err);
   }
@@ -151,8 +158,7 @@ router.get('/renewals/:id', authenticate, async (req, res, next) => {
       ip: req.ip,
     });
 
-    res.setHeader('Content-Disposition', `inline; filename="${path.basename(file.fileName || 'document')}"`);
-    res.sendFile(filePath);
+    sendStoredFile(res, filePath, file.fileName || 'document');
   } catch (err) {
     next(err);
   }
