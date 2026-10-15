@@ -39,6 +39,7 @@ export const adminService = {
   listUsers: (params) => api.get('/admin/users', { params }),
   updateUserRole: (id, role) => api.patch(`/admin/users/${id}/role`, { role }),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  resetUserTwoFactor: (id) => api.post(`/admin/users/${id}/2fa/reset`),
   inviteAdminUser: (data) => api.post('/admin/users/invite', data),
   listAppeals: (params) => api.get('/admin/appeals', { params }),
   resolveAppeal: (id, data) => api.patch(`/admin/appeals/${id}`, data),

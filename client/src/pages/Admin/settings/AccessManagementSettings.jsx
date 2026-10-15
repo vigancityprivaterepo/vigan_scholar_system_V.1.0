@@ -17,6 +17,8 @@ export default function AccessManagementSettings() {
   const [inviteLoading, setInviteLoading] = useState(false)
   const [pendingRoleChange, setPendingRoleChange] = useState(null)
   const [pendingUserDelete, setPendingUserDelete] = useState(null)
+  const [pendingTwoFactorReset, setPendingTwoFactorReset] = useState(null)
+  const [resettingTwoFactorId, setResettingTwoFactorId] = useState('')
 
   const loadUsers = async (search = '', role = userRoleFilter) => {
     if (!isPrimaryAdmin) {
@@ -77,6 +79,22 @@ export default function AccessManagementSettings() {
     } finally {
       setDeletingUserId('')
       setPendingUserDelete(null)
+    }
+  }
+
+  const confirmTwoFactorReset = async () => {
+    if (!pendingTwoFactorReset) return
+    const targetUser = pendingTwoFactorReset
+    setResettingTwoFactorId(targetUser.id)
+    try {
+      const { data } = await adminService.resetUserTwoFactor(targetUser.id)
+      toast.success(data.message || 'Two-step sign-in reset.')
+      loadUsers(userSearch.trim(), userRoleFilter)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset two-step sign-in.')
+    } finally {
+      setResettingTwoFactorId('')
+      setPendingTwoFactorReset(null)
     }
   }
 
@@ -189,28 +207,31 @@ export default function AccessManagementSettings() {
           </div>
 
           <div className="overflow-x-auto rounded-md border border-slate-200">
-            <table className="w-full min-w-[640px]">
+            <table className="w-full min-w-[760px]">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Name</th>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Email</th>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Role</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Two-step sign-in</th>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {usersLoading ? (
                   <tr>
-                    <td className="px-3 py-4 text-sm text-slate-500" colSpan={4}>Loading users...</td>
+                    <td className="px-3 py-4 text-sm text-slate-500" colSpan={5}>Loading users...</td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td className="px-3 py-4 text-sm text-slate-500" colSpan={4}>No users found.</td>
+                    <td className="px-3 py-4 text-sm text-slate-500" colSpan={5}>No users found.</td>
                   </tr>
                 ) : (
                   users.map((u) => {
                     const isSelf = u.id === user?.id
                     const isDeleting = deletingUserId === u.id
+                    const isStaff = u.role !== 'APPLICANT'
+                    const isResetting = resettingTwoFactorId === u.id
                     return (
                       <tr key={u.id} className="border-t border-slate-100">
                         <td className="px-3 py-3 text-sm font-medium text-brand-primary">
@@ -219,6 +240,13 @@ export default function AccessManagementSettings() {
                         </td>
                         <td className="px-3 py-3 text-sm text-slate-600">{u.email}</td>
                         <td className="px-3 py-3 text-sm text-slate-700">{u.role}</td>
+                        <td className="px-3 py-3 text-sm">
+                          {isStaff
+                            ? (u.twoFactorEnabled
+                              ? <span className="font-medium text-emerald-700">On</span>
+                              : <span className="text-slate-500">Not set up</span>)
+                            : <span className="text-slate-400">Not used</span>}
+                        </td>
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <select
@@ -242,8 +270,19 @@ export default function AccessManagementSettings() {
                             >
                               Delete
                             </button>
+                            {isStaff && !isSelf && (
+                              <button
+                                type="button"
+                                className="whitespace-nowrap rounded border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-500 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() => setPendingTwoFactorReset(u)}
+                                disabled={roleUpdatingId === u.id || isDeleting || isResetting}
+                              >
+                                Reset 2FA
+                              </button>
+                            )}
                             {roleUpdatingId === u.id && <span className="text-xs text-slate-500">Updating...</span>}
                             {isDeleting && <span className="text-xs text-red-600">Deleting...</span>}
+                            {isResetting && <span className="text-xs text-slate-500">Resetting...</span>}
                           </div>
                         </td>
                       </tr>
@@ -277,6 +316,17 @@ export default function AccessManagementSettings() {
           loading={deletingUserId === pendingUserDelete.id}
           onConfirm={confirmUserDelete}
           onCancel={() => setPendingUserDelete(null)}
+        />
+      )}
+      {pendingTwoFactorReset && (
+        <ConfirmModal
+          title="Reset Two-Step Sign-In"
+          message={`${pendingTwoFactorReset.fullName} will set up two-step sign-in again at their next sign-in, and will be signed out of every device. Use this only after confirming who is asking.`}
+          confirmLabel="Reset 2FA"
+          danger
+          loading={resettingTwoFactorId === pendingTwoFactorReset.id}
+          onConfirm={confirmTwoFactorReset}
+          onCancel={() => setPendingTwoFactorReset(null)}
         />
       )}
     </section>
