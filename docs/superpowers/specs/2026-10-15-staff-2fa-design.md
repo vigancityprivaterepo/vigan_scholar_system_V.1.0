@@ -1,7 +1,7 @@
 # Staff two-step sign-in (authenticator app)
 
 Date: 2026-10-15
-Status: draft, awaiting approval
+Status: implemented on branch staff-2fa (approved 2026-10-15). Not yet deployed.
 
 ## Why
 
