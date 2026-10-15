@@ -367,7 +367,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
           <h1 className="text-xl font-bold text-brand-primary sm:text-2xl">
             {app.lastName ? `${app.lastName}, ${app.firstName}${app.middleName ? ' ' + app.middleName : ''}` : app.applicant?.fullName}
           </h1>
-          <p className="truncate font-mono text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()} • {app.applicant?.email}</p>
+          <p className="truncate tabular-nums text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()} • {app.applicant?.email}</p>
         </div>
         <button onClick={downloadApplication} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Download</button>
         {!editMode
@@ -434,7 +434,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                     <input className="portal-input text-sm" value={editData.address || ''} onChange={e => ed('address', e.target.value)} />
                   </div>
                   <div className="sm:col-span-2 xl:col-span-3">
-                    <p className="text-xs text-slate-400">Email: {app.applicant?.email} (not editable)</p>
+                    <p className="text-xs text-slate-500">Email: {app.applicant?.email} (not editable)</p>
                   </div>
                 </div>
               ) : (
@@ -580,7 +580,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                       ['Year Level Applying For', app.yearLevel],
                       ['Solo Parent', app.soloParent === true ? 'Yes' : app.soloParent === false ? 'No' : null],
                       ['4Ps Member', app.fourPs === true ? 'Yes' : app.fourPs === false ? 'No' : null],
-                      ['Prior Scholarship', app.priorScholarship === true ? `Yes — ${app.scholarshipType || 'unspecified'}` : app.priorScholarship === false ? 'No' : null],
+                      ['Prior Scholarship', app.priorScholarship === true ? `Yes (${app.scholarshipType || 'type not given'})` : app.priorScholarship === false ? 'No' : null],
                     ].map(([l, v]) => (
                       <div key={l}>
                         <p className="text-xs font-medium text-slate-500">{l}</p>
@@ -589,14 +589,14 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                     ))}
                     <div>
                       <p className="text-xs font-medium text-slate-500">General Average (SHS)</p>
-                      <p className={clsx('mt-0.5 font-mono text-2xl font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>
+                      <p className={clsx('mt-0.5 tabular-nums text-2xl font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </p>
                     </div>
                     {app.examScore && (
                       <div>
                         <p className="text-xs font-medium text-slate-500">General Score</p>
-                        <p className="mt-0.5 font-mono text-2xl font-bold text-brand-primary">{parseFloat(app.examScore).toFixed(2)}</p>
+                        <p className="mt-0.5 tabular-nums text-2xl font-bold text-brand-primary">{parseFloat(app.examScore).toFixed(2)}</p>
                       </div>
                     )}
                   </div>
@@ -752,7 +752,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                         <p className="text-sm font-medium text-brand-primary">{log.action}</p>
                         {log.notes && <p className="mt-0.5 rounded p-2 text-xs text-slate-600">{log.notes}</p>}
                         <div className="mt-1 flex items-center gap-2">
-                          <p className="text-xs text-slate-400">{formatDateTime(log.createdAt)}</p>
+                          <p className="text-xs text-slate-500">{formatDateTime(log.createdAt)}</p>
                           {log.performedBy && <p className="text-xs text-slate-500">by {log.performedBy.fullName}</p>}
                         </div>
                       </div>
@@ -771,7 +771,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             {visibleActions.length === 0 ? (
               <div className="py-4 text-center">
                 <p className="text-sm text-slate-500">No actions available</p>
-                <p className="mt-1 text-xs text-slate-400">Status: {app.status.replace(/_/g, ' ')}</p>
+                <p className="mt-1 text-xs text-slate-500">Status: {app.status.replace(/_/g, ' ')}</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
@@ -810,7 +810,7 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
                         {isCurrentActionLoading && <SpinnerIcon className="h-4 w-4 text-current" />}
                         {isCurrentActionLoading ? 'Processing...' : action.label}
                       </button>
-                      {action.hint && <p className="text-xs text-slate-400">{action.hint}</p>}
+                      {action.hint && <p className="text-xs text-slate-500">{action.hint}</p>}
                     </div>
                   )
                 })}
@@ -878,8 +878,8 @@ ${docs ? `<ul>${docs}</ul>` : '<p style="font-size:10pt;color:#888">No documents
             <h4 className="mb-3 font-semibold text-brand-primary">Quick Info</h4>
             <div className="flex flex-col gap-2 text-slate-600">
               <div className="flex justify-between"><span>Files</span><span className="font-medium">{app.requirementFiles?.length || 0}</span></div>
-              <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('font-mono font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
-              {app.examScore && <div className="flex justify-between"><span>General Score</span><span className="font-mono font-bold">{parseFloat(app.examScore).toFixed(2)}</span></div>}
+              <div className="flex justify-between"><span>Gen. Ave. (SHS)</span><span className={clsx('tabular-nums font-bold', app.generalAverage && parseFloat(app.generalAverage) >= gwaThreshold ? 'text-green-600' : 'text-red-500')}>{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></div>
+              {app.examScore && <div className="flex justify-between"><span>General Score</span><span className="tabular-nums font-bold">{parseFloat(app.examScore).toFixed(2)}</span></div>}
               <div className="flex justify-between"><span>Submitted</span><span>{formatDate(app.submittedAt)}</span></div>
             </div>
           </div>

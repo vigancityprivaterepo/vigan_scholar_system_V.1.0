@@ -69,19 +69,19 @@ export default function ApplicantLayout() {
                 Logout
               </button>
               <button
-                className="relative inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white md:hidden"
                 onClick={() => { setMenuOpen(false); navigate('/applicant/notifications') }}
                 aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
               >
                 <BellIcon className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
               <button
-                className="inline-flex rounded-md border border-white/20 bg-white/10 p-2 text-white md:hidden"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white md:hidden"
                 onClick={() => setMenuOpen(!menuOpen)}
                 aria-label="Menu"
                 aria-expanded={menuOpen}
@@ -108,7 +108,7 @@ export default function ApplicantLayout() {
                   <Icon className="h-4 w-4" />
                   <span>{label}</span>
                   {label === 'Notifications' && unreadCount > 0 && (
-                    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+                    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
                       {unreadCount}
                     </span>
                   )}
@@ -127,7 +127,7 @@ export default function ApplicantLayout() {
                   to={to}
                   onClick={() => setMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-2 py-3 text-sm ${
+                    `flex min-h-11 items-center gap-3 px-2 py-3 text-base ${
                       isActive ? 'font-semibold text-brand-primary' : 'text-slate-700'
                     }`
                   }
@@ -135,7 +135,7 @@ export default function ApplicantLayout() {
                   <Icon className="h-4 w-4" />
                   <span>{label}</span>
                   {label === 'Notifications' && unreadCount > 0 && (
-                    <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+                    <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs text-white">
                       {unreadCount}
                     </span>
                   )}

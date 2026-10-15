@@ -171,7 +171,7 @@ export default function RenewalReview() {
             const docKey = i === 0 ? 'COR' : 'GRADES'
             return (
               <div key={docKey} className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${file ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-400'}`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${file ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
                   <DocumentIcon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -179,7 +179,7 @@ export default function RenewalReview() {
                   {file ? (
                     <p className="truncate text-xs text-slate-500">{file.fileName}</p>
                   ) : (
-                    <p className="text-xs text-slate-400">Not submitted</p>
+                    <p className="text-xs text-slate-500">Not submitted</p>
                   )}
                 </div>
                 {file && (

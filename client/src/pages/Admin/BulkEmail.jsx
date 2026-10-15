@@ -521,7 +521,7 @@ export default function BulkEmail() {
       <div className={clsx('portal-surface p-5', activeSection !== 'audience' && 'hidden')}>
         <div className="flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               className="portal-input pl-10"
               placeholder="Search by name, email..."
@@ -792,10 +792,10 @@ export default function BulkEmail() {
                 <th className="px-4 py-3 text-left">
                   <input type="checkbox" checked={isAllVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">GWA</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Submitted</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">GWA</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Submitted</th>
               </tr>
             </thead>
             <tbody>
@@ -830,7 +830,7 @@ export default function BulkEmail() {
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={app.status} size="sm" /></td>
                     <td className="px-4 py-3">
-                      <span className={clsx('font-mono text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400')}>
+                      <span className={clsx('tabular-nums text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500')}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </span>
                     </td>
@@ -931,11 +931,11 @@ export default function BulkEmail() {
           <table className="w-full">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Sent At</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Sender</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Recipient</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Sent At</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Sender</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Recipient</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Status</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Subject</th>
               </tr>
             </thead>
             <tbody>

@@ -108,7 +108,7 @@ export default function NotificationsPage() {
                     <p className={clsx('text-sm text-brand-primary', n.isRead ? 'font-medium' : 'font-semibold')}>{n.title}</p>
                     {!n.isRead && <span className="shrink-0 text-xs font-semibold text-teal-700">Unread</span>}
                   </div>
-                  <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{n.message}</p>
+                  <p className="mt-0.5 text-base text-slate-600">{n.message}</p>
                   <p className="mt-1.5 text-xs text-slate-500">{fromNow(n.createdAt)}</p>
                 </div>
               </button>

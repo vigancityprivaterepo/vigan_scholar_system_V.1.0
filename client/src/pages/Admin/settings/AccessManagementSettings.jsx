@@ -192,10 +192,10 @@ export default function AccessManagementSettings() {
             <table className="w-full min-w-[640px]">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Role</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Action</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Name</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Email</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Role</th>
+                  <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -215,7 +215,7 @@ export default function AccessManagementSettings() {
                       <tr key={u.id} className="border-t border-slate-100">
                         <td className="px-3 py-3 text-sm font-medium text-brand-primary">
                           {u.fullName}
-                          {isSelf && <span className="ml-2 text-xs text-slate-400">(You)</span>}
+                          {isSelf && <span className="ml-2 text-xs text-slate-500">(You)</span>}
                         </td>
                         <td className="px-3 py-3 text-sm text-slate-600">{u.email}</td>
                         <td className="px-3 py-3 text-sm text-slate-700">{u.role}</td>

@@ -101,7 +101,7 @@ export default function GeneralSettings() {
                 />
                 <span className="text-sm font-medium text-slate-600">%</span>
               </div>
-              <p className="mt-1.5 text-xs text-slate-400">Valid range: 50-99</p>
+              <p className="mt-1.5 text-xs text-slate-500">Valid range: 50-99</p>
             </div>
 
             <div>

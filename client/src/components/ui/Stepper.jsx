@@ -33,7 +33,7 @@ export default function Stepper({ currentStatus }) {
                     isDone ? 'border-brand-teal bg-brand-teal text-white' :
                     isFailed ? 'border-red-500 bg-red-500 text-white' :
                     isCurrent ? 'border-brand-primary bg-brand-primary text-white' :
-                    'border-slate-300 bg-white text-slate-400'
+                    'border-slate-300 bg-white text-slate-500'
                   )}
                 >
                   {isDone ? '✓' : isFailed ? '×' : i + 1}
@@ -44,7 +44,7 @@ export default function Stepper({ currentStatus }) {
                     isDone ? 'text-brand-teal' :
                     isFailed ? 'text-red-500' :
                     isCurrent ? 'font-semibold text-brand-primary' :
-                    'text-slate-400'
+                    'text-slate-500'
                   )}
                 >
                   {step.label}

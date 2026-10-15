@@ -43,8 +43,8 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       {/* Image picker */}
       <div>
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-          Slide Image {isEdit && <span className="font-normal normal-case text-slate-400">(leave blank to keep current)</span>}
+        <label className="mb-2 block text-xs font-semibold text-slate-600">
+          Slide Image {isEdit && <span className="font-normal normal-case text-slate-500">(leave blank to keep current)</span>}
         </label>
         <div
           onClick={() => fileRef.current?.click()}
@@ -54,13 +54,13 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
             <img src={preview} alt="preview" className="h-36 w-full object-cover rounded" />
           ) : (
             <>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-slate-400">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-slate-500">
                 <rect x="4" y="4" width="16" height="16" rx="1.5" />
                 <circle cx="9" cy="9.5" r="1.5" />
                 <path d="m4 16 4.5-5 3.5 4 2.5-3 5.5 4" />
               </svg>
               <span className="text-sm">Click to upload image</span>
-              <span className="text-xs text-slate-400">JPG, PNG, WebP — max 5 MB</span>
+              <span className="text-xs text-slate-500">JPG, PNG or WebP, up to 5 MB</span>
             </>
           )}
         </div>
@@ -69,7 +69,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
 
       {/* Label */}
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Slide Label / Title</label>
+        <label className="mb-1.5 block text-xs font-semibold text-slate-600">Slide Label / Title</label>
         <input
           type="text"
           className="portal-input"
@@ -81,7 +81,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
 
       {/* Caption */}
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Caption / Description</label>
+        <label className="mb-1.5 block text-xs font-semibold text-slate-600">Caption / Description</label>
         <textarea
           className="portal-input min-h-[80px] resize-y"
           placeholder="Optional short description shown below the title"
@@ -93,7 +93,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
       {/* Sort order + active row */}
       <div className="flex flex-wrap gap-4">
         <div className="w-36">
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">Sort Order</label>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-600">Sort Order</label>
           <input
             type="number"
             min="0"
@@ -233,13 +233,13 @@ export default function CarouselManagement() {
           <p className="text-sm font-semibold text-slate-700">
             Slides ({slides.length})
           </p>
-          <p className="text-xs text-slate-400">Sorted by Sort Order (ascending)</p>
+          <p className="text-xs text-slate-500">Sorted by Sort Order (ascending)</p>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading slides…</div>
+          <div className="flex items-center justify-center py-16 text-sm text-slate-500">Loading slides…</div>
         ) : slides.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-400">
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-500">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-10 w-10 text-slate-300">
               <rect x="4" y="4" width="16" height="16" rx="1.5" />
               <circle cx="9" cy="9.5" r="1.5" />
@@ -262,7 +262,7 @@ export default function CarouselManagement() {
                   }}
                 />
                 {/* Placeholder shown when thumbnail fails to load */}
-                <div style={{ display: 'none' }} className="h-16 w-24 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-100 text-slate-400">
+                <div style={{ display: 'none' }} className="h-16 w-24 shrink-0 items-center justify-center rounded border border-slate-200 bg-slate-100 text-slate-500">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
                     <rect x="4" y="4" width="16" height="16" rx="1.5" /><circle cx="9" cy="9.5" r="1.5" /><path d="m4 16 4.5-5 3.5 4 2.5-3 5.5 4" />
                   </svg>
@@ -270,11 +270,11 @@ export default function CarouselManagement() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    {slide.label ? <p className="font-semibold text-brand-primary truncate">{slide.label}</p> : <p className="font-semibold italic text-slate-400">Untitled slide</p>}
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${slide.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {slide.label ? <p className="font-semibold text-brand-primary truncate">{slide.label}</p> : <p className="font-semibold italic text-slate-500">Untitled slide</p>}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${slide.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
                       {slide.isActive ? 'Active' : 'Hidden'}
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                       Order: {slide.sortOrder}
                     </span>
                   </div>

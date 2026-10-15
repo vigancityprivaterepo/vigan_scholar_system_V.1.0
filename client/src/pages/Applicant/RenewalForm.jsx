@@ -66,7 +66,7 @@ function DropSlot({ slot, file, onDrop, onClear }) {
           <p className="text-sm font-medium text-slate-700">
             {isDragActive ? 'Drop file here' : 'Drag & drop or click to upload'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">PDF, JPG, PNG — max 5 MB</p>
+          <p className="mt-1 text-xs text-slate-500">PDF, JPG or PNG, up to 5 MB</p>
         </div>
       </div>
 
@@ -74,11 +74,11 @@ function DropSlot({ slot, file, onDrop, onClear }) {
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3">
           <DocumentIcon className="h-5 w-5 shrink-0 text-brand-teal" />
           <span className="flex-1 truncate text-sm text-slate-700">{file.name}</span>
-          <span className="shrink-0 text-xs text-slate-400">{(file.size / 1024).toFixed(0)} KB</span>
+          <span className="shrink-0 text-xs text-slate-500">{(file.size / 1024).toFixed(0)} KB</span>
           <button
             type="button"
             onClick={onClear}
-            className="ml-1 shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-500"
+            className="ml-1 shrink-0 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-red-500"
             aria-label="Remove file"
           >
             <XIcon className="h-4 w-4" />
@@ -188,10 +188,10 @@ export default function RenewalForm() {
           </div>
 
           {existingRenewal.status === 'PENDING_REVIEW' && (
-            <p className="text-sm text-slate-700">Your renewal application is being reviewed by the scholarship office. We will notify you once a decision has been made.</p>
+            <p className="max-w-[65ch] text-base text-slate-700">Your renewal application is being reviewed by the scholarship office. We will notify you once a decision has been made.</p>
           )}
           {existingRenewal.status === 'APPROVED' && (
-            <p className="text-sm text-slate-700">Your scholarship renewal has been approved. Congratulations and continue your academic excellence!</p>
+            <p className="max-w-[65ch] text-base text-slate-700">Your scholarship renewal has been approved. Congratulations and continue your academic excellence!</p>
           )}
           {existingRenewal.adminRemarks && (
             <div className="mt-3 rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700">
@@ -232,12 +232,12 @@ export default function RenewalForm() {
                       ? 'border-brand-teal bg-brand-teal text-white'
                       : isCurrent
                       ? 'border-brand-primary bg-white text-brand-primary'
-                      : 'border-slate-300 bg-white text-slate-400'
+                      : 'border-slate-300 bg-white text-slate-500'
                   }`}
                 >
                   {isDone ? <CheckCircleIcon className="h-4 w-4" /> : i + 1}
                 </div>
-                <span className={`text-center text-[11px] font-medium ${isCurrent ? 'text-brand-primary' : 'text-slate-400'}`}>
+                <span className={`text-center text-xs font-medium ${isCurrent ? 'text-brand-primary' : 'text-slate-500'}`}>
                   {label}
                 </span>
               </div>
@@ -251,7 +251,7 @@ export default function RenewalForm() {
             style={{ width: `${Math.round(((filled.filter(Boolean).length) / 2) * 100)}%` }}
           />
         </div>
-        <p className="mt-1 text-right text-xs text-slate-400">{filled.filter(Boolean).length} / 2 documents ready</p>
+        <p className="mt-1 text-right text-xs text-slate-500">{filled.filter(Boolean).length} / 2 documents ready</p>
       </div>
 
       {/* Step content */}
@@ -313,7 +313,7 @@ export default function RenewalForm() {
                     {files[i] ? (
                       <p className="truncate text-xs text-slate-500">{files[i].name} · {(files[i].size / 1024).toFixed(0)} KB</p>
                     ) : (
-                      <p className="text-xs text-red-500">Missing — go back to upload</p>
+                      <p className="text-xs text-red-500">Missing. Go back and upload it.</p>
                     )}
                   </div>
                   <button

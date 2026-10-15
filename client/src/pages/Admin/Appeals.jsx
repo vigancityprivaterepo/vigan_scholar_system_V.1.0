@@ -75,11 +75,11 @@ export default function AppealsPage() {
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Applicant</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Application</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reason</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Applicant</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Application</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Reason</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Status</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Actions</th>
               </tr>
             </thead>
             <tbody>

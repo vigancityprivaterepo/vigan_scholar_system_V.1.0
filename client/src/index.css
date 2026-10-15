@@ -2,13 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Typography tokens. Tailwind's text-*, font-* and leading come from these (tailwind.config.js).
+  Source Serif 4 (headings) + Source Sans 3 (body, forms, data): one design family, serif/sans contrast.
+  Both cover ₱, ñ/Ñ and accented vowels; digits are tabular by default.
+*/
+:root {
+  --font-heading: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+  --font-body: 'Source Sans 3', 'Source Sans Pro', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Scale: 16px base, 1.2 ratio. 14px is the floor (secondary and dense table text only). */
+  --text-small: 0.875rem;                                     /* 14px  meta, table cells, badges */
+  --text-body: 1rem;                                          /* 16px  body, form fields */
+  --text-title: 1.2rem;                                       /* 19.2px card and panel titles */
+  --text-section: 1.44rem;                                    /* 23px  section headings */
+  --text-page: clamp(1.5rem, 1.32rem + 0.8vw, 1.75rem);       /* 24-28px page titles */
+  --text-display: clamp(1.75rem, 1.35rem + 1.8vw, 2.5rem);    /* 28-40px landing section headings */
+
+  --leading-dense: 1.5;
+  --leading-body: 1.6;
+  --leading-title: 1.35;
+  --leading-heading: 1.2;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 600;
+
+  /* Text colours on white; all meet WCAG AA for normal text. */
+  --color-text-heading: #0c2340;  /* 15.4:1 */
+  --color-text: #1e293b;          /* slate-800, 14.6:1 */
+  --color-text-muted: #475569;    /* slate-600, 7.6:1  labels, secondary copy */
+  --color-text-subtle: #64748b;   /* slate-500, 4.8:1  meta only, never on grey panels darker than slate-50 */
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
 
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-body);
+    font-size: 100%;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -16,13 +50,38 @@
 
   body {
     background-color: #f8fafc;
-    color: #0c2340;
+    color: var(--color-text-heading);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
     margin: 0;
     padding: 0;
   }
 
-  h1, h2, h3, h4 {
-    font-family: 'Merriweather', Georgia, serif;
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-weight: var(--weight-strong);
+    line-height: var(--leading-heading);
+    letter-spacing: 0;
+    text-wrap: balance;
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-body);
+    font-weight: var(--weight-strong);
+  }
+
+  p, li, dd {
+    text-wrap: pretty;
+  }
+
+  /* Numbers line up in tables, scores, amounts and dates */
+  table, time, .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::placeholder {
+    color: var(--color-text-subtle);
+    opacity: 1;
   }
 }
 
@@ -43,7 +102,7 @@
     @apply m-0 list-none;
   }
   .nav-link {
-    @apply flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-slate-700 transition-colors hover:bg-emerald-200/70 hover:text-slate-900;
+    @apply flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-emerald-200/70 hover:text-slate-900;
   }
   .nav-link.active {
     @apply bg-emerald-300/60 text-slate-900 shadow-sm ring-1 ring-emerald-400/50;
@@ -58,16 +117,16 @@
     @apply mb-6;
   }
   .page-pretitle {
-    @apply mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500;
+    @apply mb-2 text-sm font-medium text-slate-600;
   }
   .page-title {
-    @apply text-2xl font-bold tracking-tight text-slate-900 md:text-3xl;
+    @apply font-display text-3xl font-semibold text-slate-900;
   }
   .page-subtitle {
-    @apply mt-2 text-sm text-slate-500;
+    @apply mt-2 text-sm text-slate-600;
   }
   .subheader {
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500;
+    @apply text-sm font-medium text-slate-600;
   }
   .card {
     @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm;
@@ -85,7 +144,7 @@
     @apply w-full border-collapse text-left text-sm text-slate-700;
   }
   .table th {
-    @apply border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500;
+    @apply border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600;
   }
   .table td {
     @apply border-b border-slate-100 px-4 py-3 align-middle;
@@ -115,7 +174,7 @@
     @apply pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400;
   }
   .form-control {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100;
+    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-base text-slate-800 transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
@@ -190,16 +249,16 @@
     @apply inline-flex items-center justify-center gap-2 rounded-md border border-brand-primary bg-white px-4 py-2.5 text-sm font-medium text-brand-primary transition-colors hover:bg-slate-50;
   }
   .portal-kicker {
-    @apply text-xs font-semibold uppercase tracking-[0.2em] text-slate-500;
+    @apply text-sm font-medium text-slate-600;
   }
   .portal-page-title {
-    @apply font-display text-3xl font-bold text-brand-primary;
+    @apply font-display text-3xl font-semibold text-brand-primary;
   }
   .portal-page-subtitle {
-    @apply mt-1 text-sm text-slate-500;
+    @apply mt-1 text-sm text-slate-600;
   }
   .portal-input {
-    @apply w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent;
+    @apply w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-base text-slate-800 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:border-transparent;
   }
   .portal-tab {
     @apply rounded-md px-4 py-2 text-sm font-medium transition-colors;

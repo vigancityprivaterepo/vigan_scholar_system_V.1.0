@@ -103,11 +103,11 @@ export default function ForgotPasswordPage() {
       <AuthBrandPanel />
 
       {/* ── RIGHT FORM PANEL ── */}
-      <div className="flex flex-1 flex-col bg-white">
+      <div className="flex min-w-0 flex-1 flex-col bg-white">
 
         <AuthMobileBar />
 
-        <div className="flex flex-1 items-center justify-center px-8 py-12 sm:px-12">
+        <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-12 sm:py-12">
           <div className="w-full max-w-md">
 
             <h2 className="font-display text-3xl font-bold text-[#0c2340]">
@@ -132,7 +132,7 @@ export default function ForgotPasswordPage() {
                     Email Address
                   </label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
@@ -153,7 +153,7 @@ export default function ForgotPasswordPage() {
                   </div>
                   {visibleEmailError
                     ? <p className="mt-1.5 text-xs text-red-600">{visibleEmailError}</p>
-                    : <p className="mt-1.5 text-[11px] text-slate-400">Use the email address linked to your scholarship portal account.</p>
+                    : <p className="mt-1.5 text-xs text-slate-500">Use the email address linked to your scholarship portal account.</p>
                   }
                 </div>
 
@@ -187,7 +187,7 @@ export default function ForgotPasswordPage() {
                 <div>
                   <label htmlFor="reset-password" className="mb-1.5 block text-sm font-medium text-slate-700">New Password</label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
@@ -203,20 +203,20 @@ export default function ForgotPasswordPage() {
                       onBlur={() => setTouched(current => ({ ...current, password: true }))}
                       required
                     />
-                    <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0c2340]">
+                    <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 transition-colors hover:text-[#0c2340]">
                       <EyeIcon visible={showPassword} />
                     </button>
                   </div>
                   {visiblePasswordError
                     ? <p className="mt-1.5 text-xs text-red-600">{visiblePasswordError}</p>
-                    : <p className="mt-1.5 text-[11px] text-slate-400">Use at least 8 characters.</p>
+                    : <p className="mt-1.5 text-xs text-slate-500">Use at least 8 characters.</p>
                   }
                 </div>
 
                 <div>
                   <label htmlFor="reset-confirm" className="mb-1.5 block text-sm font-medium text-slate-700">Confirm Password</label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
@@ -232,7 +232,7 @@ export default function ForgotPasswordPage() {
                       onBlur={() => setTouched(current => ({ ...current, confirm: true }))}
                       required
                     />
-                    <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0c2340]">
+                    <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 transition-colors hover:text-[#0c2340]">
                       <EyeIcon visible={showConfirm} />
                     </button>
                   </div>
@@ -258,7 +258,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
+        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} 2026 City Government of Vigan · By City Management Information System Division · Vigan City, Ilocos Sur
         </div>
       </div>

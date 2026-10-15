@@ -54,7 +54,7 @@ export default function RenewalList() {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
             placeholder="Search by name or email…"
@@ -122,7 +122,7 @@ export default function RenewalList() {
                     </Link>
                     <p className="text-xs text-slate-500">{r.applicant?.email || ''}</p>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                  <td className="px-4 py-3 tabular-nums text-xs text-slate-500">
                     #{r.id.slice(0, 8).toUpperCase()}
                   </td>
                   <td className="px-4 py-3 text-slate-700">{r.academicYear || '—'}</td>
@@ -139,7 +139,7 @@ export default function RenewalList() {
         </div>
       )}
 
-      <p className="text-right text-xs text-slate-400">{displayed.length} record{displayed.length !== 1 ? 's' : ''}</p>
+      <p className="text-right text-xs text-slate-500">{displayed.length} record{displayed.length !== 1 ? 's' : ''}</p>
     </div>
   )
 }

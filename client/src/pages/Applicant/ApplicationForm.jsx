@@ -494,7 +494,7 @@ export default function ApplicationForm() {
           {!settings.applicationOpen ? (
             <p className="mt-2 text-sm text-red-700">Application submissions are currently closed by the administrator.</p>
           ) : (
-            <p className="mt-2 text-sm text-slate-700">
+            <p className="mt-2 max-w-[65ch] text-base text-slate-700">
               {submissionsBlocked
                 ? `Deadline has passed (${deadlineDate?.toLocaleString()}). New submissions are blocked.`
                 : `Deadline: ${deadlineDate?.toLocaleString()} (${formatCountdown()} remaining)`}
@@ -506,7 +506,7 @@ export default function ApplicationForm() {
       {existingApplication?.status === 'INCOMPLETE' && existingApplication.adminRemarks && (
         <div className="portal-surface mb-6 border-l-4 border-amber-300 bg-amber-50 p-5">
           <h2 className="text-sm font-semibold text-amber-800">What the office asked you to fix</h2>
-          <p className="mt-2 text-sm leading-7 text-slate-700">{existingApplication.adminRemarks}</p>
+          <p className="mt-2 text-base text-slate-700">{existingApplication.adminRemarks}</p>
         </div>
       )}
 
@@ -515,15 +515,15 @@ export default function ApplicationForm() {
         <div className="flex items-center gap-0">
           {STEPS.map((s, i) => (
             <React.Fragment key={s}>
-              <div className={`flex items-center gap-2 ${i <= step ? 'text-brand-primary' : 'text-slate-400'}`}>
+              <div className={`flex items-center gap-2 ${i <= step ? 'text-brand-primary' : 'text-slate-500'}`}>
                 <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${
                   i < step ? 'border-brand-teal bg-brand-teal text-white' :
                   i === step ? 'border-brand-primary bg-brand-primary text-white' :
-                  'border-slate-300 bg-white text-slate-400'
+                  'border-slate-300 bg-white text-slate-500'
                 }`}>
                   {i < step ? '✓' : i + 1}
                 </div>
-                <span className={`hidden text-sm font-medium sm:block ${i === step ? 'text-brand-primary' : 'text-slate-400'}`}>{s}</span>
+                <span className={`hidden text-sm font-medium sm:block ${i === step ? 'text-brand-primary' : 'text-slate-500'}`}>{s}</span>
               </div>
               {i < STEPS.length - 1 && <div className={`mx-2 h-0.5 flex-1 ${i < step ? 'bg-brand-teal' : 'bg-slate-200'}`} />}
             </React.Fragment>
@@ -703,8 +703,8 @@ export default function ApplicationForm() {
                     className={`${inputClass('school')} flex w-full items-center justify-between text-left`}
                     onClick={() => setSchoolDropdownOpen(o => !o)}
                   >
-                    <span className="truncate">{form.school || <span className="text-slate-400">Select school</span>}</span>
-                    <ChevronDownIcon className={`ml-2 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${schoolDropdownOpen ? 'rotate-180' : ''}`} />
+                    <span className="truncate">{form.school || <span className="text-slate-500">Select school</span>}</span>
+                    <ChevronDownIcon className={`ml-2 h-4 w-4 flex-shrink-0 text-slate-500 transition-transform ${schoolDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {schoolDropdownOpen && (
                     <ul className="absolute left-0 right-0 z-50 mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
@@ -977,7 +977,7 @@ export default function ApplicationForm() {
 
             {/* Current document card */}
             <div className="portal-panel rounded-md p-4">
-              <p className=" text-sm leading-6 text-slate-700">{REQUIRED_DOCS[docSubStep]}</p>
+              <p className=" text-base text-slate-700">{REQUIRED_DOCS[docSubStep]}</p>
             </div>
 
             {/* Dropzone — shown when slot is empty or user wants to replace */}
@@ -1021,7 +1021,7 @@ export default function ApplicationForm() {
                   <DocumentIcon className="h-4 w-4 text-brand-teal" />
                   <div className="min-w-0">
                     <p className="truncate text-sm text-slate-700">{serverSlots[docSubStep].fileName}</p>
-                    <p className="text-xs text-brand-teal">Previously submitted — drag a new file above to replace</p>
+                    <p className="text-xs text-brand-teal">Already submitted. Drop a new file above to replace it.</p>
                   </div>
                 </div>
               </div>
@@ -1106,7 +1106,7 @@ export default function ApplicationForm() {
                 </div>
                 <p className="mb-1 mt-3 text-xs font-medium text-slate-500">College Preferences:</p>
                 {form.collegePreferences.filter(p => p.name.trim()).map((p, i) => (
-                  <p key={i} className="text-sm text-slate-700">{i + 1}. {p.name}{p.location && `, ${p.location}`} — {p.course}{p.accepted && ` [Accepted: ${p.accepted}]`}</p>
+                  <p key={i} className="text-sm text-slate-700">{i + 1}. {p.name}{p.location && `, ${p.location}`} · {p.course}{p.accepted && ` [Accepted: ${p.accepted}]`}</p>
                 ))}
               </div>
 
@@ -1132,7 +1132,7 @@ export default function ApplicationForm() {
               </div>
             </div>
 
-            <div className="portal-panel p-4 text-sm leading-7 text-slate-600">
+            <div className="portal-panel p-4 text-base text-slate-600">
               <p className="font-semibold text-brand-primary">Data Privacy Consent</p>
               <p className="mt-1">By submitting this application, you grant consent to the City Government of Vigan to collect, store, process and use the personal and sensitive information provided herein in accordance with the Data Privacy Act of 2012. You also acknowledge that submission of this form does not guarantee the granting or approval of the benefit being applied for.</p>
             </div>

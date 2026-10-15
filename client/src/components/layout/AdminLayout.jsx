@@ -332,13 +332,13 @@ export default function AdminLayout() {
                   {renderAvatar('avatar bg-emerald-200 text-slate-800')}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-semibold text-slate-900">{user?.fullName || 'Administrator'}</p>
+                  <p className="truncate text-sm font-semibold text-slate-900">{user?.fullName || 'Administrator'}</p>
                   <p className="truncate text-xs text-slate-500">{ROLE_LABELS[user?.role] || 'Staff'}</p>
                   <button
                     type="button"
                     onClick={openProfileImagePicker}
                     disabled={uploadingProfileImage}
-                    className="mt-1 text-[11px] font-medium text-emerald-800 hover:text-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mt-1 text-xs font-medium text-emerald-800 hover:text-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {uploadingProfileImage ? 'Uploading photo...' : 'Upload photo'}
                   </button>
@@ -403,7 +403,7 @@ export default function AdminLayout() {
                   >
                     <BellIcon className="h-4 w-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -right-1 -top-1 flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
                         {unreadCount}
                       </span>
                     )}
@@ -456,7 +456,7 @@ export default function AdminLayout() {
                     {renderAvatar('avatar h-9 w-9 bg-white/15 text-white')}
                   </button>
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-white">{user?.fullName || 'Administrator'}</p>
+                    <p className="truncate text-sm font-semibold text-white">{user?.fullName || 'Administrator'}</p>
                     {user?.email && <p className="truncate text-xs text-emerald-100/80">{user.email}</p>}
                   </div>
                 </div>

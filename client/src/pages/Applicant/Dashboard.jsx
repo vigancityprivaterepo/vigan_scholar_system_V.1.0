@@ -82,7 +82,7 @@ export default function ApplicantDashboard() {
             <DocumentIcon className="h-6 w-6" />
           </div>
           <h2 className="mt-5 font-display text-2xl font-bold text-brand-primary">You haven't applied yet</h2>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600">The application has five steps: personal, family and academic details, then your documents and a final review. Have your Form 138 and other requirements ready as files before you start.</p>
+          <p className="mx-auto mt-3 max-w-md text-base text-slate-600">The application has five steps: personal, family and academic details, then your documents and a final review. Have your Form 138 and other requirements ready as files before you start.</p>
           <Link to="/applicant/apply" className="portal-button-primary mt-6 inline-flex">Apply Now</Link>
         </div>
       ) : (
@@ -90,7 +90,7 @@ export default function ApplicantDashboard() {
           {action && (
             <div className={`portal-surface border-l-4 p-5 ${actionTone}`}>
               <h2 className="text-base font-semibold">What to do next</h2>
-              <p className="mt-2 text-sm leading-7">{action.msg}</p>
+              <p className="mt-2 text-base">{action.msg}</p>
               {action.cta && (
                 <Link to={action.cta.to} className="portal-button-primary mt-4 inline-flex text-sm">
                   {action.cta.label}
@@ -135,7 +135,7 @@ export default function ApplicantDashboard() {
                         <p className="text-sm font-medium text-brand-primary">{n.title}</p>
                         <p className="mt-0.5 truncate text-xs text-slate-500">{n.message}</p>
                       </div>
-                      <p className="flex-shrink-0 text-xs text-slate-400">{fromNow(n.createdAt)}</p>
+                      <p className="flex-shrink-0 text-xs text-slate-500">{fromNow(n.createdAt)}</p>
                     </div>
                   )
                 })}

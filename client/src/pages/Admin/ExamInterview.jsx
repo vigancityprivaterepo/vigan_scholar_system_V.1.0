@@ -109,7 +109,7 @@ export default function ExamInterview() {
 
       <div className="portal-surface p-4">
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
             className="portal-input pl-10"
             placeholder="Search by name, email, or Ref. ID..."
@@ -210,7 +210,7 @@ export default function ExamInterview() {
               {selected.size === apps.length && apps.length > 0 ? 'Deselect all on this page' : `Select all ${apps.length} on this page`}
             </label>
             {pagination.pages > 1 && (
-              <span className="ml-auto text-xs text-slate-400">Page {page} of {pagination.pages}</span>
+              <span className="ml-auto text-xs text-slate-500">Page {page} of {pagination.pages}</span>
             )}
           </div>
 
@@ -234,7 +234,7 @@ export default function ExamInterview() {
                     />
                     <div>
                       <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="font-mono font-bold">{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></p>
+                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="tabular-nums font-bold">{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></p>
                     </div>
                   </div>
                   <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">

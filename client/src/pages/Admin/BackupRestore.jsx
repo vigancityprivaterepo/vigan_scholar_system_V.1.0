@@ -40,13 +40,13 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
           <p className="text-sm text-slate-700">
             This will <strong>permanently overwrite all current data and uploaded files</strong> with the contents of:
           </p>
-          <p className="break-all rounded bg-slate-100 px-3 py-2 font-mono text-xs text-slate-700">{filename}</p>
+          <p className="break-all rounded bg-slate-100 px-3 py-2 tabular-nums text-xs text-slate-700">{filename}</p>
           <p className="text-sm text-slate-700">
             A pre-restore snapshot will be saved automatically, but all active sessions (including yours) will be invalidated.
           </p>
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-              Type <span className="font-mono text-red-600">{REQUIRED}</span> to confirm
+              Type <span className="tabular-nums text-red-600">{REQUIRED}</span> to confirm
             </label>
             <input
               type="text"
@@ -233,9 +233,9 @@ export default function BackupRestore() {
 
       <div className="rounded border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
         <strong>Note:</strong> Full backups include database records plus uploaded files from
-        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/private_uploads</code>,
-        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/public_uploads</code>, and
-        <code className="mx-1 text-xs font-mono bg-emerald-100 px-1 rounded">server/uploads</code>.
+        <code className="mx-1 text-xs tabular-nums bg-emerald-100 px-1 rounded">server/private_uploads</code>,
+        <code className="mx-1 text-xs tabular-nums bg-emerald-100 px-1 rounded">server/public_uploads</code>, and
+        <code className="mx-1 text-xs tabular-nums bg-emerald-100 px-1 rounded">server/uploads</code>.
         Data-only backups skip uploaded files entirely, so they are much smaller and faster to generate. Older backups created before this update may still restore database data only.
       </div>
 
@@ -247,9 +247,9 @@ export default function BackupRestore() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Loading...</div>
+          <div className="flex items-center justify-center py-16 text-sm text-slate-500">Loading...</div>
         ) : backups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-400">
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-500">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-10 w-10 text-slate-300">
               <ellipse cx="12" cy="6.5" rx="7.5" ry="2.5" />
               <path d="M4.5 6.5v4c0 1.38 3.358 2.5 7.5 2.5s7.5-1.12 7.5-2.5v-4" />
@@ -265,9 +265,9 @@ export default function BackupRestore() {
                 <div key={b.filename} className="flex flex-wrap items-center gap-4 px-6 py-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-mono text-xs text-slate-700 truncate">{b.filename}</p>
+                      <p className="tabular-nums text-xs text-slate-700 truncate">{b.filename}</p>
                       {isPreRestore && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
                           Pre-Restore Snapshot
                         </span>
                       )}
@@ -315,7 +315,7 @@ export default function BackupRestore() {
         </div>
         <div className="p-6">
           <p className="mb-4 text-sm text-slate-600">
-            Upload a <code className="font-mono text-xs bg-slate-100 px-1 rounded">.json.gz</code> backup file downloaded from a previous export.
+            Upload a <code className="tabular-nums text-xs bg-slate-100 px-1 rounded">.json.gz</code> backup file downloaded from a previous export.
             Newer backups can include both database records and uploaded files. Large restore files are processed on server disk first before restore begins.
           </p>
           <button
@@ -325,18 +325,18 @@ export default function BackupRestore() {
           >
             {uploadFile ? (
               <div className="text-center">
-                <p className="font-mono text-sm font-semibold text-slate-700">{uploadFile.name}</p>
+                <p className="tabular-nums text-sm font-semibold text-slate-700">{uploadFile.name}</p>
                 <p className="mt-1 text-xs text-slate-500">{fmt(uploadFile.size)}</p>
               </div>
             ) : (
               <>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-slate-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-8 w-8 text-slate-500">
                   <path d="M12 15V5" />
                   <path d="m8.5 8.5 3.5-3.5 3.5 3.5" />
                   <path d="M5 18.5h14" />
                 </svg>
                 <span className="text-sm">Click to select a backup file</span>
-                <span className="text-xs text-slate-400">.json.gz - max 4 GB</span>
+                <span className="text-xs text-slate-500">.json.gz - max 4 GB</span>
               </>
             )}
           </button>

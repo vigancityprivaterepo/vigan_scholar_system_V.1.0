@@ -50,19 +50,19 @@ export default function ProfilePage() {
 
           <div>
             <label htmlFor="pf-2" className="mb-1 block text-sm font-medium text-slate-700">Email Address</label>
-            <input id="pf-2" className="portal-input bg-slate-50 text-slate-400" value={user?.email || ''} disabled />
-            <p className="mt-1 text-xs text-slate-400">Email cannot be changed. Contact the scholarship office if needed.</p>
+            <input id="pf-2" className="portal-input bg-slate-50 text-slate-500" value={user?.email || ''} disabled />
+            <p className="mt-1 text-xs text-slate-500">Email cannot be changed. Contact the scholarship office if needed.</p>
           </div>
 
           <div>
-            <label htmlFor="pf-3" className="mb-1 block text-sm font-medium text-slate-700">Contact Number <span className="text-slate-400 font-normal">(optional)</span></label>
+            <label htmlFor="pf-3" className="mb-1 block text-sm font-medium text-slate-700">Contact Number <span className="text-slate-500 font-normal">(optional)</span></label>
             <input id="pf-3"
               className="portal-input"
               value={form.contact}
               onChange={e => setForm(f => ({ ...f, contact: e.target.value }))}
               placeholder="09XX XXX XXXX"
             />
-            <p className="mt-1 text-xs text-slate-400">This updates the contact number on your active application.</p>
+            <p className="mt-1 text-xs text-slate-500">This updates the contact number on your active application.</p>
           </div>
 
           <div className="flex items-center gap-3 border-t border-slate-200 pt-4">

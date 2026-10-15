@@ -219,7 +219,7 @@ export default function Masterlist() {
       <div className="portal-surface p-5">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               className="portal-input pl-10"
               placeholder="Search by name, email, or Ref. ID..."
@@ -255,15 +255,15 @@ export default function Masterlist() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">SHS Attended</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">GWA</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Year Level</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">1st College Preference</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">AY</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date Accepted</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">#</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Contact</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">SHS Attended</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">GWA</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Year Level</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">1st College Preference</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">AY</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Date Accepted</th>
               </tr>
             </thead>
             <tbody>
@@ -278,17 +278,17 @@ export default function Masterlist() {
               ) : apps.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-16 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500">
                       <GraduationCapIcon className="h-6 w-6" />
                     </div>
                     <p className="mt-3 text-sm text-slate-500">No accepted scholars found</p>
-                    {search && <p className="mt-1 text-xs text-slate-400">Try clearing the search</p>}
+                    {search && <p className="mt-1 text-xs text-slate-500">Try clearing the search</p>}
                   </td>
                 </tr>
               ) : (
                 apps.map((app, idx) => (
                   <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-                    <td className="px-4 py-3 text-xs text-slate-400">{(page - 1) * 50 + idx + 1}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{(page - 1) * 50 + idx + 1}</td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-brand-primary">{toDisplayName(app)}</p>
                       <p className="text-xs text-slate-500">{app.applicant?.email}</p>
@@ -296,7 +296,7 @@ export default function Masterlist() {
                     <td className="px-4 py-3 text-xs text-slate-600">{app.contact || '-'}</td>
                     <td className="px-4 py-3 text-xs text-slate-700">{app.school || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`font-mono text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400'}`}>
+                      <span className={`tabular-nums text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500'}`}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </span>
                     </td>

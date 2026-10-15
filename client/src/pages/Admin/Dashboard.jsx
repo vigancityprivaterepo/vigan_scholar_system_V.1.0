@@ -431,11 +431,11 @@ function PipelineList({ rows, max, barClass }) {
             to={`/admin/applicants?status=${row.status}`}
             className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3.5rem] items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-100"
           >
-            <span className={`truncate text-sm ${row.count ? 'text-slate-700' : 'text-slate-400'}`}>{row.label}</span>
+            <span className={`truncate text-sm ${row.count ? 'text-slate-700' : 'text-slate-500'}`}>{row.label}</span>
             <span className="h-2.5 rounded-sm bg-slate-100" aria-hidden="true">
               <span className={`block h-full rounded-sm ${barClass}`} style={{ width: `${(row.count / max) * 100}%` }} />
             </span>
-            <span className={`text-right text-sm font-semibold tabular-nums ${row.count ? 'text-slate-900' : 'text-slate-400'}`}>{row.count}</span>
+            <span className={`text-right text-sm font-semibold tabular-nums ${row.count ? 'text-slate-900' : 'text-slate-500'}`}>{row.count}</span>
           </Link>
         </li>
       ))}

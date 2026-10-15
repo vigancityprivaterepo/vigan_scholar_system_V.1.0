@@ -19,9 +19,9 @@ function getPasswordStrength(val) {
 
 const STRENGTH_LABELS = [
   '',
-  'Weak — add uppercase letters or numbers',
-  'Fair — add a number or symbol',
-  'Good — add a special character',
+  'Weak: add uppercase letters or numbers',
+  'Fair: add a number or symbol',
+  'Good: add a special character',
   'Strong password',
 ]
 const STRENGTH_SEG_COLOR = ['', 'bg-red-400', 'bg-orange-400', 'bg-green-500', 'bg-[#0c2340]']
@@ -121,12 +121,12 @@ export default function RegisterPage() {
       <AuthBrandPanel />
 
       {/* ── RIGHT FORM PANEL ── */}
-      <div className="flex flex-1 flex-col bg-white">
+      <div className="flex min-w-0 flex-1 flex-col bg-white">
 
         <AuthMobileBar />
 
         {/* Form area — scrollable for longer register form */}
-        <div className="flex flex-1 items-center justify-center overflow-y-auto px-8 py-10 sm:px-12">
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-5 py-10 sm:px-12">
           <div className="w-full max-w-md">
 
             <h2 className="font-display text-3xl font-bold text-[#0c2340]">Create Account</h2>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                   Full Name
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
@@ -174,7 +174,7 @@ export default function RegisterPage() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
@@ -203,7 +203,7 @@ export default function RegisterPage() {
                   Password
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
@@ -224,7 +224,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0c2340]"
+                    className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 transition-colors hover:text-[#0c2340]"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                         <div key={i} className={`h-[3px] flex-1 rounded-sm transition-colors duration-300 ${i < passwordStrength ? STRENGTH_SEG_COLOR[passwordStrength] : 'bg-slate-200'}`} />
                       ))}
                     </div>
-                    <p className={`mt-1 text-[11px] ${STRENGTH_TEXT_COLOR[passwordStrength]}`}>{STRENGTH_LABELS[passwordStrength]}</p>
+                    <p className={`mt-1 text-xs ${STRENGTH_TEXT_COLOR[passwordStrength]}`}>{STRENGTH_LABELS[passwordStrength]}</p>
                   </>
                 ) : null}
               </div>
@@ -259,7 +259,7 @@ export default function RegisterPage() {
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
@@ -280,7 +280,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(v => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0c2340]"
+                    className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 transition-colors hover:text-[#0c2340]"
                     aria-label={showConfirm ? 'Hide confirmed password' : 'Show confirmed password'}
                   >
                     {showConfirm ? (
@@ -346,7 +346,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
+        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} 2026 City Government of Vigan · By City Management Information System Division · Vigan City, Ilocos Sur
         </div>
       </div>

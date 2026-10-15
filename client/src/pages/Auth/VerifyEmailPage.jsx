@@ -45,12 +45,12 @@ export default function VerifyEmailPage() {
       <AuthBrandPanel />
 
       {/* ── RIGHT FORM PANEL ── */}
-      <div className="flex flex-1 flex-col bg-white">
+      <div className="flex min-w-0 flex-1 flex-col bg-white">
 
         <AuthMobileBar />
 
         {/* Content area */}
-        <div className="flex flex-1 items-center justify-center px-8 py-12 sm:px-12">
+        <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-12 sm:py-12">
           <div className="w-full max-w-md">
 
             <h2 className="font-display text-3xl font-bold text-[#0c2340]">Email Confirmation</h2>
@@ -82,7 +82,7 @@ export default function VerifyEmailPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
+        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} 2026 
         </div>
       </div>

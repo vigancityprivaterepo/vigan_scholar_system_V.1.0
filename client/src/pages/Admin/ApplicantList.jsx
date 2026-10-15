@@ -383,7 +383,7 @@ export default function ApplicantList() {
       <div className="portal-surface p-5">
         <div className="flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               type="search"
               aria-label="Search applications"
@@ -529,7 +529,7 @@ export default function ApplicantList() {
                   { label: 'Review', col: null },
                   ...(canDeleteApplicants ? [{ label: 'Delete', col: null }] : []),
                 ].map(({ label, col }) => (
-                  <th key={label} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <th key={label} className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
                     {col ? (
                       <button onClick={() => toggleSort(col)} className="flex items-center gap-1 transition-colors hover:text-brand-primary">
                         {label} {sortIcon(col)}
@@ -569,15 +569,15 @@ export default function ApplicantList() {
                       <div>
                         <p className="text-sm font-medium text-brand-primary">{app.applicant?.fullName}</p>
                         <p className="text-xs text-slate-500">{app.applicant?.email}</p>
-                        <p className="mt-0.5 font-mono text-[10px] font-semibold tracking-wider text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</p>
+                        <p className="mt-0.5 tabular-nums text-xs font-semibold text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-slate-700">
                       <p className="max-w-32 truncate">{app.school || '-'}</p>
-                      <p className="max-w-32 truncate text-xs text-slate-400">{app.course || ''}</p>
+                      <p className="max-w-32 truncate text-xs text-slate-500">{app.course || ''}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={clsx('font-mono text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400')}>
+                      <span className={clsx('tabular-nums text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500')}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(1)}%` : '-'}
                       </span>
                     </td>
@@ -630,18 +630,18 @@ export default function ApplicantList() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                    <span className="shrink-0 font-mono text-[10px] font-semibold tracking-wider text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</span>
+                    <span className="shrink-0 tabular-nums text-xs font-semibold text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</span>
                   </div>
                   <p className="truncate text-xs text-slate-500">{app.applicant?.email}</p>
                   <p className="mt-1 truncate text-xs text-slate-500">{app.school || '-'}{app.course ? ` • ${app.course}` : ''}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <StatusBadge status={app.status} size="sm" />
                     {app.generalAverage && (
-                      <span className={clsx('font-mono text-xs font-bold', parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>
+                      <span className={clsx('tabular-nums text-xs font-bold', parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : 'text-red-500')}>
                         {parseFloat(app.generalAverage).toFixed(1)}%
                       </span>
                     )}
-                    <span className="text-xs text-slate-400">{formatDate(app.submittedAt)}</span>
+                    <span className="text-xs text-slate-500">{formatDate(app.submittedAt)}</span>
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">

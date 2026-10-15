@@ -95,7 +95,7 @@ export default function EligibilityScreening() {
                     </div>
 
                     <div className="text-center">
-                      <p className={clsx('font-mono text-3xl font-bold', qualified ? 'text-green-600' : 'text-red-500')}>
+                      <p className={clsx('tabular-nums text-3xl font-bold', qualified ? 'text-green-600' : 'text-red-500')}>
                         {isNaN(avg) ? '-' : `${avg.toFixed(1)}%`}
                       </p>
                       <p className={clsx('text-xs font-medium', qualified ? 'text-green-600' : 'text-red-500')}>
@@ -108,7 +108,7 @@ export default function EligibilityScreening() {
                         <label className="mb-1 block text-xs text-slate-500">
                           Remarks
                           <span className="ml-1 text-red-500" title="Required when disqualifying">*</span>
-                          <span className="ml-1 font-normal text-slate-400">(required to disqualify)</span>
+                          <span className="ml-1 font-normal text-slate-500">(required to disqualify)</span>
                         </label>
                         <textarea
                           className="portal-input text-xs"

@@ -4,11 +4,11 @@ import logo from '../../assets/logo.png'
 export function AuthBrandPanel() {
   return (
     <div className="hidden w-[42%] flex-col justify-between bg-[#064e3b] px-10 py-12 text-white lg:flex">
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <div className="flex flex-1 flex-col justify-center">
         <img src={logo} alt="Vigan City Seal" className="h-28 w-28 object-contain" />
         <p className="mt-7 font-display text-3xl font-bold leading-tight">City Government of Vigan</p>
-        <p className="mt-2 text-sm text-emerald-100">Province of Ilocos Sur · Scholarship Program</p>
-        <p className="mt-6 max-w-xs text-sm leading-relaxed text-emerald-50/90">
+        <p className="mt-2 text-base text-emerald-100">Province of Ilocos Sur · Scholarship Program</p>
+        <p className="mt-6 max-w-[40ch] text-base text-emerald-50">
           Apply for the city scholarship, upload your requirements, and follow your application from submission to acceptance.
         </p>
       </div>

@@ -69,7 +69,7 @@ export default function ChangePasswordPage() {
           <div>
             <label htmlFor="cp-current" className="mb-1.5 block text-sm font-medium text-slate-700">Current Password</label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -84,7 +84,7 @@ export default function ChangePasswordPage() {
                 onBlur={() => setTouched(t => ({ ...t, currentPassword: true }))}
                 autoComplete="current-password"
               />
-              <button type="button" onClick={() => setShowCurrent(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0c2340]">
+              <button type="button" onClick={() => setShowCurrent(v => !v)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 hover:text-[#0c2340]">
                 <EyeIcon visible={showCurrent} />
               </button>
             </div>
@@ -95,7 +95,7 @@ export default function ChangePasswordPage() {
           <div>
             <label htmlFor="cp-new" className="mb-1.5 block text-sm font-medium text-slate-700">New Password</label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -110,7 +110,7 @@ export default function ChangePasswordPage() {
                 onBlur={() => setTouched(t => ({ ...t, newPassword: true }))}
                 autoComplete="new-password"
               />
-              <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0c2340]">
+              <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 hover:text-[#0c2340]">
                 <EyeIcon visible={showNew} />
               </button>
             </div>
@@ -121,7 +121,7 @@ export default function ChangePasswordPage() {
           <div>
             <label htmlFor="cp-confirm" className="mb-1.5 block text-sm font-medium text-slate-700">Confirm New Password</label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -136,7 +136,7 @@ export default function ChangePasswordPage() {
                 onBlur={() => setTouched(t => ({ ...t, confirmPassword: true }))}
                 autoComplete="new-password"
               />
-              <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0c2340]">
+              <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 hover:text-[#0c2340]">
                 <EyeIcon visible={showConfirm} />
               </button>
             </div>

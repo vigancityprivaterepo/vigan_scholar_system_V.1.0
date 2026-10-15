@@ -82,7 +82,7 @@ export default function StatusTracker() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="portal-page-title">Application Status</h1>
-          <p className="portal-page-subtitle">Reference ID: <span className="font-mono font-bold">#{application.id.slice(0, 8).toUpperCase()}</span></p>
+          <p className="portal-page-subtitle">Reference ID: <span className="tabular-nums font-bold">#{application.id.slice(0, 8).toUpperCase()}</span></p>
         </div>
         <StatusBadge status={application.status} />
       </div>
@@ -114,7 +114,7 @@ export default function StatusTracker() {
 
         {isIncomplete && (
           <>
-            <p className="mb-2 text-sm text-slate-700">Your requirements are incomplete. Please review the admin remarks below and resubmit.</p>
+            <p className="mb-2 max-w-[65ch] text-base text-slate-700">Your requirements are incomplete. Please review the admin remarks below and resubmit.</p>
             {application.adminRemarks && <div className="portal-panel mb-3 p-3 text-sm text-slate-700"><strong>Remarks:</strong> {application.adminRemarks}</div>}
             <Link to="/applicant/apply" className="portal-button-primary inline-flex text-sm">Resubmit Application</Link>
           </>
@@ -122,7 +122,7 @@ export default function StatusTracker() {
 
         {isCORRejected && (
           <>
-            <p className="mb-2 text-sm text-slate-700">Your Certificate of Registration was rejected.</p>
+            <p className="mb-2 max-w-[65ch] text-base text-slate-700">Your Certificate of Registration was rejected.</p>
             {application.rejectionReason && <div className="portal-panel mb-3 p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
             <Link to="/applicant/cor" className="portal-button-primary inline-flex text-sm">Resubmit COR</Link>
           </>
@@ -130,7 +130,7 @@ export default function StatusTracker() {
 
         {isRejected && (
           <>
-            <p className="mb-2 text-sm text-slate-700">Unfortunately, your application was not successful.</p>
+            <p className="mb-2 max-w-[65ch] text-base text-slate-700">Unfortunately, your application was not successful.</p>
             {application.rejectionReason && <div className="portal-panel p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
             <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
               <h4 className="mb-2 text-sm font-semibold text-slate-700">Ask for reconsideration</h4>
@@ -170,14 +170,14 @@ export default function StatusTracker() {
 
         {application.status === 'APPROVED' && (
           <>
-            <p className="mb-3 text-sm text-slate-700">Your application has been approved. Please submit your Certificate of Registration (COR) to complete the process.</p>
+            <p className="mb-3 max-w-[65ch] text-base text-slate-700">Your application has been approved. Please submit your Certificate of Registration (COR) to complete the process.</p>
             <Link to="/applicant/cor" className="portal-button-primary inline-flex text-sm">Submit COR Now</Link>
           </>
         )}
 
         {application.status === 'ACCEPTED' && (
           <>
-            <p className="mb-4 text-sm text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You may submit a renewal application for the next academic year below.</p>
+            <p className="mb-4 max-w-[65ch] text-base text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You may submit a renewal application for the next academic year below.</p>
             {!application.corHardCopyReceivedAt && (
               <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-4">
                 <div className="mb-1 flex items-center gap-2 text-amber-800">
@@ -205,13 +205,13 @@ export default function StatusTracker() {
               <div className="rounded-md border border-amber-300 bg-amber-50 p-4">
                 <p className="text-sm font-semibold text-amber-800">Renewal Under Review</p>
                 <p className="mt-1 text-xs text-amber-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
-                <p className="mt-2 text-sm text-slate-700">Your renewal application is being reviewed by the scholarship office.</p>
+                <p className="mt-2 max-w-[65ch] text-base text-slate-700">Your renewal application is being reviewed by the scholarship office.</p>
               </div>
             ) : renewal.status === 'APPROVED' ? (
               <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-800">Renewal Approved</p>
                 <p className="mt-1 text-xs text-emerald-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
-                <p className="mt-2 text-sm text-slate-700">Your scholarship renewal has been approved. Congratulations!</p>
+                <p className="mt-2 max-w-[65ch] text-base text-slate-700">Your scholarship renewal has been approved. Congratulations!</p>
               </div>
             ) : renewal.status === 'REJECTED' ? (
               <div className="rounded-md border border-red-300 bg-red-50 p-4">
@@ -230,7 +230,7 @@ export default function StatusTracker() {
         )}
 
         {['PENDING_REVIEW', 'ELIGIBILITY_SCREENING', 'COR_SUBMITTED'].includes(application.status) && (
-          <p className="text-sm text-slate-700">Your application is currently under review. We will notify you of any updates.</p>
+          <p className="max-w-[65ch] text-base text-slate-700">Your application is currently under review. We will notify you of any updates.</p>
         )}
       </div>
 
@@ -266,7 +266,7 @@ export default function StatusTracker() {
                 <div className="flex-1 pb-3">
                   <p className="text-sm font-medium text-brand-primary">{log.action}</p>
                   {log.notes && <p className="mt-0.5 text-xs text-slate-500">{log.notes}</p>}
-                  <p className="mt-1 text-xs text-slate-400">{formatDateTime(log.createdAt)}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatDateTime(log.createdAt)}</p>
                 </div>
               </div>
             ))}
@@ -284,10 +284,10 @@ export default function StatusTracker() {
               <div key={item.id} className="rounded-md border border-slate-200 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-brand-primary">{item.title || item.source}</p>
-                  <span className="text-[11px] text-slate-400">{formatDateTime(item.createdAt)}</span>
+                  <span className="text-xs text-slate-500">{formatDateTime(item.createdAt)}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{{ EMAIL: 'Email', NOTIFICATION: 'Portal notice', ACTIVITY: 'Status update' }[item.source] || item.source}</p>
-                <p className="mt-2 text-sm text-slate-700">{item.message || '-'}</p>
+                <p className="mt-2 max-w-[65ch] text-base text-slate-700">{item.message || '-'}</p>
               </div>
             ))}
           </div>

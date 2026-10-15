@@ -136,7 +136,7 @@ export default function LandingPageSettings() {
                   value={form.statsAwarded}
                   onChange={(e) => setField('statsAwarded', e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">e.g. {DEFAULT_STATS_AWARDED}</p>
+                <p className="mt-1 text-xs text-slate-500">e.g. {DEFAULT_STATS_AWARDED}</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Active Scholars</label>
@@ -147,7 +147,7 @@ export default function LandingPageSettings() {
                   value={form.statsScholars}
                   onChange={(e) => setField('statsScholars', e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">e.g. 882+</p>
+                <p className="mt-1 text-xs text-slate-500">e.g. 882+</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Partner Schools</label>
@@ -158,7 +158,7 @@ export default function LandingPageSettings() {
                   value={form.statsSchools}
                   onChange={(e) => setField('statsSchools', e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">e.g. 5</p>
+                <p className="mt-1 text-xs text-slate-500">e.g. 5</p>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Success Rate</label>
@@ -169,7 +169,7 @@ export default function LandingPageSettings() {
                   value={form.statsSuccessRate}
                   onChange={(e) => setField('statsSuccessRate', e.target.value)}
                 />
-                <p className="mt-1 text-xs text-slate-400">e.g. 94%</p>
+                <p className="mt-1 text-xs text-slate-500">e.g. 94%</p>
               </div>
             </div>
 

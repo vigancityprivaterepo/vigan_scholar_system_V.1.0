@@ -237,7 +237,7 @@ export default function TopExamScores() {
       <div className="portal-surface p-5">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               className="portal-input pl-10"
               placeholder="Search by name, email, or Ref. ID..."
@@ -262,16 +262,16 @@ export default function TopExamScores() {
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50">
               <tr>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">Rank</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">SHS Attended</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">GWA</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">Rank</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">SHS Attended</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">GWA</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">
                   General Score <span className="text-brand-primary">&#8595;</span>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">AY</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date Updated</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">AY</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Date Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -286,11 +286,11 @@ export default function TopExamScores() {
               ) : apps.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-400">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-500">
                       <ChartIcon className="h-6 w-6" />
                     </div>
                     <p className="mt-3 text-sm text-slate-500">No scores recorded yet</p>
-                    {search && <p className="mt-1 text-xs text-slate-400">Try clearing the search</p>}
+                    {search && <p className="mt-1 text-xs text-slate-500">Try clearing the search</p>}
                   </td>
                 </tr>
               ) : (
@@ -307,7 +307,7 @@ export default function TopExamScores() {
                             {denseRank}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">{denseRank}</span>
+                          <span className="text-xs text-slate-500">{denseRank}</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -316,12 +316,12 @@ export default function TopExamScores() {
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-700">{app.school || '-'}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-400'}`}>
+                        <span className={`tabular-nums text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500'}`}>
                           {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`font-mono text-sm font-bold ${score !== null ? 'text-brand-primary' : 'text-slate-400'}`}>
+                        <span className={`tabular-nums text-sm font-bold ${score !== null ? 'text-brand-primary' : 'text-slate-500'}`}>
                           {score !== null ? score.toFixed(2) : '-'}
                         </span>
                       </td>

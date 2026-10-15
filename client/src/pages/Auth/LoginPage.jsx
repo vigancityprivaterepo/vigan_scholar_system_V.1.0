@@ -96,12 +96,12 @@ export default function LoginPage() {
       <AuthBrandPanel />
 
       {/* ── RIGHT FORM PANEL ── */}
-      <div className="flex flex-1 flex-col bg-white">
+      <div className="flex min-w-0 flex-1 flex-col bg-white">
 
         <AuthMobileBar />
 
         {/* Form area */}
-        <div className="flex flex-1 items-center justify-center px-8 py-12 sm:px-12">
+        <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-12 sm:py-12">
           <div className="w-full max-w-md">
 
             <h2 className="font-display text-3xl font-bold text-[#0c2340]">Welcome Back</h2>
@@ -127,7 +127,7 @@ export default function LoginPage() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
@@ -156,12 +156,12 @@ export default function LoginPage() {
                   <label htmlFor="login-password" className="text-sm font-medium text-slate-700">
                     Password
                   </label>
-                  <Link to="/forgot-password" className="text-xs font-medium text-[#059669] transition-colors hover:text-[#0c2340]">
+                  <Link to="/forgot-password" className="-my-3 inline-flex min-h-11 items-center text-sm font-medium text-[#047857] transition-colors hover:text-[#0c2340]">
                     Forgot password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
@@ -182,7 +182,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0c2340]"
+                    className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-slate-500 transition-colors hover:text-[#0c2340]"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
@@ -259,7 +259,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-400">
+        <div className="border-t border-slate-100 px-8 py-4 text-center text-xs text-slate-500">
           © {new Date().getFullYear()} City Government of Vigan · By City Management Information System Division · Vigan City, Ilocos Sur
         </div>
       </div>

@@ -64,7 +64,7 @@ export default function HelpPage() {
                 </span>
               </button>
               {active === index && (
-                <div className="border-t border-slate-100 bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-700">
+                <div className="border-t border-slate-100 bg-slate-50 px-4 py-4 text-base text-slate-700">
                   {item.a}
                 </div>
               )}

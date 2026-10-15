@@ -74,7 +74,7 @@ export default function CORReview() {
                     <div>
                       <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
                       <p className="text-xs text-slate-500">{app.school} • {app.course}</p>
-                      <p className="mt-0.5 font-mono text-xs text-slate-400">#{app.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="mt-0.5 tabular-nums text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</p>
                     </div>
                     <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
                       Full Review <ArrowRightIcon className="h-4 w-4" />
