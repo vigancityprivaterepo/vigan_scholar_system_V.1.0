@@ -10,6 +10,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { sendEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
 const { getEffectiveRole } = require('../utils/primaryAdmin');
+const { ADMIN_ROLES } = require('../middleware/roleGuard');
 const { getClientBaseUrl } = require('../utils/clientBaseUrl');
 
 const prisma = new PrismaClient();
@@ -144,8 +145,8 @@ const getUserProfile = async (userId) => {
   };
 };
 
-const issueAuthSession = async (res, userId) => {
-  const tokens = await generateTokens(userId);
+const issueAuthSession = async (res, userId, { twoFactorVerified = false } = {}) => {
+  const tokens = await generateTokens(userId, { twoFactorVerified });
   res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
   const profile = await getUserProfile(userId);
   return { profile, accessToken: tokens.accessToken };
@@ -473,9 +474,17 @@ const refresh = async (req, res, next) => {
       throw new AppError('Invalid or expired refresh token', 401);
     }
 
+    // Staff sessions only renew if they were issued after a completed two-step sign-in,
+    // so sessions from before 2FA existed end here and staff set it up on next sign-in.
+    const owner = await prisma.user.findUnique({ where: { id: decoded.userId }, select: { id: true, email: true, role: true } });
+    if (!owner || (ADMIN_ROLES.includes(getEffectiveRole(owner)) && !stored.twoFactorVerified)) {
+      await prisma.refreshToken.delete({ where: { token: tokenHash } });
+      throw new AppError('Please sign in again.', 401);
+    }
+
     await prisma.refreshToken.delete({ where: { token: tokenHash } });
 
-    const tokens = await generateTokens(decoded.userId);
+    const tokens = await generateTokens(decoded.userId, { twoFactorVerified: Boolean(stored.twoFactorVerified) });
     res.cookie(REFRESH_COOKIE_NAME, tokens.refreshToken, getRefreshCookieOptions());
     res.json({ success: true, accessToken: tokens.accessToken });
   } catch (err) {

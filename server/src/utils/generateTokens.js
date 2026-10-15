@@ -3,7 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const { hashToken } = require('./tokenHash');
 const prisma = new PrismaClient();
 
-const generateTokens = async (userId) => {
+const generateTokens = async (userId, { twoFactorVerified = false } = {}) => {
   const accessToken = jwt.sign(
     { userId },
     process.env.JWT_SECRET,
@@ -20,7 +20,7 @@ const generateTokens = async (userId) => {
   expiresAt.setDate(expiresAt.getDate() + 7);
 
   await prisma.refreshToken.create({
-    data: { userId, token: hashToken(refreshToken), expiresAt },
+    data: { userId, token: hashToken(refreshToken), expiresAt, twoFactorVerified },
   });
 
   return { accessToken, refreshToken };

@@ -14,6 +14,8 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Challenge and reset tokens share JWT_SECRET but are never valid as a login.
+    if (decoded.purpose) throw new AppError('Invalid or expired token', 401);
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
