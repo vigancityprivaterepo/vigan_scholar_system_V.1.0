@@ -462,7 +462,11 @@ const listApplications = async (req, res, next) => {
       }];
     }
     if (hasExamScore === 'true') where.examScore = { not: null };
-    if (yearLevel) where.yearLevel = yearLevel;
+    if (yearLevel) {
+      // year_level is an integer column; query strings arrive as text ("1" or "1st Year").
+      const level = parseInt(yearLevel, 10);
+      if (Number.isInteger(level)) where.yearLevel = level;
+    }
     const submittedAtFilter = buildSubmittedAtWhere(submittedFrom, submittedTo);
     if (submittedAtFilter) where.submittedAt = submittedAtFilter;
     if (academicYear) {
