@@ -6,6 +6,7 @@ const { sendEmail } = require('../services/emailService');
 const { createNotification } = require('../services/notificationService');
 const { toAcademicYear } = require('../utils/academicYear');
 const { getGwaThreshold } = require('../utils/gwaThreshold');
+const { toApplicantApplication, toApplicantAppeal } = require('../utils/applicantView');
 
 const prisma = new PrismaClient();
 const OPTIONAL_SCHEMA_ERROR_CODES = new Set(['P2021', 'P2022']);
@@ -201,7 +202,7 @@ const submitApplication = async (req, res, next) => {
       });
     }
 
-    res.status(201).json({ success: true, message: 'Application submitted', application });
+    res.status(201).json({ success: true, message: 'Application submitted', application: toApplicantApplication(application) });
   } catch (err) {
     next(err);
   }
@@ -216,11 +217,11 @@ const getMyApplication = async (req, res, next) => {
         include: {
           requirementFiles: true,
           corFiles: { orderBy: { uploadedAt: 'desc' } },
-          activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
+          activityLogs: { orderBy: { createdAt: 'desc' }, take: 30 },
           examSchedules: {
             orderBy: { scheduledAt: 'desc' },
             take: 1,
-            include: { examiner: { select: { id: true, fullName: true, email: true, role: true } } },
+            include: { examiner: { select: { fullName: true } } },
           },
         },
       });
@@ -231,7 +232,7 @@ const getMyApplication = async (req, res, next) => {
         include: {
           requirementFiles: true,
           corFiles: { orderBy: { uploadedAt: 'desc' } },
-          activityLogs: { orderBy: { createdAt: 'desc' }, take: 10, include: { performedBy: { select: { fullName: true } } } },
+          activityLogs: { orderBy: { createdAt: 'desc' }, take: 30 },
         },
       });
       if (application) {
@@ -240,7 +241,7 @@ const getMyApplication = async (req, res, next) => {
     }
 
     if (!application) return res.json({ success: true, application: null });
-    res.json({ success: true, application });
+    res.json({ success: true, application: toApplicantApplication(application) });
   } catch (err) {
     next(err);
   }
@@ -359,7 +360,7 @@ const resubmit = async (req, res, next) => {
       });
     }
 
-    res.json({ success: true, message: 'Application resubmitted', application: updated });
+    res.json({ success: true, message: 'Application resubmitted', application: toApplicantApplication(updated) });
   } catch (err) {
     next(err);
   }
@@ -562,7 +563,7 @@ const submitAppeal = async (req, res, next) => {
       });
     }
 
-    res.status(201).json({ success: true, message: 'Appeal submitted.', appeal });
+    res.status(201).json({ success: true, message: 'Appeal submitted.', appeal: toApplicantAppeal(appeal) });
   } catch (err) {
     next(err);
   }
@@ -575,10 +576,9 @@ const listMyAppeals = async (req, res, next) => {
       orderBy: { createdAt: 'desc' },
       include: {
         application: { select: { id: true, status: true, academicYear: true } },
-        reviewedBy: { select: { fullName: true, role: true } },
       },
     });
-    res.json({ success: true, appeals });
+    res.json({ success: true, appeals: appeals.map(toApplicantAppeal) });
   } catch (err) {
     next(err);
   }

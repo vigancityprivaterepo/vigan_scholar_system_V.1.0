@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const { AppError } = require('../middleware/errorHandler');
 const { toAcademicYear } = require('../utils/academicYear');
 const { createNotification } = require('../services/notificationService');
+const { toApplicantRenewal } = require('../utils/applicantView');
 
 const prisma = new PrismaClient();
 
@@ -79,7 +80,7 @@ const submitRenewal = async (req, res, next) => {
       });
     }
 
-    res.status(201).json({ success: true, message: 'Renewal submitted successfully.', renewal });
+    res.status(201).json({ success: true, message: 'Renewal submitted successfully.', renewal: toApplicantRenewal(renewal) });
   } catch (err) {
     next(err);
   }
@@ -93,7 +94,7 @@ const getMyRenewal = async (req, res, next) => {
       orderBy: { submittedAt: 'desc' },
       include: { renewalFiles: true },
     });
-    res.json({ success: true, renewal: renewal || null, currentAcademicYear: toAcademicYear(new Date()) });
+    res.json({ success: true, renewal: toApplicantRenewal(renewal), currentAcademicYear: toAcademicYear(new Date()) });
   } catch (err) {
     next(err);
   }

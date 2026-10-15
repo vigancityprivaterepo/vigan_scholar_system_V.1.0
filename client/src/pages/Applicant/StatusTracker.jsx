@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
+import { getStatusBadge } from '../../utils/statusConfig'
 import Stepper from '../../components/ui/Stepper'
 import { formatDate, formatDateTime, formatScheduleDateTime } from '../../utils/formatDate'
 import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, DocumentIcon, InfoIcon } from '../../components/ui/PortalIcons'
@@ -255,7 +256,7 @@ export default function StatusTracker() {
 
       {application.activityLogs?.length > 0 && (
         <div className="portal-surface p-6">
-          <h3 className="mb-4 text-lg font-semibold text-brand-primary">Activity Timeline</h3>
+          <h3 className="mb-4 text-lg font-semibold text-brand-primary">Status history</h3>
           <div className="flex flex-col gap-3">
             {application.activityLogs.map((log, i) => (
               <div key={log.id} className="flex gap-3">
@@ -264,8 +265,7 @@ export default function StatusTracker() {
                   {i < application.activityLogs.length - 1 && <div className="mt-1 w-0.5 flex-1 bg-slate-200" />}
                 </div>
                 <div className="flex-1 pb-3">
-                  <p className="text-sm font-medium text-brand-primary">{log.action}</p>
-                  {log.notes && <p className="mt-0.5 text-xs text-slate-500">{log.notes}</p>}
+                  <p className="text-sm font-medium text-brand-primary">{getStatusBadge(log.toStatus).label}</p>
                   <p className="mt-1 text-xs text-slate-500">{formatDateTime(log.createdAt)}</p>
                 </div>
               </div>
