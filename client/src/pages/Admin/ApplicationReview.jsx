@@ -9,17 +9,9 @@ import { openProtectedFile } from '../../utils/openProtectedFile'
 import { STATUS_CONFIG } from '../../utils/statusConfig'
 import { html } from '../../utils/escapeHtml'
 import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon, CheckCircleIcon, SpinnerIcon } from '../../components/ui/PortalIcons'
+import { REQUIREMENT_CHECKLIST_ITEMS } from '../../utils/requirements'
 
 const CONFIRM_REQUIRED = ['REJECTED', 'NOT_QUALIFIED', 'FAILED_EXAM']
-const REQUIREMENT_CHECKLIST_ITEMS = [
-  'Personal Letter of Application addressed to City Mayor',
-  'Certificate of Residency from the Punong Barangay',
-  'Form 138 (General Average at least 83%, no grade lower than 80%)',
-  'Certification from High School Principal (Good Moral Character)',
-  'Result of College Admission Test (CAT)',
-  'Picture (Passport Size with Printed Name)',
-]
-
 // Open on the tab holding what staff decide at each stage.
 const TAB_FOR_STATUS = {
   PENDING_REVIEW: 'requirements',
@@ -122,7 +114,7 @@ export default function ApplicationReview() {
 
   if (loading) return (
     <div className="flex flex-col gap-4">
-      {[1, 2, 3].map(i => <div key={i} className="card h-32 animate-pulse bg-gray-100" />)}
+      {[1, 2, 3].map(i => <div key={i} className="skeleton h-32 rounded-card" />)}
     </div>
   )
 
@@ -135,36 +127,36 @@ export default function ApplicationReview() {
 
   const ACTIONS = {
     PENDING_REVIEW: [
-      { label: 'Requirements complete: send to Eligibility', status: 'ELIGIBILITY_SCREENING', color: 'portal-button-primary', hint: 'All requirements are complete' },
-      { label: 'Mark Incomplete', status: 'INCOMPLETE', color: 'portal-button-secondary !border-amber-300 !text-amber-700 hover:!border-amber-500 hover:!text-amber-800', needsRemarks: true },
-      { label: 'Reject Application', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Requirements complete: send to Eligibility', status: 'ELIGIBILITY_SCREENING', color: 'btn btn-primary', hint: 'All requirements are complete' },
+      { label: 'Mark Incomplete', status: 'INCOMPLETE', color: 'btn btn-warn', needsRemarks: true },
+      { label: 'Reject Application', status: 'REJECTED', color: 'btn btn-danger', needsReason: true },
     ],
     INCOMPLETE: [
-      { label: 'Reject (Missing Documents)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use this once the applicant can no longer submit requirements (e.g. deadline passed). This stops further reminder emails.' },
+      { label: 'Reject (Missing Documents)', status: 'REJECTED', color: 'btn btn-danger', needsReason: true, hint: 'Use this once the applicant can no longer submit requirements (e.g. deadline passed). This stops further reminder emails.' },
     ],
     ELIGIBILITY_SCREENING: [
-      { label: 'Qualify for Exam / Interview', status: 'EXAM_INTERVIEW', color: 'portal-button-primary' },
-      { label: 'Mark Not Qualified', status: 'NOT_QUALIFIED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Qualify for Exam / Interview', status: 'EXAM_INTERVIEW', color: 'btn btn-primary' },
+      { label: 'Mark Not Qualified', status: 'NOT_QUALIFIED', color: 'btn btn-danger', needsReason: true },
     ],
     NOT_QUALIFIED: [
-      { label: 'Finalize Rejection', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Finalize Rejection', status: 'REJECTED', color: 'btn btn-danger', needsReason: true },
     ],
     EXAM_INTERVIEW: [
-      { label: 'Passed: approve', status: 'APPROVED', color: 'portal-button-primary' },
-      { label: 'Failed exam / interview', status: 'FAILED_EXAM', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Passed: approve', status: 'APPROVED', color: 'btn btn-primary' },
+      { label: 'Failed exam / interview', status: 'FAILED_EXAM', color: 'btn btn-danger', needsReason: true },
     ],
     FAILED_EXAM: [
-      { label: 'Finalize Rejection', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Finalize Rejection', status: 'REJECTED', color: 'btn btn-danger', needsReason: true },
     ],
     APPROVED: [
-      { label: 'Reject (No COR Submitted)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use once the applicant can no longer submit a COR (e.g. deadline passed). Stops further reminder emails.' },
+      { label: 'Reject (No COR Submitted)', status: 'REJECTED', color: 'btn btn-danger', needsReason: true, hint: 'Use once the applicant can no longer submit a COR (e.g. deadline passed). Stops further reminder emails.' },
     ],
     COR_SUBMITTED: [
-      { label: 'Approve COR: accept as scholar', status: 'ACCEPTED', color: 'portal-button-primary' },
-      { label: 'Reject COR', status: 'COR_REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true },
+      { label: 'Approve COR: accept as scholar', status: 'ACCEPTED', color: 'btn btn-primary' },
+      { label: 'Reject COR', status: 'COR_REJECTED', color: 'btn btn-danger', needsReason: true },
     ],
     COR_REJECTED: [
-      { label: 'Reject (No Resubmission)', status: 'REJECTED', color: 'portal-button-secondary !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800', needsReason: true, hint: 'Use once the applicant can no longer resubmit a corrected COR.' },
+      { label: 'Reject (No Resubmission)', status: 'REJECTED', color: 'btn btn-danger', needsReason: true, hint: 'Use once the applicant can no longer resubmit a corrected COR.' },
     ],
   }
 
@@ -243,7 +235,7 @@ export default function ApplicationReview() {
     ? {
         label: `Return to ${previousStatusLabel}`,
         status: previousStatus,
-        color: 'portal-button-secondary',
+        color: 'btn',
         hint: 'Use this if the current status was selected by mistake.',
       }
     : null
@@ -363,19 +355,19 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
   return (
     <div className="flex w-full max-w-none flex-col gap-6">
       <div className="flex flex-wrap items-start gap-3">
-        <button onClick={() => navigate(-1)} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Back</button>
+        <button onClick={() => navigate(-1)} className="btn text-sm shrink-0">Back</button>
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold text-brand-primary sm:text-2xl">
             {app.lastName ? `${app.lastName}, ${app.firstName}${app.middleName ? ' ' + app.middleName : ''}` : app.applicant?.fullName}
           </h1>
           <p className="truncate tabular-nums text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()} • {app.applicant?.email}</p>
         </div>
-        <button onClick={downloadApplication} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Download</button>
+        <button onClick={downloadApplication} className="btn text-sm shrink-0">Download</button>
         {!editMode
-          ? <button onClick={startEdit} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">Edit</button>
+          ? <button onClick={startEdit} className="btn btn-primary text-sm shrink-0">Edit</button>
           : <>
-              <button onClick={saveEdit} disabled={editLoading} className="portal-button-primary !px-3 !py-2 text-sm shrink-0">{editLoading ? 'Saving…' : 'Save'}</button>
-              <button onClick={cancelEdit} className="portal-button-secondary !px-3 !py-2 text-sm shrink-0">Cancel</button>
+              <button onClick={saveEdit} disabled={editLoading} className="btn btn-primary text-sm shrink-0">{editLoading ? 'Saving…' : 'Save'}</button>
+              <button onClick={cancelEdit} className="btn text-sm shrink-0">Cancel</button>
             </>
         }
         <StatusBadge status={app.status} />
@@ -383,7 +375,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
         <div className="min-w-0 flex flex-col gap-4">
-          <div className="portal-surface p-1">
+          <div className="card p-1">
             <div className="flex gap-1 overflow-x-auto">
               {TABS.map(tab => (
                 <button
@@ -391,7 +383,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                   onClick={() => setActiveTab(tab)}
                   aria-pressed={activeTab === tab}
                   className={clsx(
-                    'whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors sm:flex-1 sm:px-4 sm:py-2 sm:text-sm',
+                    'whitespace-nowrap rounded-control px-3 py-1.5 text-xs font-medium capitalize transition-colors sm:flex-1 sm:px-4 sm:py-2 sm:text-sm',
                     activeTab === tab ? 'bg-brand-primary text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-brand-primary'
                   )}
                 >
@@ -402,37 +394,37 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
           </div>
 
           {activeTab === 'personal' && (
-            <div className="portal-surface p-6">
+            <div className="card p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Personal Information</h3>
               {editMode ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[['Last Name','lastName'],['First Name','firstName'],['Middle Name','middleName'],['Place of Birth','placeOfBirth'],['Contact','contact'],['Age','age']].map(([l,k]) => (
                     <div key={k}>
                       <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
-                      <input className="portal-input text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
+                      <input className="form-control text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
                     </div>
                   ))}
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">Birthdate</p>
-                    <input type="date" className="portal-input text-sm" value={editData.birthdate || ''} onChange={e => ed('birthdate', e.target.value)} />
+                    <input type="date" className="form-control text-sm" value={editData.birthdate || ''} onChange={e => ed('birthdate', e.target.value)} />
                   </div>
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">Sex</p>
-                    <select className="portal-input text-sm" value={editData.sex || ''} onChange={e => ed('sex', e.target.value)}>
+                    <select className="form-control text-sm" value={editData.sex || ''} onChange={e => ed('sex', e.target.value)}>
                       <option value="">—</option>
                       {['Male','Female'].map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">Gender</p>
-                    <select className="portal-input text-sm" value={editData.gender || ''} onChange={e => ed('gender', e.target.value)}>
+                    <select className="form-control text-sm" value={editData.gender || ''} onChange={e => ed('gender', e.target.value)}>
                       <option value="">—</option>
                       {['Cis Gender/Straight','Lesbian','Gay','Bisexual','Transgender','Prefer not to Say'].map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
                   <div className="sm:col-span-2 xl:col-span-3">
                     <p className="mb-1 text-xs font-medium text-slate-500">Address</p>
-                    <input className="portal-input text-sm" value={editData.address || ''} onChange={e => ed('address', e.target.value)} />
+                    <input className="form-control text-sm" value={editData.address || ''} onChange={e => ed('address', e.target.value)} />
                   </div>
                   <div className="sm:col-span-2 xl:col-span-3">
                     <p className="text-xs text-slate-500">Email: {app.applicant?.email} (not editable)</p>
@@ -462,19 +454,19 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
           )}
 
           {activeTab === 'family' && (
-            <div className="portal-surface p-6">
+            <div className="card p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Family Information</h3>
               {editMode ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {[['Name of Father','fatherName'],['Father\'s Occupation','fatherOccupation'],['Name of Mother','motherName'],['Mother\'s Occupation','motherOccupation'],['No. of Dependents','numDependents'],['Monthly Family Income','familyIncome']].map(([l,k]) => (
                     <div key={k}>
                       <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
-                      <input className="portal-input text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
+                      <input className="form-control text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
                     </div>
                   ))}
                   <div>
                     <p className="mb-1 text-xs font-medium text-slate-500">Main Source of Income</p>
-                    <select className="portal-input text-sm" value={editData.incomeSource || ''} onChange={e => ed('incomeSource', e.target.value)}>
+                    <select className="form-control text-sm" value={editData.incomeSource || ''} onChange={e => ed('incomeSource', e.target.value)}>
                       <option value="">—</option>
                       {['Salary','Pension','Business','Government Grants','Others'].map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
@@ -500,7 +492,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
           )}
 
           {activeTab === 'academic' && (
-            <div className="portal-surface p-6">
+            <div className="card p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Academic Information</h3>
               {editMode ? (
                 <div className="flex flex-col gap-4">
@@ -508,13 +500,13 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                     {[['SHS Attended','school'],['School Address','schoolAddress'],['Year Graduated','yearGraduated'],['General Average','generalAverage']].map(([l,k]) => (
                       <div key={k}>
                         <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
-                        <input className="portal-input text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
+                        <input className="form-control text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)} />
                       </div>
                     ))}
                     {[['Solo Parent','soloParent'],['4Ps Member','fourPs'],['Prior Scholarship','priorScholarship']].map(([l,k]) => (
                       <div key={k}>
                         <p className="mb-1 text-xs font-medium text-slate-500">{l}</p>
-                        <select className="portal-input text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)}>
+                        <select className="form-control text-sm" value={editData[k] || ''} onChange={e => ed(k, e.target.value)}>
                           <option value="">—</option>
                           <option value="true">Yes</option>
                           <option value="false">No</option>
@@ -524,7 +516,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                     {editData.priorScholarship === 'true' && (
                       <div>
                         <p className="mb-1 text-xs font-medium text-slate-500">Scholarship Type</p>
-                        <select className="portal-input text-sm" value={editData.scholarshipType || ''} onChange={e => ed('scholarshipType', e.target.value)}>
+                        <select className="form-control text-sm" value={editData.scholarshipType || ''} onChange={e => ed('scholarshipType', e.target.value)}>
                           <option value="">—</option>
                           {['Relative','Private Individual','Private Organization'].map(o => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -532,7 +524,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                     )}
                     <div>
                       <p className="mb-1 text-xs font-medium text-slate-500">Year Level Applying For</p>
-                      <select className="portal-input text-sm" value={editData.yearLevel || ''} onChange={e => ed('yearLevel', e.target.value)}>
+                      <select className="form-control text-sm" value={editData.yearLevel || ''} onChange={e => ed('yearLevel', e.target.value)}>
                         <option value="">—</option>
                         {['1st Year','2nd Year','3rd Year','4th Year'].map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
@@ -540,9 +532,9 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                   </div>
                   <div className="border-t border-slate-200 pt-4">
                     <p className="mb-2 text-xs font-medium text-slate-500">College Preferences</p>
-                    <div className="overflow-x-auto rounded-md border border-slate-200">
-                      <table className="w-full text-sm">
-                        <thead className="bg-slate-50">
+                    <div className="overflow-x-auto rounded-control border border-slate-200">
+                      <table className="table">
+                        <thead>
                           <tr>
                             <th className="border-b border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-600">#</th>
                             <th className="border-b border-slate-200 px-2 py-2 text-left text-xs font-semibold text-slate-600">School</th>
@@ -555,11 +547,11 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                           {(editData.collegePreferences || []).map((p, i) => (
                             <tr key={i} className="border-b border-slate-100 last:border-0">
                               <td className="px-2 py-1.5 text-slate-500">{i + 1}</td>
-                              <td className="px-2 py-1.5"><input className="portal-input !py-1 text-xs" value={p.name || ''} onChange={e => edPref(i,'name',e.target.value)} /></td>
-                              <td className="px-2 py-1.5"><input className="portal-input !py-1 text-xs" value={p.location || ''} onChange={e => edPref(i,'location',e.target.value)} /></td>
-                              <td className="px-2 py-1.5"><input className="portal-input !py-1 text-xs" value={p.course || ''} onChange={e => edPref(i,'course',e.target.value)} /></td>
+                              <td className="px-2 py-1.5"><input className="form-control !py-1 text-xs" value={p.name || ''} onChange={e => edPref(i,'name',e.target.value)} /></td>
+                              <td className="px-2 py-1.5"><input className="form-control !py-1 text-xs" value={p.location || ''} onChange={e => edPref(i,'location',e.target.value)} /></td>
+                              <td className="px-2 py-1.5"><input className="form-control !py-1 text-xs" value={p.course || ''} onChange={e => edPref(i,'course',e.target.value)} /></td>
                               <td className="px-2 py-1.5">
-                                <select className="portal-input !py-1 text-xs" value={p.accepted || ''} onChange={e => edPref(i,'accepted',e.target.value)}>
+                                <select className="form-control !py-1 text-xs" value={p.accepted || ''} onChange={e => edPref(i,'accepted',e.target.value)}>
                                   <option value=""></option>
                                   <option value="Y">Y</option>
                                   <option value="N">N</option>
@@ -604,9 +596,9 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                   {app.collegePreferences?.length > 0 && (
                     <div className="mt-4 border-t border-slate-200 pt-4">
                       <p className="mb-2 text-xs font-medium text-slate-500">College Preferences (in order)</p>
-                      <div className="overflow-x-auto rounded-md border border-slate-200">
-                        <table className="w-full text-sm">
-                          <thead className="bg-slate-50">
+                      <div className="overflow-x-auto rounded-control border border-slate-200">
+                        <table className="table">
+                          <thead>
                             <tr>
                               <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">#</th>
                               <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold text-slate-600">School</th>
@@ -640,9 +632,9 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
           )}
 
           {activeTab === 'requirements' && (
-            <div className="portal-surface p-6">
+            <div className="card p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Requirement Files ({app.requirementFiles?.length || 0})</h3>
-              <div className="mb-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-5 rounded-control border border-brand-divider bg-brand-bg p-4">
                 <p className="mb-2 text-sm font-semibold text-brand-primary">Per-Requirement Checklist</p>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                   {REQUIREMENT_CHECKLIST_ITEMS.map((item) => {
@@ -673,7 +665,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
               ) : (
                 <div className="flex flex-col gap-3">
                   {app.requirementFiles.map(file => (
-                    <div key={file.id} className="portal-panel flex items-center justify-between p-3">
+                    <div key={file.id} className="rounded-[14px] border border-brand-divider bg-brand-bg flex items-center justify-between p-3">
                       <div className="flex items-center gap-3">
                         <DocumentIcon className="h-5 w-5 text-brand-primary" />
                         <div>
@@ -703,7 +695,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                 <div className="mt-6 border-t border-slate-200 pt-4">
                   <h4 className="mb-3 font-semibold text-brand-primary">COR Files</h4>
                   {app.corFiles.map(cor => (
-                    <div key={cor.id} className="portal-panel flex items-center justify-between p-3">
+                    <div key={cor.id} className="rounded-[14px] border border-brand-divider bg-brand-bg flex items-center justify-between p-3">
                       <div className="flex items-center gap-3">
                         <DocumentIcon className="h-5 w-5 text-brand-primary" />
                         <div>
@@ -712,7 +704,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`badge ${cor.isApproved === null ? 'bg-gray-100 text-gray-600' : cor.isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`badge ${cor.isApproved === null ? 'bg-slate-100 text-slate-600' : cor.isApproved ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {cor.isApproved === null ? 'Pending' : cor.isApproved ? 'Approved' : 'Rejected'}
                         </span>
                         <button
@@ -737,7 +729,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
           )}
 
           {activeTab === 'history' && (
-            <div className="portal-surface p-6">
+            <div className="card p-6">
               <h3 className="mb-4 text-lg font-semibold text-brand-primary">Activity History</h3>
               {!app.activityLogs?.length ? (
                 <p className="py-6 text-center text-sm text-slate-500">No activity yet</p>
@@ -766,7 +758,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="portal-surface p-6 lg:sticky lg:top-6">
+          <div className="card p-6 lg:sticky lg:top-6">
             <h3 className="mb-4 text-lg font-semibold text-brand-primary">Actions</h3>
 
             {visibleActions.length === 0 ? (
@@ -780,7 +772,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                   <div className="flex flex-col gap-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-600">General Score</label>
-                      <input type="number" min="0" max="100" step="0.01" className="portal-input text-sm" placeholder="e.g. 87.50" value={examScore} onChange={e => setExamScore(e.target.value)} />
+                      <input type="number" min="0" max="100" step="0.01" className="form-control text-sm" placeholder="e.g. 87.50" value={examScore} onChange={e => setExamScore(e.target.value)} />
                     </div>
                   </div>
                 )}
@@ -788,14 +780,14 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                 {visibleActions.some(a => a.needsRemarks) && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Admin Remarks</label>
-                    <textarea className="portal-input" rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Explain action to applicant..." />
+                    <textarea className="form-control" rows={2} value={remarks} onChange={e => setRemarks(e.target.value)} placeholder="Explain action to applicant..." />
                   </div>
                 )}
 
                 {visibleActions.some(a => a.needsReason) && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-slate-600">Rejection Reason</label>
-                    <textarea className="portal-input" rows={2} value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason for rejection..." />
+                    <textarea className="form-control" rows={2} value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Reason for rejection..." />
                   </div>
                 )}
 
@@ -806,7 +798,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                       <button
                         onClick={() => requestAction(action)}
                         disabled={actionLoading}
-                        className={clsx(action.color || 'portal-button-primary', 'w-full justify-center py-2.5 text-sm flex items-center justify-center gap-2')}
+                        className={clsx(action.color || 'btn btn-primary', 'w-full justify-center py-2.5 text-sm flex items-center justify-center gap-2')}
                       >
                         {isCurrentActionLoading && <SpinnerIcon className="h-4 w-4 text-current" />}
                         {isCurrentActionLoading ? 'Processing...' : action.label}
@@ -819,7 +811,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
             )}
 
             {app.status === 'ACCEPTED' && (
-              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="mt-4 rounded-control border border-brand-divider bg-brand-bg p-4">
                 <p className="mb-1 text-sm font-semibold text-brand-primary">Physical COR Hard Copy</p>
                 {app.corHardCopyReceivedAt ? (
                   <>
@@ -832,7 +824,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                     <button
                       onClick={() => handleHardCopyToggle(false)}
                       disabled={hardCopyLoading}
-                      className="portal-button-secondary mt-2 w-full text-xs"
+                      className="btn mt-2 w-full text-xs"
                     >
                       {hardCopyLoading ? 'Updating...' : 'Undo (mistaken entry)'}
                     </button>
@@ -843,7 +835,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
                     <button
                       onClick={() => handleHardCopyToggle(true)}
                       disabled={hardCopyLoading}
-                      className="portal-button-primary w-full text-xs"
+                      className="btn btn-primary w-full text-xs"
                     >
                       {hardCopyLoading ? 'Saving...' : 'Mark Hard Copy Received'}
                     </button>
@@ -853,19 +845,19 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
             )}
 
             {showConfirm && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4">
+              <div className="mt-4 rounded-control border border-red-200 bg-red-50 p-4">
                 <div className="mb-2 flex items-center gap-2 text-red-700">
                   <AlertTriangleIcon className="h-4 w-4" />
                   <p className="text-sm font-semibold">Confirm Action</p>
                 </div>
                 <p className="mb-3 text-xs text-red-600">This action cannot be undone. Type <strong>CONFIRM</strong> to proceed.</p>
-                <input className="portal-input mb-3 text-sm" placeholder="Type CONFIRM" value={confirmText} onChange={e => setConfirmText(e.target.value)} />
+                <input className="form-control mb-3 text-sm" placeholder="Type CONFIRM" value={confirmText} onChange={e => setConfirmText(e.target.value)} />
                 <div className="flex gap-2">
-                  <button onClick={() => { setShowConfirm(false); setConfirmText('') }} disabled={actionLoading} className="portal-button-secondary flex-1 text-xs">Cancel</button>
+                  <button onClick={() => { setShowConfirm(false); setConfirmText('') }} disabled={actionLoading} className="btn flex-1 text-xs">Cancel</button>
                   <button
                     disabled={confirmText !== 'CONFIRM' || actionLoading}
                     onClick={() => doAction(pendingAction.status, pendingAction?.extra || {})}
-                    className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 disabled:opacity-40 hover:!border-red-500 hover:!text-red-800 flex items-center justify-center gap-2"
+                    className="btn btn-danger"
                   >
                     {actionLoading && <SpinnerIcon className="h-4 w-4 text-red-700" />}
                     {actionLoading ? 'Processing...' : 'Confirm'}
@@ -875,7 +867,7 @@ ${docs.length ? html`<ul>${docs}</ul>` : html`<p style="font-size:10pt;color:#88
             )}
           </div>
 
-          <div className="portal-surface p-6 text-sm">
+          <div className="card p-6 text-sm">
             <h4 className="mb-3 font-semibold text-brand-primary">Quick Info</h4>
             <div className="flex flex-col gap-2 text-slate-600">
               <div className="flex justify-between"><span>Files</span><span className="font-medium">{app.requirementFiles?.length || 0}</span></div>

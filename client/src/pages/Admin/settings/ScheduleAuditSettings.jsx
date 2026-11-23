@@ -37,7 +37,7 @@ export default function ScheduleAuditSettings() {
   }, [loadRecords])
 
   return (
-    <section className="portal-surface p-6">
+    <section className="card p-6">
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-brand-primary">Exam / Interview Schedule Records</h2>
         <p className="mt-2 text-sm text-slate-500">
@@ -49,7 +49,7 @@ export default function ScheduleAuditSettings() {
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
-            className="portal-input pl-10"
+            className="form-control pl-10"
             placeholder="Search by applicant, email, school, location, or examiner"
             value={search}
             onChange={(event) => {
@@ -63,10 +63,10 @@ export default function ScheduleAuditSettings() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-slate-200">
+      <div className="overflow-hidden rounded-control border border-slate-200">
         {loading ? (
           <div className="flex flex-col gap-3 p-5">
-            {[1, 2, 3, 4].map((item) => <div key={item} className="h-16 animate-pulse rounded-xl bg-slate-100" />)}
+            {[1, 2, 3, 4].map((item) => <div key={item} className="h-16 animate-pulse rounded-[14px] bg-slate-100" />)}
           </div>
         ) : records.length === 0 ? (
           <div className="px-5 py-10 text-sm text-slate-500">No schedule audit records found.</div>

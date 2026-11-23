@@ -35,13 +35,13 @@ export default function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex animate-fade-in items-center justify-center bg-brand-primary/40 p-4 backdrop-blur-[2px]"
       onClick={(e) => { if (e.target === e.currentTarget && !loading) onCancel() }}
       aria-modal="true"
       role="dialog"
       aria-labelledby="confirm-modal-title"
     >
-      <div className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-2xl">
+      <div className="w-full max-w-md origin-center animate-pop-in overflow-hidden rounded-card border border-brand-line bg-white shadow-raised">
         {/* Header */}
         <div className={`border-b px-6 py-4 ${danger ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}>
           <p id="confirm-modal-title" className={`text-base font-semibold ${danger ? 'text-red-700' : 'text-brand-primary'}`}>

@@ -32,7 +32,7 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg border border-red-300 bg-white shadow-2xl">
+      <div className="w-full max-w-md rounded-button border border-red-300 bg-white shadow-2xl">
         <div className="border-b border-red-200 bg-red-50 px-6 py-4">
           <p className="text-base font-semibold text-red-700">Confirm Backup Restore</p>
         </div>
@@ -50,7 +50,7 @@ function ConfirmRestore({ filename, onConfirm, onCancel, loading }) {
             </label>
             <input
               type="text"
-              className="portal-input"
+              className="form-control"
               value={phrase}
               onChange={e => setPhrase(e.target.value)}
               placeholder={REQUIRED}
@@ -210,7 +210,7 @@ export default function BackupRestore() {
         </div>
         <div className="flex min-w-[280px] flex-col gap-2">
           <select
-            className="portal-input text-sm"
+            className="form-control text-sm"
             value={backupMode}
             onChange={e => setBackupMode(e.target.value)}
             disabled={creating}

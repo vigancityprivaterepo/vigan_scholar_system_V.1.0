@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import api from '../services/api'
+import { clearAllDrafts } from '../utils/applicationDraft'
 
 export const useAuthStore = create(
   persist(
@@ -83,6 +84,7 @@ export const useAuthStore = create(
 
       logout: async () => {
         try { await api.post('/auth/logout', {}) } catch {}
+        clearAllDrafts()
         set({ user: null, accessToken: null, hasRefreshHint: false })
       },
     }),

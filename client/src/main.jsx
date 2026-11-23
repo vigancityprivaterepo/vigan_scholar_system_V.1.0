@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App'
 import './index.css'
+import { applyMotionPreference } from './utils/motionPreference'
+
+applyMotionPreference()
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 

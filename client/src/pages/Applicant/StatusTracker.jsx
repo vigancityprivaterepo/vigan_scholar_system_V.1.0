@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { getStatusBadge } from '../../utils/statusConfig'
-import Stepper from '../../components/ui/Stepper'
+import StatusTimeline from '../../components/applicant/StatusTimeline'
 import { formatDate, formatDateTime, formatScheduleDateTime } from '../../utils/formatDate'
 import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, DocumentIcon, InfoIcon } from '../../components/ui/PortalIcons'
 
@@ -38,18 +38,18 @@ export default function StatusTracker() {
 
   if (loading) return (
     <div className="flex flex-col gap-4">
-      {[1, 2, 3].map(i => <div key={i} className="card h-24 animate-pulse bg-gray-100" />)}
+      {[1, 2, 3].map(i => <div key={i} className="skeleton h-24 rounded-card" />)}
     </div>
   )
 
   if (!application) return (
     <div className="portal-empty">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-brand-primary">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-control border border-slate-300 bg-slate-50 text-brand-primary">
         <DocumentIcon className="h-6 w-6" />
       </div>
       <h2 className="mt-5 font-display text-2xl font-bold text-brand-primary">No Application Found</h2>
       <p className="mt-3 text-sm text-slate-600">You have not submitted an application yet.</p>
-      <Link to="/applicant/apply" className="portal-button-primary mt-6 inline-flex">Apply Now</Link>
+      <Link to="/applicant/apply" className="btn btn-primary mt-6 inline-flex">Apply Now</Link>
     </div>
   )
 
@@ -79,21 +79,21 @@ export default function StatusTracker() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="portal-page-title">Application Status</h1>
+          <h1 className="portal-page-title">Application status</h1>
           <p className="portal-page-subtitle">Reference ID: <span className="tabular-nums font-bold">#{application.id.slice(0, 8).toUpperCase()}</span></p>
         </div>
         <StatusBadge status={application.status} />
       </div>
 
-      <div className="portal-surface overflow-x-auto p-6">
-        <h2 className="mb-4 text-lg font-semibold text-brand-primary">Your Progress</h2>
-        <Stepper currentStatus={application.status} />
+      <div className="shrink-0 rounded-[20px] bg-white px-[18px] py-5 shadow-card">
+        <h2 className="mb-4 text-[17px] font-semibold text-brand-primary">Your progress</h2>
+        <StatusTimeline application={application} />
       </div>
 
-      <div className={`portal-surface border-l-4 p-5 ${
+      <div className={`card border-l-4 p-5 ${
         isRejected ? 'border-red-300 bg-red-50' :
         isIncomplete || isCORRejected ? 'border-amber-300 bg-amber-50' :
         application.status === 'ACCEPTED' ? 'border-emerald-300 bg-emerald-50' :
@@ -116,24 +116,24 @@ export default function StatusTracker() {
         {isIncomplete && (
           <>
             <p className="mb-2 max-w-[65ch] text-base text-slate-700">Your requirements are incomplete. Please review the admin remarks below and resubmit.</p>
-            {application.adminRemarks && <div className="portal-panel mb-3 p-3 text-sm text-slate-700"><strong>Remarks:</strong> {application.adminRemarks}</div>}
-            <Link to="/applicant/apply" className="portal-button-primary inline-flex text-sm">Resubmit Application</Link>
+            {application.adminRemarks && <div className="rounded-[14px] border border-brand-divider bg-brand-bg mb-3 p-3 text-sm text-slate-700"><strong>Remarks:</strong> {application.adminRemarks}</div>}
+            <Link to="/applicant/apply" className="btn btn-primary inline-flex text-sm">Resubmit Application</Link>
           </>
         )}
 
         {isCORRejected && (
           <>
             <p className="mb-2 max-w-[65ch] text-base text-slate-700">Your Certificate of Registration was rejected.</p>
-            {application.rejectionReason && <div className="portal-panel mb-3 p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
-            <Link to="/applicant/cor" className="portal-button-primary inline-flex text-sm">Resubmit COR</Link>
+            {application.rejectionReason && <div className="rounded-[14px] border border-brand-divider bg-brand-bg mb-3 p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
+            <Link to="/applicant/cor" className="btn btn-primary inline-flex text-sm">Resubmit COR</Link>
           </>
         )}
 
         {isRejected && (
           <>
             <p className="mb-2 max-w-[65ch] text-base text-slate-700">Unfortunately, your application was not successful.</p>
-            {application.rejectionReason && <div className="portal-panel p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
-            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
+            {application.rejectionReason && <div className="rounded-[14px] border border-brand-divider bg-brand-bg p-3 text-sm text-slate-700"><strong>Reason:</strong> {application.rejectionReason}</div>}
+            <div className="mt-3 rounded-control border border-slate-200 bg-white p-3">
               <h4 className="mb-2 text-sm font-semibold text-slate-700">Ask for reconsideration</h4>
               {pendingAppeal ? (
                 <p className="text-sm text-amber-700">You already have a pending appeal under review.</p>
@@ -141,13 +141,13 @@ export default function StatusTracker() {
                 <>
                   <textarea
                     aria-label="Reason for reconsideration"
-                    className="portal-input"
+                    className="form-control"
                     rows={3}
                     placeholder="Explain why the decision should be reviewed, and mention any document that supports it."
                     value={appealReason}
                     onChange={(e) => setAppealReason(e.target.value)}
                   />
-                  <button onClick={submitAppeal} disabled={appealLoading} className="portal-button-primary mt-2 text-sm">
+                  <button onClick={submitAppeal} disabled={appealLoading} className="btn btn-primary mt-2 text-sm">
                     {appealLoading ? 'Submitting...' : 'Submit Appeal'}
                   </button>
                 </>
@@ -157,7 +157,7 @@ export default function StatusTracker() {
         )}
 
         {application.status === 'EXAM_INTERVIEW' && application.examSchedules?.[0] && (
-          <div className="portal-panel p-4 text-sm">
+          <div className="rounded-[14px] border border-brand-divider bg-brand-bg p-4 text-sm">
             <div className="mb-2 flex items-center gap-2 text-brand-primary">
               <CalendarIcon className="h-4 w-4" />
               <p className="font-semibold">Exam/Interview Schedule</p>
@@ -172,7 +172,7 @@ export default function StatusTracker() {
         {application.status === 'APPROVED' && (
           <>
             <p className="mb-3 max-w-[65ch] text-base text-slate-700">Your application has been approved. Please submit your Certificate of Registration (COR) to complete the process.</p>
-            <Link to="/applicant/cor" className="portal-button-primary inline-flex text-sm">Submit COR Now</Link>
+            <Link to="/applicant/cor" className="btn btn-primary inline-flex text-sm">Submit COR Now</Link>
           </>
         )}
 
@@ -180,7 +180,7 @@ export default function StatusTracker() {
           <>
             <p className="mb-4 max-w-[65ch] text-base text-slate-700">Your scholarship has been fully confirmed. Welcome to the program. You may submit a renewal application for the next academic year below.</p>
             {!application.corHardCopyReceivedAt && (
-              <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-4">
+              <div className="mb-4 rounded-control border border-amber-300 bg-amber-50 p-4">
                 <div className="mb-1 flex items-center gap-2 text-amber-800">
                   <AlertTriangleIcon className="h-4 w-4" />
                   <p className="text-sm font-semibold">Bring Your Original COR to the Office</p>
@@ -190,7 +190,7 @@ export default function StatusTracker() {
             )}
             {/* Renewal status card */}
             {!isCurrentCycleRenewal ? (
-              <div className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="rounded-control border border-slate-200 bg-white p-4">
                 <p className="mb-2 text-sm font-medium text-brand-primary">Scholarship Renewal</p>
                 <p className="mb-3 text-sm text-slate-600">Ready to renew? Submit your COR and latest grades to continue your scholarship.</p>
                 {renewal?.academicYear && (
@@ -198,31 +198,31 @@ export default function StatusTracker() {
                     Last renewed: {renewal.academicYear} · {renewal.status === 'APPROVED' ? 'Approved' : renewal.status === 'REJECTED' ? 'Rejected' : renewal.status.replace(/_/g, ' ')}
                   </p>
                 )}
-                <Link to="/applicant/renewal" className="portal-button-primary inline-flex text-sm">
+                <Link to="/applicant/renewal" className="btn btn-primary inline-flex text-sm">
                   Submit Renewal Application
                 </Link>
               </div>
             ) : renewal.status === 'PENDING_REVIEW' ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-4">
+              <div className="rounded-control border border-amber-300 bg-amber-50 p-4">
                 <p className="text-sm font-semibold text-amber-800">Renewal Under Review</p>
                 <p className="mt-1 text-xs text-amber-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
                 <p className="mt-2 max-w-[65ch] text-base text-slate-700">Your renewal application is being reviewed by the scholarship office.</p>
               </div>
             ) : renewal.status === 'APPROVED' ? (
-              <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4">
+              <div className="rounded-control border border-emerald-300 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-800">Renewal Approved</p>
                 <p className="mt-1 text-xs text-emerald-700">Ref: #{renewal.id.slice(0, 8).toUpperCase()}{renewal.academicYear ? ` · ${renewal.academicYear}` : ''}</p>
                 <p className="mt-2 max-w-[65ch] text-base text-slate-700">Your scholarship renewal has been approved. Congratulations!</p>
               </div>
             ) : renewal.status === 'REJECTED' ? (
-              <div className="rounded-md border border-red-300 bg-red-50 p-4">
+              <div className="rounded-control border border-red-300 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-800">Renewal Rejected</p>
                 {renewal.adminRemarks && (
                   <div className="mt-2 rounded border border-slate-200 bg-white p-2 text-sm text-slate-700">
                     <strong>Remarks:</strong> {renewal.adminRemarks}
                   </div>
                 )}
-                <Link to="/applicant/renewal" className="portal-button-primary mt-3 inline-flex text-sm">
+                <Link to="/applicant/renewal" className="btn btn-primary mt-3 inline-flex text-sm">
                   Submit New Renewal
                 </Link>
               </div>
@@ -235,8 +235,8 @@ export default function StatusTracker() {
         )}
       </div>
 
-      <div className="portal-surface p-6">
-        <h3 className="mb-4 text-lg font-semibold text-brand-primary">Application Details</h3>
+      <div className="shrink-0 rounded-[20px] bg-white p-5 shadow-card">
+        <h3 className="mb-4 text-[17px] font-semibold text-brand-primary">Application Details</h3>
         <div className="grid gap-4 text-sm sm:grid-cols-2">
           {[
             ['School', application.school],
@@ -255,18 +255,18 @@ export default function StatusTracker() {
       </div>
 
       {application.activityLogs?.length > 0 && (
-        <div className="portal-surface p-6">
-          <h3 className="mb-4 text-lg font-semibold text-brand-primary">Status history</h3>
+        <div className="shrink-0 rounded-[20px] bg-white p-5 shadow-card">
+          <h3 className="mb-4 text-[17px] font-semibold text-brand-primary">Status history</h3>
           <div className="flex flex-col gap-3">
             {application.activityLogs.map((log, i) => (
               <div key={log.id} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full bg-brand-teal" />
+                  <div className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${i === 0 ? 'bg-brand-teal ring-4 ring-emerald-100' : 'bg-emerald-300'}`} />
                   {i < application.activityLogs.length - 1 && <div className="mt-1 w-0.5 flex-1 bg-slate-200" />}
                 </div>
                 <div className="flex-1 pb-3">
-                  <p className="text-sm font-medium text-brand-primary">{getStatusBadge(log.toStatus).label}</p>
-                  <p className="mt-1 text-xs text-slate-500">{formatDateTime(log.createdAt)}</p>
+                  <p className="text-[15px] font-semibold text-brand-primary">{getStatusBadge(log.toStatus).label}</p>
+                  <p className="mt-0.5 text-sm text-slate-500">{formatDateTime(log.createdAt)}</p>
                 </div>
               </div>
             ))}
@@ -274,14 +274,14 @@ export default function StatusTracker() {
         </div>
       )}
 
-      <div className="portal-surface p-6">
-        <h3 className="mb-4 text-lg font-semibold text-brand-primary">Communication Timeline</h3>
+      <div className="shrink-0 rounded-[20px] bg-white p-5 shadow-card">
+        <h3 className="mb-4 text-[17px] font-semibold text-brand-primary">Communication Timeline</h3>
         {communications.length === 0 ? (
           <p className="text-sm text-slate-500">No messages yet. Emails and notices the office sends you will be listed here.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {communications.slice(0, 50).map((item) => (
-              <div key={item.id} className="rounded-md border border-slate-200 p-3">
+              <div key={item.id} className="rounded-control border border-slate-200 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-brand-primary">{item.title || item.source}</p>
                   <span className="text-xs text-slate-500">{formatDateTime(item.createdAt)}</span>

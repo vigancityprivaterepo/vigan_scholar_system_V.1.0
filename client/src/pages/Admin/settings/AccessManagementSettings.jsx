@@ -125,7 +125,7 @@ export default function AccessManagementSettings() {
   }
 
   return (
-    <section className="portal-surface p-6">
+    <section className="card p-6">
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-brand-primary">User Control</h2>
         <p className="mt-2 text-sm text-slate-500">
@@ -134,7 +134,7 @@ export default function AccessManagementSettings() {
       </div>
 
       {!isPrimaryAdmin && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="rounded-control border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Only the primary administrator account can invite staff, change roles, or delete accounts.
           Ask the primary administrator if someone's access needs to change.
         </div>
@@ -142,7 +142,7 @@ export default function AccessManagementSettings() {
 
       {isPrimaryAdmin && (
         <>
-          <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 p-4">
+          <div className="mb-4 rounded-control border border-emerald-200 bg-emerald-50 p-4">
             <h3 className="text-sm font-semibold text-emerald-900">Invite a staff member</h3>
             <p className="mt-1 text-sm text-emerald-900">
               Create an admin invitation. The user will receive an email link to set their password.
@@ -150,7 +150,7 @@ export default function AccessManagementSettings() {
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               <input
                 aria-label="Full name"
-                className="portal-input sm:col-span-1"
+                className="form-control sm:col-span-1"
                 placeholder="Full name"
                 value={inviteForm.fullName}
                 onChange={(e) => setInviteForm((current) => ({ ...current, fullName: e.target.value }))}
@@ -159,7 +159,7 @@ export default function AccessManagementSettings() {
               <input
                 type="email"
                 aria-label="Email address"
-                className="portal-input sm:col-span-1"
+                className="form-control sm:col-span-1"
                 placeholder="Email address"
                 value={inviteForm.email}
                 onChange={(e) => setInviteForm((current) => ({ ...current, email: e.target.value }))}
@@ -167,7 +167,7 @@ export default function AccessManagementSettings() {
               />
               <button
                 type="button"
-                className="portal-button-primary sm:col-span-1"
+                className="btn btn-primary sm:col-span-1"
                 onClick={handleInviteAdmin}
                 disabled={inviteLoading}
               >
@@ -179,7 +179,7 @@ export default function AccessManagementSettings() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <select
               aria-label="Account type"
-              className="portal-input sm:max-w-[220px]"
+              className="form-control sm:max-w-[220px]"
               value={userRoleFilter}
               onChange={(e) => setUserRoleFilter(e.target.value)}
             >
@@ -192,23 +192,23 @@ export default function AccessManagementSettings() {
             </select>
             <input
               aria-label="Search users"
-              className="portal-input"
+              className="form-control"
               placeholder="Search by full name or email"
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
             />
             <button
               type="button"
-              className="portal-button-secondary whitespace-nowrap"
+              className="btn whitespace-nowrap"
               onClick={() => loadUsers(userSearch.trim(), userRoleFilter)}
             >
               Search Users
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-md border border-slate-200">
+          <div className="overflow-x-auto rounded-control border border-slate-200">
             <table className="w-full min-w-[760px]">
-              <thead className="bg-slate-50">
+              <thead>
                 <tr>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Name</th>
                   <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Email</th>
@@ -251,7 +251,7 @@ export default function AccessManagementSettings() {
                           <div className="flex items-center gap-2">
                             <select
                               aria-label={`Role for ${u.fullName}`}
-                              className="portal-input !py-1.5 text-xs"
+                              className="form-control !py-1.5 text-xs"
                               value={u.role}
                               disabled={isSelf || roleUpdatingId === u.id || isDeleting}
                               onChange={(e) => handleRoleChange(u, e.target.value)}

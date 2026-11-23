@@ -84,16 +84,16 @@ export default function RenewalReview() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        {[1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-100" />)}
+        {[1, 2, 3].map((i) => <div key={i} className="h-24 animate-pulse rounded-button bg-slate-100" />)}
       </div>
     )
   }
 
   if (!renewal) {
     return (
-      <div className="portal-surface p-12 text-center">
+      <div className="card p-12 text-center">
         <p className="text-slate-500">Renewal not found.</p>
-        <button onClick={() => navigate('/admin/renewals')} className="portal-button-outline mt-4 text-sm">
+        <button onClick={() => navigate('/admin/renewals')} className="btn btn-outline mt-4 text-sm">
           Back to Renewals
         </button>
       </div>
@@ -118,7 +118,7 @@ export default function RenewalReview() {
       </button>
 
       {/* Header */}
-      <div className="portal-surface p-6">
+      <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="portal-kicker">Renewal Application</p>
@@ -137,14 +137,14 @@ export default function RenewalReview() {
         </div>
 
         {renewal.adminRemarks && (
-          <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <div className="mt-4 rounded-control border border-brand-divider bg-brand-bg p-3 text-sm text-slate-700">
             <strong>Admin Remarks:</strong> {renewal.adminRemarks}
           </div>
         )}
       </div>
 
       {/* Scholar Info */}
-      <div className="portal-surface p-6">
+      <div className="card p-6">
         <h2 className="mb-4 font-semibold text-brand-primary">Scholar Information</h2>
         <div className="grid gap-3 text-sm sm:grid-cols-2">
           {[
@@ -164,13 +164,13 @@ export default function RenewalReview() {
       </div>
 
       {/* Documents */}
-      <div className="portal-surface p-6">
+      <div className="card p-6">
         <h2 className="mb-4 font-semibold text-brand-primary">Submitted Documents</h2>
         <div className="flex flex-col gap-3">
           {[corFile, gradesFile].map((file, i) => {
             const docKey = i === 0 ? 'COR' : 'GRADES'
             return (
-              <div key={docKey} className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+              <div key={docKey} className="flex items-center gap-3 rounded-control border border-brand-divider bg-brand-bg px-4 py-3">
                 <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${file ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
                   <DocumentIcon className="h-4 w-4" />
                 </div>
@@ -185,7 +185,7 @@ export default function RenewalReview() {
                 {file && (
                   <button
                     onClick={() => openFile(file.id)}
-                    className="shrink-0 rounded-md border border-brand-teal px-3 py-1.5 text-xs font-medium text-brand-teal hover:bg-teal-50 transition-colors"
+                    className="shrink-0 rounded-control border border-brand-teal px-3 py-1.5 text-xs font-medium text-brand-teal hover:bg-teal-50 transition-colors"
                   >
                     View
                   </button>
@@ -198,7 +198,7 @@ export default function RenewalReview() {
 
       {/* Admin Action */}
       {isPending && (
-        <div className="portal-surface p-6">
+        <div className="card p-6">
           <h2 className="mb-4 font-semibold text-brand-primary">Review Action</h2>
 
           {!showRejectForm ? (
@@ -206,14 +206,14 @@ export default function RenewalReview() {
               <button
                 onClick={handleApprove}
                 disabled={actionLoading}
-                className="flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-2 rounded-control bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
               >
                 {actionLoading ? 'Processing…' : 'Approve Renewal'}
               </button>
               <button
                 onClick={() => setShowRejectForm(true)}
                 disabled={actionLoading}
-                className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-2 rounded-control border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 transition-colors"
               >
                 Reject Renewal
               </button>
@@ -225,7 +225,7 @@ export default function RenewalReview() {
                   Rejection Remarks <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  className="portal-input"
+                  className="form-control"
                   rows={3}
                   placeholder="Explain why the renewal is being rejected…"
                   value={remarks}
@@ -236,13 +236,13 @@ export default function RenewalReview() {
                 <button
                   onClick={handleReject}
                   disabled={actionLoading || !remarks.trim()}
-                  className="rounded-md bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
+                  className="rounded-control bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
                 >
                   {actionLoading ? 'Rejecting…' : 'Confirm Rejection'}
                 </button>
                 <button
                   onClick={() => { setShowRejectForm(false); setRemarks('') }}
-                  className="portal-button-outline text-sm"
+                  className="btn btn-outline text-sm"
                 >
                   Cancel
                 </button>

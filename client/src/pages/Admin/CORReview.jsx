@@ -1,11 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
 import { openProtectedFile } from '../../utils/openProtectedFile'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, DocumentIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
+import { AlertTriangleIcon } from '../../components/ui/PortalIcons'
+import { CollapseOut, EmptyQueue, RemarkField, useRequiredRemark } from '../../components/ui/Motion'
+import { useUndoableActions } from '../../hooks/useUndoableActions'
 
 const PAGE_SIZE = 20
 
@@ -15,10 +17,10 @@ export default function CORReview() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [reasons, setReasons] = useState({})
-  const [acting, setActing] = useState({})
+  const { schedule, isHidden } = useUndoableActions()
+  const remark = useRequiredRemark()
 
   const fetchData = useCallback(() => {
-    setLoading(true)
     adminService.listApplications({ status: 'COR_SUBMITTED', limit: PAGE_SIZE, page })
       .then(r => {
         setApps(r.data.applications)
@@ -28,123 +30,118 @@ export default function CORReview() {
       .finally(() => setLoading(false))
   }, [page])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    setLoading(true)
+    fetchData()
+  }, [fetchData])
 
-  const review = async (id, approved) => {
-    if (!approved && !reasons[id]?.trim()) { toast.error('Please provide a rejection reason'); return }
-    setActing(a => ({ ...a, [id]: true }))
+  const review = (app, approved) => {
+    const reason = reasons[app.id] || ''
+    if (!approved && !remark.require(app.id, reason)) return
+    const name = app.applicant?.fullName || 'Applicant'
+    schedule({
+      id: app.id,
+      message: approved ? `COR approved · ${name} accepted` : `COR returned to ${name}`,
+      commit: () => adminService.reviewCOR(app.id, { approved, reason: reason || undefined }),
+      onDone: fetchData,
+    })
+  }
+
+  const openCor = async (corId) => {
     try {
-      await adminService.reviewCOR(id, { approved, reason: reasons[id] || undefined })
-      toast.success(approved ? 'COR approved. Applicant accepted.' : 'COR rejected.')
-      fetchData()
+      await openProtectedFile(`/files/cor/${corId}`)
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed')
-    } finally {
-      setActing(a => ({ ...a, [id]: false }))
+      toast.error(err.response?.data?.message || 'Failed to open COR file.')
     }
   }
 
+  const waiting = Math.max(0, pagination.total - apps.filter((app) => isHidden(app.id)).length)
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="portal-page-title">COR Review</h1>
-        <p className="portal-page-subtitle">{pagination.total} COR submission(s) pending review</p>
+        <h1 className="portal-page-title">COR review</h1>
+        <p className="portal-page-subtitle">
+          <strong className="text-brand-primary">{waiting}</strong> certificates of registration waiting. Approving a COR accepts the applicant as a scholar.
+        </p>
       </div>
 
       {loading ? (
         <div className="flex flex-col gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="card h-36 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-28 rounded-card" />)}
         </div>
-      ) : apps.length === 0 && page === 1 ? (
-        <div className="portal-empty">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-brand-primary">
-            <DocumentIcon className="h-6 w-6" />
-          </div>
-          <p className="mt-4 font-display text-xl font-bold text-brand-primary">No CORs pending</p>
-          <p className="mt-1 text-sm text-slate-500">All COR submissions have been reviewed.</p>
-        </div>
+      ) : apps.length === 0 || (apps.every((app) => isHidden(app.id)) && pagination.pages <= 1) ? (
+        <EmptyQueue title="No CORs pending">All COR submissions have been reviewed.</EmptyQueue>
       ) : (
-        <div className="portal-surface overflow-hidden">
-          <div className="flex flex-col divide-y divide-slate-100">
-            {apps.map(app => {
-              const latestCOR = app.corFiles?.[0] || null
-              return (
-                <div key={app.id} className="p-6">
-                  <div className="mb-4 flex items-start justify-between">
-                    <div>
-                      <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                      <p className="text-xs text-slate-500">{app.school} • {app.course}</p>
-                      <p className="mt-0.5 tabular-nums text-xs text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</p>
+        <>
+          {apps.map((app, index) => {
+            const latestCOR = app.corFiles?.[0] || null
+            return (
+              <CollapseOut key={app.id} leaving={isHidden(app.id)}>
+                <div className="animate-slide-up" style={{ animationDelay: `${index * 40}ms` }}>
+                  <div className="card grid items-center gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,1fr)_minmax(280px,1fr)]">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-[17px] font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                      <p className="text-sm text-slate-500">{app.school} · {app.course}</p>
+                      <p className="text-[13px] tabular-nums text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</p>
+                      <Link to={`/admin/applicants/${app.id}`} className="mt-1 self-start py-1 text-sm font-semibold text-brand-teal hover:text-brand-dark">
+                        Open full review →
+                      </Link>
                     </div>
-                    <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
-                      Full Review <ArrowRightIcon className="h-4 w-4" />
-                    </Link>
-                  </div>
 
-                  {latestCOR ? (
-                    <div className="portal-panel mb-4 p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <DocumentIcon className="h-5 w-5 text-brand-primary" />
-                          <div>
-                            <p className="text-sm font-medium text-brand-primary">{latestCOR.fileName}</p>
-                            <p className="text-xs text-slate-500">Uploaded {formatDate(latestCOR.uploadedAt)}</p>
-                          </div>
+                    {latestCOR ? (
+                      <div className="flex items-center gap-3 rounded-[14px] border border-brand-divider bg-brand-bg p-3">
+                        <div className="flex h-[54px] w-11 shrink-0 items-end justify-center rounded-md border border-brand-line bg-[repeating-linear-gradient(0deg,#fff_0_6px,#ecfdf5_6px_7px)] pb-1 text-[10px] font-bold text-red-700" aria-hidden="true">PDF</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold text-brand-primary">{latestCOR.fileName}</p>
+                          <p className="text-[13px] text-slate-500">Uploaded {formatDate(latestCOR.uploadedAt)}</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            try {
-                              await openProtectedFile(`/files/cor/${latestCOR.id}`)
-                            } catch (err) {
-                              toast.error(err.response?.data?.message || 'Failed to open COR file.')
-                            }
-                          }}
-                          className="portal-button-secondary !px-3 !py-1.5 text-xs"
-                        >
-                          View PDF
-                        </button>
+                        <button type="button" onClick={() => openCor(latestCOR.id)} className="btn min-h-9 px-3 text-sm">View</button>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="portal-panel mb-4 flex items-center gap-3 p-4 text-sm text-amber-700">
-                      <AlertTriangleIcon className="h-5 w-5" />
-                      No COR file found.
-                    </div>
-                  )}
+                    ) : (
+                      <div className="flex items-center gap-3 rounded-[14px] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        <AlertTriangleIcon className="h-5 w-5" />
+                        No COR file found.
+                      </div>
+                    )}
 
-                  <div className="flex flex-col gap-3">
-                    <textarea
-                      aria-label="Rejection reason"
-                      className="portal-input text-sm"
-                      rows={2}
-                      placeholder="Rejection reason (required if rejecting)"
-                      value={reasons[app.id] || ''}
-                      onChange={e => setReasons(r => ({ ...r, [app.id]: e.target.value }))}
-                    />
-                    <div className="flex gap-3">
-                      <button onClick={() => review(app.id, true)} disabled={acting[app.id]} className="portal-button-primary flex-1">
-                        Approve COR
-                      </button>
-                      <button onClick={() => review(app.id, false)} disabled={acting[app.id]} className="portal-button-secondary flex-1 !border-red-300 !text-red-700 hover:!border-red-500 hover:!text-red-800">
-                        Reject COR
-                      </button>
+                    <div className="flex flex-col gap-2">
+                      <RemarkField
+                        value={reasons[app.id] || ''}
+                        onChange={(e) => {
+                          setReasons(r => ({ ...r, [app.id]: e.target.value }))
+                          remark.clear(app.id)
+                        }}
+                        placeholder="Reason (required to reject)"
+                        aria-label={`Rejection reason for ${app.applicant?.fullName || 'applicant'}`}
+                        error={remark.errorFor(app.id)}
+                        shakeKey={remark.shakeKeyFor(app.id)}
+                        helper="Tell the scholar what to fix, e.g. “Upload the COR for the current semester.”"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => review(app, true)} className="btn btn-primary">Approve COR</button>
+                        <button type="button" onClick={() => review(app, false)} className="btn btn-danger">Reject COR</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              </CollapseOut>
+            )
+          })}
 
-          <Pagination
-            page={page}
-            pages={pagination.pages}
-            total={pagination.total}
-            label="submissions"
-            onPrev={() => setPage(p => p - 1)}
-            onNext={() => setPage(p => p + 1)}
-          />
-        </div>
+          {pagination.pages > 1 && (
+            <div className="card">
+              <Pagination
+                page={page}
+                pages={pagination.pages}
+                total={pagination.total}
+                label="submissions"
+                onPrev={() => setPage(p => p - 1)}
+                onNext={() => setPage(p => p + 1)}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   )

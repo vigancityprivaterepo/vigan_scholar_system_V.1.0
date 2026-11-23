@@ -1,154 +1,185 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { adminService } from '../../services/adminService'
-import { formatDateTime } from '../../utils/formatDate'
+import { formatDate } from '../../utils/formatDate'
 import { getStatusBadge } from '../../utils/statusConfig'
+import Pagination from '../../components/shared/Pagination'
+import { CollapseOut, RemarkField, useRequiredRemark } from '../../components/ui/Motion'
+import { useUndoableActions } from '../../hooks/useUndoableActions'
 
-const APPEAL_STATUS_LABEL = { PENDING: 'Pending', APPROVED: 'Approved', DENIED: 'Denied' }
+const FILTERS = [
+  { value: '', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'DENIED', label: 'Denied' },
+]
+const STATUS_BADGE = {
+  PENDING: { label: 'Pending', className: 'bg-status-warn-bg text-status-warn-fg' },
+  APPROVED: { label: 'Approved', className: 'bg-status-accepted-bg text-status-accepted-fg' },
+  DENIED: { label: 'Denied', className: 'bg-status-rejected-bg text-status-rejected-fg' },
+}
 
 export default function AppealsPage() {
   const [appeals, setAppeals] = useState([])
+  const [pagination, setPagination] = useState({ total: 0, pages: 1 })
+  const [page, setPage] = useState(1)
+  const [counts, setCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [resolutions, setResolutions] = useState({})
-  const [actingId, setActingId] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const { schedule, isHidden } = useUndoableActions()
+  const remark = useRequiredRemark()
 
-  const fetchAppeals = async () => {
-    setLoading(true)
+  const fetchAppeals = useCallback(async () => {
     try {
-      const params = {}
+      const params = { page }
       if (statusFilter) params.status = statusFilter
-      const response = await adminService.listAppeals(params)
+      const [response, stats] = await Promise.all([
+        adminService.listAppeals(params),
+        adminService.getStats().catch(() => null),
+      ])
       setAppeals(response.data.appeals || [])
+      setPagination(response.data.pagination || { total: 0, pages: 1 })
+      if (stats) setCounts(stats.data.stats?.appeals || {})
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load appeals.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, page])
 
-  useEffect(() => { fetchAppeals() }, [statusFilter])
+  useEffect(() => {
+    setLoading(true)
+    fetchAppeals()
+  }, [fetchAppeals])
 
-  const resolveAppeal = async (appeal, status) => {
+  const resolveAppeal = (appeal, status) => {
     const resolution = String(resolutions[appeal.id] || '').trim()
-    if (!resolution) {
-      toast.error('Please provide a resolution note.')
-      return
-    }
-    try {
-      setActingId(appeal.id)
-      const response = await adminService.resolveAppeal(appeal.id, { status, resolution })
-      toast.success(response.data.message || 'Appeal resolved.')
-      fetchAppeals()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to resolve appeal.')
-    } finally {
-      setActingId('')
-    }
+    if (!remark.require(appeal.id, resolution)) return
+    const name = appeal.applicant?.fullName || 'Applicant'
+    schedule({
+      id: appeal.id,
+      message: status === 'APPROVED' ? `Appeal approved for ${name}` : `Appeal denied for ${name}`,
+      commit: () => adminService.resolveAppeal(appeal.id, { status, resolution }),
+      onDone: fetchAppeals,
+      errorMessage: 'Failed to resolve appeal.',
+    })
   }
+
+  const countFor = (value) => (value
+    ? counts[value] || 0
+    : Object.values(counts).reduce((sum, n) => sum + (Number(n) || 0), 0))
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="portal-page-title">Appeals</h1>
-          <p className="portal-page-subtitle">Review and resolve rejected applicant appeals.</p>
-        </div>
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="portal-page-title">Appeals</h1>
+        <p className="portal-page-subtitle">Requests for reconsideration from applicants who were not qualified or rejected.</p>
       </div>
 
-      <div className="portal-surface p-4">
-        <div className="flex gap-2">
-          <label className="sr-only" htmlFor="appeal-filter">Show appeals</label>
-          <select id="appeal-filter" className="portal-input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="">All Appeals</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="DENIED">Denied</option>
-          </select>
-          <button onClick={fetchAppeals} className="portal-button-secondary">Refresh</button>
-        </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Show appeals">
+        {FILTERS.map((filter) => (
+          <button
+            key={filter.value || 'all'}
+            type="button"
+            aria-pressed={statusFilter === filter.value}
+            onClick={() => { setStatusFilter(filter.value); setPage(1) }}
+            className="chip"
+          >
+            {filter.label}
+            <span className="tabular-nums opacity-75">{countFor(filter.value)}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="portal-surface overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Applicant</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Application</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Reason</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="px-3 py-2 text-left text-sm font-semibold text-slate-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">Loading...</td></tr>
-              ) : appeals.length === 0 ? (
-                <tr><td colSpan={5} className="px-3 py-8 text-center text-sm text-slate-500">
-                  {statusFilter === 'PENDING' ? 'No appeals are waiting for a decision.' : 'No appeals match this filter.'}
-                </td></tr>
-              ) : (
-                appeals.map((appeal) => (
-                  <tr key={appeal.id} className="border-t border-slate-100 align-top">
-                    <td className="px-3 py-3 text-sm text-slate-700">
-                      <p className="font-medium text-brand-primary">{appeal.applicant?.fullName || '-'}</p>
-                      <p className="text-xs text-slate-500">{appeal.applicant?.email || '-'}</p>
-                    </td>
-                    <td className="px-3 py-3 text-xs text-slate-600">
-                      {appeal.application?.id ? (
-                        <Link to={`/admin/applicants/${appeal.application.id}`} className="font-medium text-brand-primary underline-offset-2 hover:underline">
-                          Open application #{appeal.application.id.slice(0, 8).toUpperCase()}
-                        </Link>
-                      ) : <p>-</p>}
-                      <p>{appeal.application?.status ? getStatusBadge(appeal.application.status).label : '-'}</p>
-                      <p>{appeal.application?.academicYear ? `AY ${appeal.application.academicYear}` : '-'}</p>
-                      <p>{formatDateTime(appeal.createdAt)}</p>
-                    </td>
-                    <td className="px-3 py-3 text-sm text-slate-700">{appeal.reason}</td>
-                    <td className="px-3 py-3 text-xs text-slate-700">
-                      <p className="font-semibold">{APPEAL_STATUS_LABEL[appeal.status] || appeal.status}</p>
-                      {appeal.resolution && <p className="mt-1 text-slate-500">Resolution: {appeal.resolution}</p>}
-                    </td>
-                    <td className="px-3 py-3">
-                      {appeal.status === 'PENDING' ? (
-                        <div className="flex min-w-[250px] flex-col gap-2">
-                          <textarea
-                            className="portal-input text-xs"
-                            rows={2}
-                            placeholder="Resolution notes"
+      {loading ? (
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-32 rounded-card" />)}
+        </div>
+      ) : appeals.length === 0 ? (
+        <div className="portal-empty text-[15px] text-slate-500">
+          {statusFilter === 'PENDING' ? 'No appeals are waiting for a decision.' : 'No appeals match this filter.'}
+        </div>
+      ) : (
+        <>
+          {appeals.map((appeal, index) => {
+            const badge = STATUS_BADGE[appeal.status] || { label: appeal.status, className: 'bg-status-pending-bg text-status-pending-fg' }
+            return (
+              <CollapseOut key={appeal.id} leaving={statusFilter === 'PENDING' && isHidden(appeal.id)}>
+                <div className="animate-slide-up" style={{ animationDelay: `${index * 40}ms` }}>
+                  <div className="card grid items-start gap-5 p-5 lg:grid-cols-[minmax(200px,0.8fr)_minmax(0,1.4fr)_minmax(280px,1fr)]">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-[17px] font-semibold text-brand-primary">{appeal.applicant?.fullName || '—'}</p>
+                      <p className="text-sm text-slate-500">{appeal.applicant?.email || '—'}</p>
+                      <p className="mt-1 text-[13px] tabular-nums text-slate-500">
+                        {appeal.application?.id ? (
+                          <Link to={`/admin/applicants/${appeal.application.id}`} className="font-semibold text-brand-teal hover:text-brand-dark">
+                            #{appeal.application.id.slice(0, 8).toUpperCase()}
+                          </Link>
+                        ) : '—'}
+                        {appeal.application?.status && ` · was ${getStatusBadge(appeal.application.status).label.toLowerCase()}`}
+                      </p>
+                      <p className="text-[13px] text-slate-500">
+                        Filed {formatDate(appeal.createdAt)}{appeal.application?.academicYear ? ` · AY ${appeal.application.academicYear}` : ''}
+                      </p>
+                    </div>
+
+                    <blockquote className="rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-3.5 text-[15px] leading-relaxed text-slate-800">
+                      “{appeal.reason}”
+                    </blockquote>
+
+                    <div>
+                      {appeal.status === 'PENDING' && !isHidden(appeal.id) ? (
+                        <div className="flex flex-col gap-2">
+                          <RemarkField
                             value={resolutions[appeal.id] || ''}
-                            onChange={(e) => setResolutions((prev) => ({ ...prev, [appeal.id]: e.target.value }))}
+                            onChange={(e) => {
+                              setResolutions((prev) => ({ ...prev, [appeal.id]: e.target.value }))
+                              remark.clear(appeal.id)
+                            }}
+                            placeholder="Resolution note (required)"
+                            aria-label={`Resolution note for ${appeal.applicant?.fullName || 'applicant'}`}
+                            error={remark.errorFor(appeal.id)}
+                            shakeKey={remark.shakeKeyFor(appeal.id)}
+                            helper="The applicant will see this note, so add a short explanation."
                           />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => resolveAppeal(appeal, 'APPROVED')}
-                              disabled={actingId === appeal.id}
-                              className="portal-button-primary !px-3 !py-1.5 text-xs"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => resolveAppeal(appeal, 'DENIED')}
-                              disabled={actingId === appeal.id}
-                              className="portal-button-secondary !border-red-300 !px-3 !py-1.5 text-xs !text-red-700"
-                            >
-                              Deny
-                            </button>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button" onClick={() => resolveAppeal(appeal, 'APPROVED')} className="btn btn-primary">Approve</button>
+                            <button type="button" onClick={() => resolveAppeal(appeal, 'DENIED')} className="btn btn-danger">Deny</button>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-xs text-slate-500">Resolved</p>
+                        <div className="flex flex-col items-start gap-2">
+                          <span className={`badge badge-dot ${isHidden(appeal.id) ? 'bg-status-pending-bg text-status-pending-fg' : badge.className}`}>
+                            {isHidden(appeal.id) ? 'Saving…' : badge.label}
+                          </span>
+                          {(appeal.resolution || isHidden(appeal.id)) && (
+                            <p className="text-sm leading-normal text-slate-600">{appeal.resolution || resolutions[appeal.id]}</p>
+                          )}
+                        </div>
                       )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </div>
+                  </div>
+                </div>
+              </CollapseOut>
+            )
+          })}
+
+          {pagination.pages > 1 && (
+            <div className="card">
+              <Pagination
+                page={page}
+                pages={pagination.pages}
+                total={pagination.total}
+                label="appeals"
+                onPrev={() => setPage(p => p - 1)}
+                onNext={() => setPage(p => p + 1)}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }

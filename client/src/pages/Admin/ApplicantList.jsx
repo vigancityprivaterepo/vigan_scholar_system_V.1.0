@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
@@ -8,7 +8,9 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import ConfirmModal from '../../components/shared/ConfirmModal'
 import { formatDate } from '../../utils/formatDate'
 import { getStatusBadge } from '../../utils/statusConfig'
-import { ArrowRightIcon, SearchIcon, ChevronUpIcon, ChevronDownIcon } from '../../components/ui/PortalIcons'
+import { ArrowRightIcon, SearchIcon, ChevronUpIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from '../../components/ui/PortalIcons'
+import ReviewDrawer from '../../components/admin/ReviewDrawer'
+import { barangayOf } from '../../utils/requirements'
 
 const SAVED_VIEWS_KEY = 'adminApplicantList.savedViews.v1'
 
@@ -30,14 +32,14 @@ const getFirstPreferenceDetails = (application) => {
   }
 }
 
-const exportToCSV = async (search, statusFilter, academicYear) => {
+const exportToCSV = async (search, statusFilter, academicYear, onlyIds = null) => {
   try {
     const params = { page: 1, limit: 9999, sortBy: 'submittedAt', sortOrder: 'desc' }
     if (search) params.search = search
     if (statusFilter) params.status = statusFilter
     if (academicYear) params.academicYear = academicYear
     const r = await adminService.listApplications(params)
-    const apps = r.data.applications
+    const apps = onlyIds ? r.data.applications.filter((a) => onlyIds.has(a.id)) : r.data.applications
 
     const headers = [
       'Reference ID',
@@ -105,9 +107,18 @@ const exportToCSV = async (search, statusFilter, academicYear) => {
 
 const ALL_STATUSES = ['PENDING_REVIEW', 'INCOMPLETE', 'ELIGIBILITY_SCREENING', 'NOT_QUALIFIED', 'EXAM_INTERVIEW', 'FAILED_EXAM', 'APPROVED', 'COR_SUBMITTED', 'COR_REJECTED', 'ACCEPTED', 'REJECTED']
 const DESTRUCTIVE_STATUSES = ['NOT_QUALIFIED', 'FAILED_EXAM', 'REJECTED']
+const SORTS = {
+  new: { label: 'Newest first', sortBy: 'submittedAt', sortOrder: 'desc' },
+  old: { label: 'Oldest first', sortBy: 'submittedAt', sortOrder: 'asc' },
+  gwa: { label: 'Highest GWA', sortBy: 'gwa', sortOrder: 'desc' },
+  name: { label: 'Name A–Z', sortBy: 'applicant', sortOrder: 'asc' },
+}
+// Clicks on these inside a row do their own thing instead of opening the drawer.
+const INTERACTIVE = 'a, button, input, select, textarea, label'
 
 export default function ApplicantList() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const academicYearOptions = useMemo(() => getAcademicYearOptions(), [])
   const [data, setData] = useState({ applications: [], pagination: { total: 0, pages: 1 } })
@@ -132,6 +143,11 @@ export default function ApplicantList() {
   const [pendingApplicantDelete, setPendingApplicantDelete] = useState(null)
   const [deletingApplicantId, setDeletingApplicantId] = useState('')
   const canDeleteApplicants = user?.role === 'SUPER_ADMIN'
+  const [statusCounts, setStatusCounts] = useState({})
+  const [threshold, setThreshold] = useState(83)
+  const [drawerId, setDrawerId] = useState(searchParams.get('review') || '')
+  const [batchOpen, setBatchOpen] = useState(false)
+  const [flashId, setFlashId] = useState('')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -149,6 +165,21 @@ export default function ApplicantList() {
   }, [page, search, statusFilter, sortBy, sortOrder, academicYear])
 
   useEffect(() => { fetchData() }, [fetchData])
+  // Chip counts follow the academic-year filter.
+  const fetchCounts = useCallback(() => {
+    adminService.getStats(academicYear ? { academicYear } : undefined)
+      .then((r) => setStatusCounts(r.data.stats?.byStatus || {}))
+      .catch(() => {})
+  }, [academicYear])
+  useEffect(() => { fetchCounts() }, [fetchCounts])
+  useEffect(() => {
+    adminService.getSiteSettings()
+      .then((r) => {
+        const t = parseFloat(r.data.settings?.gwaThreshold)
+        if (!Number.isNaN(t)) setThreshold(t)
+      })
+      .catch(() => {})
+  }, [])
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(SAVED_VIEWS_KEY)
@@ -320,6 +351,27 @@ export default function ApplicantList() {
     }
   }
 
+  const sortKey = Object.keys(SORTS).find((key) => SORTS[key].sortBy === sortBy && SORTS[key].sortOrder === sortOrder) || ''
+  const totalCount = Object.values(statusCounts).reduce((sum, n) => sum + (Number(n) || 0), 0)
+  const chipStatuses = ALL_STATUSES.filter((status) => statusCounts[status] > 0 || status === statusFilter)
+
+  const openRow = (event, id) => {
+    if (event.target.closest(INTERACTIVE)) return
+    setDrawerId(id)
+  }
+
+  // After a decision in the drawer, move on to the next applicant still pending review.
+  const handleDecided = (id, status) => {
+    toast.success(status === 'ELIGIBILITY_SCREENING' ? 'Sent to eligibility screening.' : 'Marked incomplete. The applicant has been told what to fix.')
+    const list = data.applications
+    const at = list.findIndex((app) => app.id === id)
+    const next = [...list.slice(at + 1), ...list.slice(0, Math.max(0, at))].find((app) => app.id !== id && app.status === 'PENDING_REVIEW')
+    setDrawerId(next ? next.id : '')
+    setFlashId(id)
+    fetchData()
+    fetchCounts()
+  }
+
   const hasFilters = Boolean(search.trim() || statusFilter || academicYear)
   const clearFilters = () => {
     setSearch('')
@@ -340,7 +392,7 @@ export default function ApplicantList() {
   )
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {confirm && (
         <ConfirmModal
           title={confirm.label}
@@ -362,32 +414,34 @@ export default function ApplicantList() {
           onCancel={() => setPendingApplicantDelete(null)}
         />
       )}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="portal-page-title">Applicants</h1>
-          <p className="portal-page-subtitle">{data.pagination.total} total applications</p>
+          <p className="portal-page-subtitle">
+            {data.pagination.total} applications · click a row to review, then use J / K to move between applicants and Esc to close.
+          </p>
         </div>
         <div className="flex gap-2">
-          <Link to="/admin/bulk-email" className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
+          <Link to="/admin/bulk-email" className="btn whitespace-nowrap">
             Email applicants
           </Link>
           <button
             onClick={() => exportToCSV(search, statusFilter, academicYear)}
-            className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm"
+            className="btn whitespace-nowrap"
           >
             Export CSV
           </button>
         </div>
       </div>
 
-      <div className="portal-surface p-5">
+      <div className="card p-5">
         <div className="flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               type="search"
               aria-label="Search applications"
-              className="portal-input pl-10"
+              className="form-control pl-10"
               placeholder="Search by name, email, or Ref. ID (e.g. #A1B2C3D4)"
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -395,55 +449,70 @@ export default function ApplicantList() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Status"
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
-          >
-            <option value="">All Statuses</option>
-            {ALL_STATUSES.map(s => (
-              <option key={s} value={s}>{getStatusBadge(s).label}</option>
-            ))}
-          </select>
+        <div className="mt-4 flex flex-wrap items-center gap-2" role="group" aria-label="Filter by status">
+          <button type="button" className="chip" aria-pressed={!statusFilter} onClick={() => { setStatusFilter(''); setPage(1) }}>
+            All <span className="tabular-nums opacity-75">{totalCount}</span>
+          </button>
+          {chipStatuses.map((status) => (
+            <button key={status} type="button" className="chip" aria-pressed={statusFilter === status} onClick={() => { setStatusFilter(status); setPage(1) }}>
+              {getStatusBadge(status).label} <span className="tabular-nums opacity-75">{statusCounts[status] || 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <select
             aria-label="Academic year"
             value={academicYear}
             onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
-            className="portal-input flex-1 sm:flex-none sm:w-auto min-w-[140px]"
+            className="form-control w-auto min-w-[140px]"
           >
-            <option value="">All Academic Years</option>
+            <option value="">All academic years</option>
             {academicYearOptions.map((year) => (
               <option key={year} value={year}>AY {year}</option>
             ))}
+          </select>
+          <select
+            aria-label="Sort"
+            value={sortKey}
+            onChange={(e) => {
+              const next = SORTS[e.target.value]
+              if (!next) return
+              setSortBy(next.sortBy)
+              setSortOrder(next.sortOrder)
+              setPage(1)
+            }}
+            className="form-control w-auto min-w-[160px] sm:ml-auto"
+          >
+            {!sortKey && <option value="">Custom sort</option>}
+            {Object.entries(SORTS).map(([key, option]) => <option key={key} value={key}>{option.label}</option>)}
           </select>
         </div>
 
         <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input
             aria-label="Name for this view"
-            className="portal-input"
+            className="form-control"
             placeholder="Name this view to reuse it (e.g. Accepted 2026)"
             value={viewName}
             onChange={(e) => setViewName(e.target.value)}
           />
-          <button type="button" onClick={saveCurrentView} className="portal-button-secondary whitespace-nowrap">
-            Save Current View
+          <button type="button" onClick={saveCurrentView} className="btn whitespace-nowrap">
+            Save current view
           </button>
           <div className="flex gap-2">
             <select
               aria-label="Saved views"
               value={selectedViewId}
               onChange={(e) => applySavedView(e.target.value)}
-              className="portal-input min-w-[180px]"
+              className="form-control min-w-[180px]"
             >
-              <option value="">Saved Views</option>
+              <option value="">Saved views</option>
               {savedViews.map((view) => (
                 <option key={view.id} value={view.id}>{view.name}</option>
               ))}
             </select>
-            <button type="button" onClick={deleteSavedView} className="portal-button-secondary whitespace-nowrap">
+            <button type="button" onClick={deleteSavedView} className="btn whitespace-nowrap">
               Delete
             </button>
           </div>
@@ -451,87 +520,88 @@ export default function ApplicantList() {
       </div>
 
       {selectedIds.length > 0 && (
-        <div className="portal-surface border border-emerald-200 bg-emerald-50 p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-emerald-900">Change status of selected</p>
-              <p className="mt-0.5 text-sm text-emerald-900">{selectedIds.length} selected application(s)</p>
+        <div className="fixed bottom-6 left-1/2 z-30 w-[min(720px,calc(100vw-2rem))] -translate-x-1/2 lg:ml-32" role="region" aria-label="Bulk actions">
+          <div className="animate-sheet-up">
+          {batchOpen && (
+            <div className="mb-2 grid animate-pop-in gap-2 rounded-2xl bg-white p-3 shadow-raised ring-1 ring-brand-line sm:grid-cols-2">
+              <input
+                type="number"
+                aria-label="General score"
+                className="form-control"
+                placeholder="General score (optional)"
+                value={batchExamScore}
+                onChange={(e) => setBatchExamScore(e.target.value)}
+              />
+              <input
+                aria-label="Remarks"
+                className="form-control"
+                placeholder="Admin remarks (optional)"
+                value={batchRemarks}
+                onChange={(e) => setBatchRemarks(e.target.value)}
+              />
+              <input
+                aria-label="Rejection reason"
+                className="form-control sm:col-span-2"
+                placeholder={DESTRUCTIVE_STATUSES.includes(batchStatus) ? 'Rejection reason (shown to applicants)' : 'Rejection reason (optional)'}
+                value={batchRejectionReason}
+                onChange={(e) => setBatchRejectionReason(e.target.value)}
+              />
             </div>
-            <button
-              type="button"
-              onClick={() => { setSelectedIds([]); clearBatchFields() }}
-              className="text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+          )}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-brand-primary py-2 pl-4 pr-2 text-white shadow-[0_20px_48px_rgba(12,35,64,.3)]">
+            <span key={selectedIds.length} className="mr-1 animate-pop-in text-[15px] font-semibold tabular-nums">{selectedIds.length} selected</span>
+            <select
+              aria-label="New status"
+              className="h-[38px] min-w-0 flex-1 rounded-control border border-white/25 bg-white/10 px-2 text-sm text-white [&>option]:text-brand-primary"
+              value={batchStatus}
+              onChange={(e) => { setBatchStatus(e.target.value); if (DESTRUCTIVE_STATUSES.includes(e.target.value)) setBatchOpen(true) }}
             >
-              Clear Selection
-            </button>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <select aria-label="New status" className="portal-input" value={batchStatus} onChange={(e) => setBatchStatus(e.target.value)}>
-              <option value="">Select target status</option>
+              <option value="">Change status to…</option>
               {ALL_STATUSES.map((status) => (
                 <option key={status} value={status}>{getStatusBadge(status).label}</option>
               ))}
             </select>
-            <input
-              type="number"
-              aria-label="General Score"
-              className="portal-input"
-              placeholder="General Score (optional)"
-              value={batchExamScore}
-              onChange={(e) => setBatchExamScore(e.target.value)}
-            />
-            <textarea
-              aria-label="Remarks"
-              className="portal-input"
-              rows={2}
-              placeholder="Admin remarks (optional)"
-              value={batchRemarks}
-              onChange={(e) => setBatchRemarks(e.target.value)}
-            />
-            <textarea
-              aria-label="Rejection reason"
-              className="portal-input"
-              rows={2}
-              placeholder="Rejection reason (optional)"
-              value={batchRejectionReason}
-              onChange={(e) => setBatchRejectionReason(e.target.value)}
-            />
-          </div>
-
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={runBatchStatus}
-              disabled={batchLoading}
-              className="portal-button-primary"
-            >
-              {batchLoading ? 'Processing...' : 'Apply to Selected'}
+            <button type="button" onClick={() => setBatchOpen((v) => !v)} aria-expanded={batchOpen} className="press h-[38px] rounded-control border border-white/25 px-3 text-sm font-semibold">
+              {batchOpen ? 'Fewer options' : 'Options'}
             </button>
+            <button type="button" onClick={runBatchStatus} disabled={batchLoading || !batchStatus} className="press h-[38px] rounded-control bg-emerald-500 px-3.5 text-sm font-semibold text-brand-dark disabled:opacity-50">
+              {batchLoading ? 'Applying…' : 'Apply'}
+            </button>
+            <button type="button" onClick={() => navigate('/admin/bulk-email')} className="press h-[38px] rounded-control border border-white/25 px-3 text-sm font-semibold">
+              Send email
+            </button>
+            <button type="button" onClick={() => exportToCSV(search, statusFilter, academicYear, new Set(selectedIds))} className="press h-[38px] rounded-control border border-white/25 px-3 text-sm font-semibold">
+              Export
+            </button>
+            <button type="button" onClick={() => { setSelectedIds([]); clearBatchFields(); setBatchOpen(false) }} aria-label="Clear selection" className="press flex h-[38px] w-[38px] items-center justify-center rounded-control bg-white/10">
+              <XIcon className="h-4 w-4" />
+            </button>
+          </div>
           </div>
         </div>
       )}
 
-      <div className="portal-surface overflow-hidden p-0">
+      <div className={`card ${selectedIds.length ? 'mb-24' : ''}`}>
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full">
-            <thead className="border-b border-slate-200 bg-slate-50">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">
-                  <input type="checkbox" checked={isAllVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible" />
+                <th className="w-12">
+                  <input type="checkbox" className="h-5 w-5 accent-emerald-700" checked={isAllVisibleSelected} onChange={toggleSelectAllVisible} aria-label="Select all visible" />
                 </th>
                 {[
-                  { label: 'Name', col: 'applicant' },
-                  { label: 'School', col: null },
-                  { label: 'Gen. Avg', col: 'gwa' },
+                  { label: 'Applicant', col: 'applicant' },
+                  { label: 'School · Course', col: null },
+                  { label: 'Barangay', col: null },
+                  { label: 'GWA', col: 'gwa' },
                   { label: 'Status', col: 'status' },
                   { label: 'Submitted', col: 'submittedAt' },
-                  { label: 'Review', col: null },
                   ...(canDeleteApplicants ? [{ label: 'Delete', col: null }] : []),
+                  { label: '', col: null },
                 ].map(({ label, col }) => (
-                  <th key={label} className="px-4 py-3 text-left text-sm font-semibold text-slate-600">
+                  <th key={label}>
                     {col ? (
-                      <button onClick={() => toggleSort(col)} className="flex items-center gap-1 transition-colors hover:text-brand-primary">
+                      <button onClick={() => toggleSort(col)} className="flex items-center gap-1 transition-colors hover:text-brand-dark">
                         {label} {sortIcon(col)}
                       </button>
                     ) : label}
@@ -543,63 +613,65 @@ export default function ApplicantList() {
               {loading ? (
                 [...Array(8)].map((_, i) => (
                   <tr key={i} className="border-b border-slate-100">
-                    {Array.from({ length: canDeleteApplicants ? 7 : 6 }, (_, j) => j).map(j => (
-                      <td key={j} className="px-4 py-3"><div className="h-4 animate-pulse rounded bg-gray-100" /></td>
+                    {Array.from({ length: canDeleteApplicants ? 9 : 8 }, (_, j) => j).map(j => (
+                      <td key={j}><div className="skeleton h-4" /></td>
                     ))}
                   </tr>
                 ))
               ) : data.applications.length === 0 ? (
                 <tr>
-                  <td colSpan={canDeleteApplicants ? 8 : 7} className="py-12 text-center">
+                  <td colSpan={canDeleteApplicants ? 9 : 8} className="py-12 text-center">
                     {emptyState}
                   </td>
                 </tr>
               ) : (
-                data.applications.map((app) => (
-                  <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-                    <td className="px-4 py-3">
+                data.applications.map((app, index) => (
+                  <tr
+                    key={app.id}
+                    onClick={(event) => openRow(event, app.id)}
+                    className={`animate-slide-up cursor-pointer ${selectedSet.has(app.id) ? 'bg-emerald-50' : ''} ${drawerId === app.id ? 'bg-brand-bg' : ''} ${flashId === app.id ? 'row-flash' : ''}`}
+                    style={{ animationDelay: `${Math.min(index, 12) * 30}ms` }}
+                  >
+                    <td>
                       <input
                         type="checkbox"
+                        className="h-5 w-5 accent-emerald-700"
                         checked={selectedSet.has(app.id)}
                         onChange={() => toggleSelect(app.id)}
                         aria-label={`Select ${app.applicant?.fullName || app.id}`}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <div>
-                        <p className="text-sm font-medium text-brand-primary">{app.applicant?.fullName}</p>
-                        <p className="text-xs text-slate-500">{app.applicant?.email}</p>
-                        <p className="mt-0.5 tabular-nums text-xs font-semibold text-slate-500">#{app.id.slice(0, 8).toUpperCase()}</p>
+                        <button type="button" onClick={() => setDrawerId(app.id)} className="text-left font-semibold text-brand-primary hover:text-brand-teal">{app.applicant?.fullName}</button>
+                        <p className="tabular-nums text-[13px] text-slate-500" title={app.applicant?.email}>#{app.id.slice(0, 8).toUpperCase()}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">
-                      <p className="max-w-32 truncate">{app.school || '-'}</p>
-                      <p className="max-w-32 truncate text-xs text-slate-500">{app.course || ''}</p>
+                    <td className="text-slate-700">
+                      <p className="max-w-56 truncate leading-snug">{app.school || '—'}</p>
+                      <p className="max-w-56 truncate text-[13px] text-slate-500">{app.course || ''}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={clsx('tabular-nums text-sm font-bold', app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500')}>
+                    <td className="text-slate-700">{barangayOf(app.address) || '—'}</td>
+                    <td>
+                      <span className={clsx('tabular-nums font-semibold', app.generalAverage && parseFloat(app.generalAverage) >= threshold ? 'text-emerald-700' : app.generalAverage ? 'text-red-700' : 'text-slate-500')}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(1)}%` : '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={app.status} size="sm" /></td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{formatDate(app.submittedAt)}</td>
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
-                        Review <ArrowRightIcon className="h-4 w-4" />
-                      </Link>
-                    </td>
+                    <td><StatusBadge status={app.status} size="sm" /></td>
+                    <td className="text-sm text-slate-500">{formatDate(app.submittedAt)}</td>
                     {canDeleteApplicants && (
-                    <td className="px-4 py-3">
+                    <td>
                         <button
                           type="button"
                           onClick={() => setPendingApplicantDelete(app)}
                           disabled={deletingApplicantId === app.id}
-                          className="rounded border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:border-red-500 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="btn btn-danger min-h-[34px] px-3 text-sm"
                         >
-                          {deletingApplicantId === app.id ? 'Deleting...' : 'Delete'}
+                          {deletingApplicantId === app.id ? 'Deleting…' : 'Delete'}
                         </button>
                     </td>
                     )}
+                    <td className="w-8 pl-0 text-slate-400" aria-hidden="true"><ChevronRightIcon className="h-[18px] w-[18px]" /></td>
                   </tr>
                 ))
               )}
@@ -619,10 +691,10 @@ export default function ApplicantList() {
             <div className="py-10 text-center">{emptyState}</div>
           ) : (
             data.applications.map((app) => (
-              <div key={app.id} className="flex items-start gap-3 p-4">
+              <div key={app.id} onClick={(event) => openRow(event, app.id)} className={`flex cursor-pointer items-start gap-3 p-4 ${selectedSet.has(app.id) ? 'bg-emerald-50' : ''}`}>
                 <input
                   type="checkbox"
-                  className="mt-1"
+                  className="mt-1 h-5 w-5 accent-emerald-700"
                   checked={selectedSet.has(app.id)}
                   onChange={() => toggleSelect(app.id)}
                   aria-label={`Select ${app.applicant?.fullName || app.id}`}
@@ -645,17 +717,17 @@ export default function ApplicantList() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
-                  <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
-                    Review <ArrowRightIcon className="h-4 w-4" />
-                  </Link>
+                  <button type="button" onClick={() => setDrawerId(app.id)} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-teal">
+                    Review <ChevronRightIcon className="h-4 w-4" />
+                  </button>
                   {canDeleteApplicants && (
                     <button
                       type="button"
                       onClick={() => setPendingApplicantDelete(app)}
                       disabled={deletingApplicantId === app.id}
-                      className="rounded border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 transition-colors hover:border-red-500 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="btn btn-danger min-h-[34px] px-3 text-sm"
                     >
-                      {deletingApplicantId === app.id ? 'Deleting...' : 'Delete'}
+                      {deletingApplicantId === app.id ? 'Deleting…' : 'Delete'}
                     </button>
                   )}
                 </div>
@@ -666,14 +738,25 @@ export default function ApplicantList() {
 
         {data.pagination.pages > 1 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
-            <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} • {data.pagination.total} results</p>
+            <p className="text-sm text-slate-500">Page {page} of {data.pagination.pages} • {data.pagination.total} results</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
-              <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn min-h-9 px-3 text-sm">Prev</button>
+              <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="btn min-h-9 px-3 text-sm">Next</button>
             </div>
           </div>
         )}
       </div>
+
+      {drawerId && (
+        <ReviewDrawer
+          id={drawerId}
+          ids={visibleIds}
+          threshold={threshold}
+          onClose={() => setDrawerId('')}
+          onNavigate={setDrawerId}
+          onDecided={handleDecided}
+        />
+      )}
     </div>
   )
 }

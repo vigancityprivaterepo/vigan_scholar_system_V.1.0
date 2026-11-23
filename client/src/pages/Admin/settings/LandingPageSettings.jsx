@@ -17,12 +17,18 @@ export default function LandingPageSettings() {
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(initialForm)
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved)
+  const applyLoaded = (next) => {
+    setForm(next)
+    setSaved(next)
+  }
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const { data } = await adminService.getSiteSettings()
-        setForm({
+        applyLoaded({
           facebookPageName: data.settings?.facebookPageName || '',
           facebookPageUrl: data.settings?.facebookPageUrl || '',
           facebookPageDescription: data.settings?.facebookPageDescription || '',
@@ -47,7 +53,7 @@ export default function LandingPageSettings() {
     setSaving(true)
     try {
       const { data } = await adminService.updateLandingSettings(form)
-      setForm({
+      applyLoaded({
         facebookPageName: data.settings?.facebookPageName || '',
         facebookPageUrl: data.settings?.facebookPageUrl || '',
         facebookPageDescription: data.settings?.facebookPageDescription || '',
@@ -66,7 +72,7 @@ export default function LandingPageSettings() {
 
   return (
     <section className="space-y-5">
-      <section className="portal-surface p-6">
+      <section className="card p-6">
         <div className="mb-5">
           <h2 className=" text-lg font-semibold text-brand-primary">Social Links</h2>
           <p className="mt-2 text-sm text-slate-500">
@@ -75,14 +81,14 @@ export default function LandingPageSettings() {
         </div>
 
         {loading ? (
-          <div className="portal-panel p-4 text-sm text-slate-500">Loading landing page settings...</div>
+          <div className="rounded-[14px] border border-brand-divider bg-brand-bg p-4 text-sm text-slate-500">Loading landing page settings...</div>
         ) : (
           <div className="grid gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page Name</label>
               <input
                 type="text"
-                className="portal-input"
+                className="form-control"
                 placeholder="Vigan City PH"
                 value={form.facebookPageName}
                 onChange={(e) => setField('facebookPageName', e.target.value)}
@@ -92,7 +98,7 @@ export default function LandingPageSettings() {
               <label className="mb-1 block text-sm font-medium text-slate-700">Facebook Page URL</label>
               <input
                 type="url"
-                className="portal-input"
+                className="form-control"
                 placeholder="https://www.facebook.com/your-page"
                 value={form.facebookPageUrl}
                 onChange={(e) => setField('facebookPageUrl', e.target.value)}
@@ -104,7 +110,7 @@ export default function LandingPageSettings() {
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Short Description</label>
               <textarea
-                className="portal-input min-h-[110px] resize-y"
+                className="form-control min-h-[110px] resize-y"
                 placeholder="Follow the official page for scholarship announcements, schedules, and public updates."
                 value={form.facebookPageDescription}
                 onChange={(e) => setField('facebookPageDescription', e.target.value)}
@@ -114,7 +120,7 @@ export default function LandingPageSettings() {
         )}
       </section>
 
-      <section className="portal-surface p-6">
+      <section className="card p-6">
         <div className="mb-5">
           <h2 className=" text-lg font-semibold text-brand-primary">Statistics Banner</h2>
           <p className="mt-2 text-sm text-slate-500">
@@ -123,7 +129,7 @@ export default function LandingPageSettings() {
         </div>
 
         {loading ? (
-          <div className="portal-panel p-4 text-sm text-slate-500">Loading statistics settings...</div>
+          <div className="rounded-[14px] border border-brand-divider bg-brand-bg p-4 text-sm text-slate-500">Loading statistics settings...</div>
         ) : (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -131,7 +137,7 @@ export default function LandingPageSettings() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Total Awarded</label>
                 <input
                   type="text"
-                  className="portal-input"
+                  className="form-control"
                   placeholder={DEFAULT_STATS_AWARDED}
                   value={form.statsAwarded}
                   onChange={(e) => setField('statsAwarded', e.target.value)}
@@ -142,7 +148,7 @@ export default function LandingPageSettings() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Active Scholars</label>
                 <input
                   type="text"
-                  className="portal-input"
+                  className="form-control"
                   placeholder="882+"
                   value={form.statsScholars}
                   onChange={(e) => setField('statsScholars', e.target.value)}
@@ -153,7 +159,7 @@ export default function LandingPageSettings() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Partner Schools</label>
                 <input
                   type="text"
-                  className="portal-input"
+                  className="form-control"
                   placeholder="5"
                   value={form.statsSchools}
                   onChange={(e) => setField('statsSchools', e.target.value)}
@@ -164,7 +170,7 @@ export default function LandingPageSettings() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">Success Rate</label>
                 <input
                   type="text"
-                  className="portal-input"
+                  className="form-control"
                   placeholder="94%"
                   value={form.statsSuccessRate}
                   onChange={(e) => setField('statsSuccessRate', e.target.value)}
@@ -175,9 +181,9 @@ export default function LandingPageSettings() {
 
             <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-500">Save only the landing page content shown in this section.</p>
-              <button onClick={handleSave} disabled={saving} className="portal-button-primary justify-center">
+              <button type="button" onClick={handleSave} disabled={saving || !dirty} className="btn btn-primary justify-center">
                 {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-                {saving ? 'Saving...' : 'Save Landing Page Settings'}
+                {saving ? 'Saving…' : dirty ? 'Save landing page settings' : 'No changes to save'}
               </button>
             </div>
           </>

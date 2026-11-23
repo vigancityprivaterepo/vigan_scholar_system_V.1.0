@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { adminService } from '../../../services/adminService'
 import { toDateTimeInput } from './shared'
+import { Toggle } from '../../../components/ui/Motion'
 
 const initialForm = {
   gwaThreshold: '83',
@@ -13,12 +14,18 @@ export default function GeneralSettings() {
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(initialForm)
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved)
+  const applyLoaded = (next) => {
+    setForm(next)
+    setSaved(next)
+  }
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const { data } = await adminService.getSiteSettings()
-        setForm({
+        applyLoaded({
           gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
           applicationOpen: data.settings?.applicationOpen !== false,
           applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
@@ -58,7 +65,7 @@ export default function GeneralSettings() {
         applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : null,
       })
 
-      setForm({
+      applyLoaded({
         gwaThreshold: data.settings?.gwaThreshold != null ? String(data.settings.gwaThreshold) : '83',
         applicationOpen: data.settings?.applicationOpen !== false,
         applicationDeadline: toDateTimeInput(data.settings?.applicationDeadline),
@@ -72,7 +79,7 @@ export default function GeneralSettings() {
   }
 
   return (
-    <section className="portal-surface p-6">
+    <section className="card p-6">
       <div className="mb-5">
         <h2 className="text-lg font-semibold text-brand-primary">Scholarship Configuration</h2>
         <p className="mt-2 text-sm text-slate-500">Manage application rules and submission availability.</p>
@@ -92,7 +99,7 @@ export default function GeneralSettings() {
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  className="portal-input max-w-[120px]"
+                  className="form-control max-w-[120px]"
                   value={form.gwaThreshold}
                   onChange={(e) => setField('gwaThreshold', e.target.value)}
                   step="1"
@@ -107,24 +114,9 @@ export default function GeneralSettings() {
             <div>
               <p id="accept-applications-label" className="mb-1 block text-sm font-medium text-slate-700">Accept Applications</p>
               <p className="mb-3 text-xs text-slate-500">Close submissions when applications should stop.</p>
-              <button
-                type="button"
-                onClick={() => setField('applicationOpen', !form.applicationOpen)}
-                role="switch"
-                aria-checked={form.applicationOpen}
-                aria-labelledby="accept-applications-label"
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
-                  form.applicationOpen ? 'bg-[#10b981]' : 'bg-slate-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    form.applicationOpen ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-              <span className="ml-3 text-sm text-slate-600">
-                {form.applicationOpen ? 'Open - accepting submissions' : 'Closed - submissions blocked'}
+              <Toggle checked={form.applicationOpen} onChange={(value) => setField('applicationOpen', value)} labelledBy="accept-applications-label" />
+              <span className="ml-3 align-[0.4rem] text-sm text-slate-600">
+                {form.applicationOpen ? 'Open · accepting submissions' : 'Closed · submissions blocked'}
               </span>
             </div>
 
@@ -136,7 +128,7 @@ export default function GeneralSettings() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <input
                   type="datetime-local"
-                  className="portal-input max-w-sm"
+                  className="form-control max-w-sm"
                   value={form.applicationDeadline}
                   onChange={(e) => setField('applicationDeadline', e.target.value)}
                 />
@@ -155,9 +147,9 @@ export default function GeneralSettings() {
 
           <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-500">Save only the scholarship rule and application control changes shown here.</p>
-            <button onClick={handleSave} disabled={saving} className="portal-button-primary justify-center">
+            <button type="button" onClick={handleSave} disabled={saving || !dirty} className="btn btn-primary justify-center">
               {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-              {saving ? 'Saving...' : 'Save General Settings'}
+              {saving ? 'Saving…' : dirty ? 'Save general settings' : 'No changes to save'}
             </button>
           </div>
         </>

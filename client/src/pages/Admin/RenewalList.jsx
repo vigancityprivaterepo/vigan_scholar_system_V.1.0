@@ -1,40 +1,68 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import { formatDate } from '../../utils/formatDate'
 import { SearchIcon } from '../../components/ui/PortalIcons'
+import { RemarkField, useRequiredRemark } from '../../components/ui/Motion'
+import { useUndoableActions } from '../../hooks/useUndoableActions'
 
 const STATUS_OPTS = ['All', 'PENDING_REVIEW', 'APPROVED', 'REJECTED']
 
 const STATUS_BADGE = {
-  PENDING_REVIEW: 'bg-amber-100 text-amber-800',
-  APPROVED: 'bg-emerald-100 text-emerald-800',
-  REJECTED: 'bg-red-100 text-red-800',
+  PENDING_REVIEW: 'bg-status-warn-bg text-status-warn-fg',
+  APPROVED: 'bg-status-accepted-bg text-status-accepted-fg',
+  REJECTED: 'bg-status-rejected-bg text-status-rejected-fg',
 }
 
 const STATUS_LABEL = {
-  PENDING_REVIEW: 'Pending Review',
+  PENDING_REVIEW: 'Pending review',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
 }
 
 export default function RenewalList() {
-  const navigate = useNavigate()
   const [renewals, setRenewals] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('All')
   const [search, setSearch] = useState('')
+  const [rejecting, setRejecting] = useState(null)
+  const [remarks, setRemarks] = useState({})
+  // Status shown while a decision waits on Undo.
+  const [pendingStatus, setPendingStatus] = useState({})
+  const { schedule, isHidden } = useUndoableActions()
+  const remark = useRequiredRemark()
 
-  useEffect(() => {
+  const fetchRenewals = useCallback(() => {
     adminService.listRenewals()
       .then((res) => setRenewals(res.data.renewals || []))
       .catch(() => toast.error('Failed to load renewals.'))
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => { fetchRenewals() }, [fetchRenewals])
+
+  const statusOf = (r) => (isHidden(r.id) && pendingStatus[r.id]) || r.status
+
+  const decide = (r, status) => {
+    const text = String(remarks[r.id] || '').trim()
+    if (status === 'REJECTED' && !remark.require(r.id, text)) return
+    setPendingStatus((current) => ({ ...current, [r.id]: status }))
+    setRejecting(null)
+    const name = r.applicant?.fullName || 'Scholar'
+    schedule({
+      id: r.id,
+      message: status === 'APPROVED' ? `Renewal approved for ${name}` : `Renewal rejected for ${name}`,
+      commit: () => adminService.updateRenewalStatus(r.id, status === 'APPROVED' ? { status } : { status, adminRemarks: text }),
+      onDone: fetchRenewals,
+      errorMessage: 'Failed to update renewal.',
+    })
+  }
+
+  const countFor = (opt) => (opt === 'All' ? renewals.length : renewals.filter((r) => statusOf(r) === opt).length)
+
   const displayed = renewals.filter((r) => {
-    if (filter !== 'All' && r.status !== filter) return false
+    if (filter !== 'All' && statusOf(r) !== filter && !isHidden(r.id)) return false
     if (search.trim()) {
       const q = search.toLowerCase()
       const name = r.applicant?.fullName?.toLowerCase() || ''
@@ -45,101 +73,114 @@ export default function RenewalList() {
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="portal-page-title">Scholarship Renewals</h1>
-        <p className="portal-page-subtitle">Review and act on scholar renewal applications.</p>
+        <h1 className="portal-page-title">Scholarship renewals</h1>
+        <p className="portal-page-subtitle">Scholars renewing for the next academic year. Check grades and enrollment before approving.</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search by name or email…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="portal-input pl-9 text-sm"
-          />
-        </div>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
           {STATUS_OPTS.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setFilter(opt)}
-              aria-pressed={filter === opt}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                filter === opt
-                  ? 'bg-brand-primary text-white'
-                  : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-              }`}
-            >
+            <button key={opt} type="button" onClick={() => setFilter(opt)} aria-pressed={filter === opt} className="chip">
               {opt === 'All' ? 'All' : STATUS_LABEL[opt]}
+              <span className="tabular-nums opacity-75">{countFor(opt)}</span>
             </button>
           ))}
+        </div>
+        <div className="relative ml-auto w-full sm:w-60">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <input
+            type="search"
+            aria-label="Search renewals"
+            placeholder="Search scholar"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-control pl-9"
+          />
         </div>
       </div>
 
       {loading ? (
         <div className="flex flex-col gap-3">
-          {[1, 2, 3].map((i) => <div key={i} className="h-16 animate-pulse rounded-lg bg-slate-100" />)}
+          {[1, 2, 3].map((i) => <div key={i} className="skeleton h-16" />)}
         </div>
       ) : displayed.length === 0 ? (
-        <div className="portal-surface p-12 text-center">
-          <p className="text-slate-500">
-            {filter === 'PENDING_REVIEW' && !search.trim()
-              ? 'No renewals are waiting for review.'
-              : 'No renewals match this filter.'}
-          </p>
+        <div className="portal-empty text-[15px] text-slate-500">
+          {filter === 'PENDING_REVIEW' && !search.trim() ? 'No renewals are waiting for review.' : 'No renewals match this filter.'}
         </div>
       ) : (
-        <div className="portal-surface overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card overflow-x-auto">
+          <table className="table min-w-[820px]">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                <th className="px-4 py-3 font-semibold text-slate-600">Scholar</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Ref #</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Academic Year</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Status</th>
-                <th className="px-4 py-3 font-semibold text-slate-600">Submitted</th>
+              <tr>
+                <th>Scholar</th>
+                <th>Reference</th>
+                <th>Academic year</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th className="text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {displayed.map((r) => (
-                <tr
-                  key={r.id}
-                  onClick={() => navigate(`/admin/renewals/${r.id}`)}
-                  className="cursor-pointer transition-colors hover:bg-slate-50"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/admin/renewals/${r.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="font-medium text-brand-primary underline-offset-2 hover:underline"
-                    >
-                      {r.applicant?.fullName || 'Unnamed scholar'}
-                    </Link>
-                    <p className="text-xs text-slate-500">{r.applicant?.email || ''}</p>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-xs text-slate-500">
-                    #{r.id.slice(0, 8).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{r.academicYear || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_BADGE[r.status]}`}>
-                      {STATUS_LABEL[r.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{formatDate(r.submittedAt)}</td>
-                </tr>
-              ))}
+            <tbody>
+              {displayed.map((r) => {
+                const status = statusOf(r)
+                const waiting = isHidden(r.id)
+                return (
+                  <tr key={r.id} className={waiting ? 'bg-brand-bg' : ''}>
+                    <td>
+                      <Link to={`/admin/renewals/${r.id}`} className="font-semibold text-brand-primary hover:text-brand-teal">
+                        {r.applicant?.fullName || 'Unnamed scholar'}
+                      </Link>
+                      <p className="text-[13px] text-slate-500">{r.applicant?.email || ''}</p>
+                    </td>
+                    <td className="text-sm tabular-nums text-slate-500">#{r.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="text-slate-700">{r.academicYear || '—'}</td>
+                    <td>
+                      <span key={status} className={`badge badge-dot animate-pop-in ${STATUS_BADGE[status]}`}>{STATUS_LABEL[status]}</span>
+                    </td>
+                    <td className="text-sm text-slate-500">{formatDate(r.submittedAt)}</td>
+                    <td className="text-right">
+                      {r.status === 'PENDING_REVIEW' && !waiting ? (
+                        rejecting === r.id ? (
+                          <div className="ml-auto flex max-w-xs flex-col gap-2 text-left">
+                            <RemarkField
+                              autoFocus
+                              value={remarks[r.id] || ''}
+                              onChange={(e) => {
+                                setRemarks((current) => ({ ...current, [r.id]: e.target.value }))
+                                remark.clear(r.id)
+                              }}
+                              placeholder="Reason (required)"
+                              aria-label={`Rejection reason for ${r.applicant?.fullName || 'scholar'}`}
+                              error={remark.errorFor(r.id)}
+                              shakeKey={remark.shakeKeyFor(r.id)}
+                              helper="The scholar will see this reason."
+                            />
+                            <div className="flex justify-end gap-1.5">
+                              <button type="button" onClick={() => setRejecting(null)} className="btn btn-ghost-secondary min-h-[34px] px-3 text-sm">Cancel</button>
+                              <button type="button" onClick={() => decide(r, 'REJECTED')} className="btn btn-danger min-h-[34px] px-3 text-sm">Reject</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex justify-end gap-1.5">
+                            <button type="button" onClick={() => decide(r, 'APPROVED')} className="btn btn-primary min-h-[34px] px-3 text-sm">Approve</button>
+                            <button type="button" onClick={() => setRejecting(r.id)} className="btn btn-danger min-h-[34px] px-3 text-sm">Reject</button>
+                          </div>
+                        )
+                      ) : (
+                        <Link to={`/admin/renewals/${r.id}`} className="text-sm font-semibold text-brand-teal hover:text-brand-dark">Open →</Link>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <p className="text-right text-xs text-slate-500">{displayed.length} record{displayed.length !== 1 ? 's' : ''}</p>
+      <p className="text-right text-sm text-slate-500">{displayed.length} record{displayed.length !== 1 ? 's' : ''}</p>
     </div>
   )
 }

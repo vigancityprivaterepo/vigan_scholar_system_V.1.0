@@ -26,6 +26,7 @@ import {
 import { adminService } from '../../services/adminService'
 import api from '../../services/api'
 import logo from '../../assets/logo.png'
+import { prefersReducedMotion } from '../../utils/motionPreference'
 
 const NAV_SECTIONS = [
   {
@@ -90,6 +91,10 @@ export default function AdminLayout() {
   const [uploadingProfileImage, setUploadingProfileImage] = useState(false)
   const notifRef = useRef(null)
   const profileImageInputRef = useRef(null)
+  const navScrollRef = useRef(null)
+  const mainRef = useRef(null)
+  const searchRef = useRef(null)
+  const [pill, setPill] = useState(null)
 
   const availableSections = NAV_SECTIONS.map((section) => ({
     ...section,
@@ -146,6 +151,37 @@ export default function AdminLayout() {
       })
       .catch(() => {})
   }
+
+  // Move the sidebar pill under the active link (also after a section opens or closes).
+  useEffect(() => {
+    const box = navScrollRef.current
+    const active = box?.querySelector('.nav-link.active')
+    setPill(active ? active.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop : null)
+  }, [location.pathname, openSections])
+
+  // "/" jumps to the header search, unless the user is already typing somewhere.
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return
+      const tag = event.target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.target?.isContentEditable) return
+      if (!searchRef.current || searchRef.current.offsetParent === null) return
+      event.preventDefault()
+      searchRef.current.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Page content eases in on navigation without remounting the page.
+  useEffect(() => {
+    const reduce = prefersReducedMotion()
+    if (reduce || !mainRef.current?.animate) return
+    mainRef.current.animate(
+      [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }],
+      { duration: 480, easing: 'cubic-bezier(.22,1,.36,1)' },
+    )
+  }, [location.pathname])
 
   useEffect(() => {
     fetchNotifications()
@@ -276,7 +312,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
+    <div className="min-h-screen bg-brand-page text-slate-800">
       <input
         ref={profileImageInputRef}
         type="file"
@@ -288,25 +324,26 @@ export default function AdminLayout() {
       {menuOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-slate-950/40 lg:hidden"
+          className="fixed inset-0 z-30 animate-fade-in bg-brand-primary/35 lg:hidden"
           onClick={() => setMenuOpen(false)}
           aria-label="Close sidebar"
         />
       )}
 
-      <aside className={`navbar navbar-vertical ${menuOpen ? 'flex' : 'hidden'} lg:flex`}>
+      <aside className={`navbar navbar-vertical flex transition-[transform,visibility] duration-slow ease-out lg:visible lg:translate-x-0 ${menuOpen ? 'visible translate-x-0' : 'invisible -translate-x-full'}`}>
         <div className="flex h-full flex-col">
-          <div className="border-b border-emerald-200">
+          <div>
             <Link to="/admin/dashboard" className="navbar-brand">
-              <img src={logo} alt="Vigan City Seal" className="h-10 w-10 rounded-xl border border-emerald-200 bg-[#edf8f2] p-1.5" />
+              <img src={logo} alt="Vigan City Seal" className="h-10 w-10 rounded-full bg-white p-1" />
               <div className="min-w-0">
-                <div className="subheader">Scholarship Office</div>
-                <div className="truncate text-base font-semibold text-slate-900">Admin Console</div>
+                <div className="text-sm text-emerald-200">Scholarship Office</div>
+                <div className="truncate font-display text-lg font-semibold text-white">Admin Console</div>
               </div>
             </Link>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-3">
+          <div ref={navScrollRef} className={`relative flex-1 overflow-y-auto px-3 py-3 ${pill !== null ? 'has-pill' : ''}`}>
+            {pill !== null && <span className="nav-pill" style={{ transform: `translateY(${pill}px)` }} aria-hidden="true" />}
             {availableSections.map((section) => {
               const isOpen = openSections[section.id] ?? true
               const hasActiveItem = section.items.some((item) => matchesPath(location.pathname, item.to))
@@ -316,9 +353,9 @@ export default function AdminLayout() {
                   <button
                     type="button"
                     onClick={() => toggleSection(section.id)}
-                    className={`mb-1 flex w-full items-center justify-between px-2 text-left ${hasActiveItem ? 'text-slate-900' : 'text-slate-500'}`}
+                    className={`flex w-full items-center justify-between pr-2 text-left ${hasActiveItem ? 'text-white' : 'text-emerald-300'}`}
                   >
-                    <span className="subheader">{section.label}</span>
+                    <span className="nav-section-label">{section.label}</span>
                     {isOpen ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
                   </button>
 
@@ -329,9 +366,13 @@ export default function AdminLayout() {
                         return (
                           <li key={to} className="nav-item">
                             <NavLink to={to} className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                              <Icon className="h-4 w-4 shrink-0" />
-                              <span className="min-w-0 flex-1 truncate">{label}</span>
-                              {badge > 0 && <span className="badge bg-white text-slate-700 ring-1 ring-emerald-300" aria-label={`${badge} waiting`}>{badge}</span>}
+                              {({ isActive }) => (
+                                <>
+                                  <Icon className="h-4 w-4 shrink-0" />
+                                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                                  {badge > 0 && <span className={`badge ${isActive ? 'bg-emerald-500 text-brand-dark' : 'bg-white/[0.14] text-white'}`} aria-label={`${badge} waiting`}>{badge}</span>}
+                                </>
+                              )}
                             </NavLink>
                           </li>
                         )
@@ -343,8 +384,8 @@ export default function AdminLayout() {
             })}
           </div>
 
-          <div className="border-t border-emerald-200 p-2.5">
-            <div className="rounded-2xl border border-emerald-200 bg-[#eef8f2] p-2.5">
+          <div className="border-t border-white/10 p-2.5">
+            <div className="rounded-card bg-white/[0.06] p-2.5">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -353,22 +394,22 @@ export default function AdminLayout() {
                   className="shrink-0 rounded-full disabled:cursor-not-allowed disabled:opacity-70"
                   aria-label="Upload profile picture"
                 >
-                  {renderAvatar('avatar bg-emerald-200 text-slate-800')}
+                  {renderAvatar('avatar')}
                 </button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">{user?.fullName || 'Administrator'}</p>
-                  <p className="truncate text-xs text-slate-500">{ROLE_LABELS[user?.role] || 'Staff'}</p>
+                  <p className="truncate text-sm font-semibold text-white">{user?.fullName || 'Administrator'}</p>
+                  <p className="truncate text-xs text-emerald-200">{ROLE_LABELS[user?.role] || 'Staff'}</p>
                   <button
                     type="button"
                     onClick={openProfileImagePicker}
                     disabled={uploadingProfileImage}
-                    className="mt-1 text-xs font-medium text-emerald-800 hover:text-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="mt-1 text-xs font-medium text-emerald-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {uploadingProfileImage ? 'Uploading photo...' : 'Upload photo'}
                   </button>
                 </div>
               </div>
-              <button type="button" onClick={handleLogout} className="btn mt-2.5 w-full justify-center border-emerald-300 bg-[#f7fcf9] px-3 py-2 text-xs text-emerald-900 hover:bg-white">
+              <button type="button" onClick={handleLogout} className="btn mt-2.5 w-full justify-center border-white/20 bg-transparent px-3 py-2 text-sm text-white hover:border-white/40 hover:bg-white/10">
                 <LogoutIcon className="h-4 w-4" />
                 Logout
               </button>
@@ -378,48 +419,50 @@ export default function AdminLayout() {
       </aside>
 
       <div className="page-wrapper">
-        <header className="navbar sticky top-0 z-20 border-b-0 bg-[#0e6f51] text-white shadow-lg">
-          <div className="flex w-full flex-col gap-4 px-4 py-4 md:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-3">
+        <header className="navbar sticky top-0 z-20 text-brand-primary">
+          <div className="flex w-full flex-col gap-3 px-4 py-3 md:px-6 lg:px-7">
+            <div className="flex min-h-10 items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <button type="button" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white transition hover:bg-white/20 lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open sidebar">
+                <button type="button" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-control border-[1.5px] border-slate-300 bg-white text-brand-primary transition hover:border-slate-400 hover:bg-brand-bg lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open sidebar">
                   <MenuIcon className="h-4 w-4" />
                 </button>
 
-                <div>
-                  <ol className="breadcrumb flex items-center gap-2 text-sm text-emerald-100/85" aria-label="breadcrumbs">
-                    <li className="breadcrumb-item">
-                      <Link to="/admin/dashboard" className="inline-flex items-center gap-1 hover:text-white">
+                <nav className="min-w-0" aria-label="Breadcrumb">
+                  <ol className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-[15px] text-slate-500">
+                    <li>
+                      <Link to="/admin/dashboard" className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-teal">
                         <HomeIcon className="h-4 w-4" />
                         <span>Admin</span>
                       </Link>
                     </li>
-                    {activeSection && <li className="breadcrumb-item">{activeSection.label}</li>}
-                    {activeItem && <li className="breadcrumb-item font-medium text-white">{activeItem.label}</li>}
+                    {activeSection && <><li aria-hidden="true">/</li><li className="hidden sm:block">{activeSection.label}</li><li aria-hidden="true" className="hidden sm:block">/</li></>}
+                    {activeItem && <li className="truncate font-semibold text-brand-primary" aria-current="page">{activeItem.label}</li>}
                   </ol>
-                </div>
+                </nav>
               </div>
 
               <div className="flex items-center gap-2">
                 <form onSubmit={handleSearchSubmit} className="hidden md:block">
-                  <div className="input-icon w-72">
+                  <div className="relative flex w-[300px] items-center">
                     <input
+                      ref={searchRef}
+                      aria-keyshortcuts="/"
+                      aria-label="Search pages or applicants (press /)"
                       type="search"
-                      className="form-control border-white/15 bg-white/10 text-white placeholder:text-emerald-100/70 focus:border-white/25 focus:ring-white/10"
-                      placeholder="Search pages or applicants"
+                      className="form-control h-10 py-0 pl-9 pr-11"
+                      placeholder="Search applicants or pages"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                     />
-                    <span className="input-icon-addon text-emerald-100/70">
-                      <SearchIcon className="h-4 w-4" />
-                    </span>
+                    <SearchIcon className="pointer-events-none absolute left-3 h-4 w-4 text-slate-500" />
+                    <kbd className="pointer-events-none absolute right-2.5 rounded-md border border-slate-200 px-1.5 text-xs font-medium text-slate-500" aria-hidden="true">/</kbd>
                   </div>
                 </form>
 
                 <div className="relative" ref={notifRef}>
                   <button
                     type="button"
-                    className="relative inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white transition hover:bg-white/20"
+                    className="relative inline-flex min-h-10 min-w-10 items-center justify-center rounded-control border-[1.5px] border-slate-300 bg-white text-brand-primary transition hover:border-slate-400 hover:bg-brand-bg"
                     onClick={() => setNotifOpen((current) => !current)}
                     aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
                     aria-haspopup="true"
@@ -427,14 +470,14 @@ export default function AdminLayout() {
                   >
                     <BellIcon className="h-4 w-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+                      <span key={unreadCount} className="badge-bounce absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] animate-pop-in items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white ring-2 ring-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
                       </span>
                     )}
                   </button>
 
                   {notifOpen && (
-                    <div className="dropdown-card absolute right-0 top-full z-30 mt-2 w-[22rem] max-w-[calc(100vw-2rem)]">
+                    <div className="dropdown-card absolute right-0 top-full z-30 mt-2 w-[22rem] origin-top-right animate-pop-in max-w-[calc(100vw-2rem)]">
                       <div className="card-header">
                         <div>
                           <div className="card-title">Notifications</div>
@@ -460,10 +503,10 @@ export default function AdminLayout() {
                               type="button"
                               key={notification.id}
                               onClick={() => handleNotifClick(notification)}
-                              className={`w-full border-b border-slate-100 px-5 py-4 text-left transition hover:bg-slate-50 ${notification.isRead ? '' : 'bg-blue-50/60'}`}
+                              className={`w-full border-b border-slate-100 px-5 py-4 text-left transition hover:bg-brand-bg ${notification.isRead ? '' : 'bg-emerald-50'}`}
                             >
                               <div className="flex items-start gap-3">
-                                <span className={`mt-1 h-2.5 w-2.5 rounded-full ${notification.isRead ? 'bg-slate-200' : 'bg-blue-500'}`} />
+                                <span className={`mt-1 h-2.5 w-2.5 rounded-full ${notification.isRead ? 'bg-slate-200' : 'bg-emerald-500'}`} />
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-slate-800">{notification.title}</p>
                                   <p className="mt-1 text-sm text-slate-500">{notification.message}</p>
@@ -477,7 +520,7 @@ export default function AdminLayout() {
                             type="button"
                             onClick={loadOlderNotifications}
                             disabled={loadingOlderNotifications}
-                            className="w-full px-5 py-3 text-center text-sm font-medium text-blue-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="w-full px-5 py-3 text-center text-sm font-semibold text-brand-teal transition hover:bg-brand-bg disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {loadingOlderNotifications ? 'Loading…' : 'Show older notifications'}
                           </button>
@@ -487,7 +530,7 @@ export default function AdminLayout() {
                   )}
                 </div>
 
-                <div className="hidden items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-white md:flex">
+                <div className="hidden items-center gap-3 pl-1 md:flex">
                   <button
                     type="button"
                     onClick={openProfileImagePicker}
@@ -495,11 +538,11 @@ export default function AdminLayout() {
                     className="shrink-0 rounded-full disabled:cursor-not-allowed disabled:opacity-70"
                     aria-label="Upload profile picture"
                   >
-                    {renderAvatar('avatar h-9 w-9 bg-white/15 text-white')}
+                    {renderAvatar('avatar h-9 w-9')}
                   </button>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{user?.fullName || 'Administrator'}</p>
-                    {user?.email && <p className="truncate text-xs text-emerald-100/80">{user.email}</p>}
+                    <p className="truncate text-sm font-semibold text-brand-primary">{user?.fullName || 'Administrator'}</p>
+                    {user?.email && <p className="truncate text-xs text-slate-500">{user.email}</p>}
                   </div>
                 </div>
               </div>
@@ -510,12 +553,12 @@ export default function AdminLayout() {
                 <div className="input-icon">
                   <input
                     type="search"
-                    className="form-control border-white/15 bg-white/10 text-white placeholder:text-emerald-100/70 focus:border-white/25 focus:ring-white/10"
+                    className="form-control"
                     placeholder="Search pages or applicants"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                   />
-                  <span className="input-icon-addon text-emerald-100/70">
+                  <span className="input-icon-addon">
                     <SearchIcon className="h-4 w-4" />
                   </span>
                 </div>
@@ -524,7 +567,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <main className="page-body">
+        <main ref={mainRef} className="page-body">
           <Outlet />
         </main>
       </div>
@@ -532,7 +575,7 @@ export default function AdminLayout() {
       {menuOpen && (
         <button
           type="button"
-          className="fixed right-4 top-4 z-50 rounded-full border border-white/20 bg-[#0e6f51] p-2 text-white shadow-lg lg:hidden"
+          className="fixed right-4 top-4 z-50 rounded-full border border-white/20 bg-brand-dark p-2 text-white shadow-raised lg:hidden"
           onClick={() => setMenuOpen(false)}
           aria-label="Close sidebar"
         >

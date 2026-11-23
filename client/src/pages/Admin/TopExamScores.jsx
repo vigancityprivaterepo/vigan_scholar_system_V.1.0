@@ -33,6 +33,13 @@ const toDisplayName = (app) => {
 
 const ALL_STATUSES = 'APPROVED,ACCEPTED,COR_SUBMITTED,COR_REJECTED,FAILED_EXAM,EXAM_INTERVIEW'
 
+// Gold, silver and bronze tints for the top three ranks.
+const MEDAL = {
+  1: { row: 'bg-amber-50/70', badge: 'border-amber-400 bg-amber-100 text-amber-900' },
+  2: { row: 'bg-slate-50', badge: 'border-slate-400 bg-slate-100 text-slate-700' },
+  3: { row: 'bg-orange-50/70', badge: 'border-orange-400 bg-orange-100 text-orange-900' },
+}
+
 // Compute dense ranks based on descending numeric score
 const computeRanks = (items, getScore) => {
   const ranks = []
@@ -221,33 +228,33 @@ export default function TopExamScores() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="portal-page-title">Top Scores</h1>
+          <h1 className="portal-page-title">Top scores</h1>
           <p className="portal-page-subtitle">{pagination.total} applicant{pagination.total !== 1 ? 's' : ''} with recorded scores</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={exportCSV} className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
+          <button onClick={exportCSV} className="btn whitespace-nowrap">
             Export CSV
           </button>
-          <button onClick={exportPrint} className="portal-button-primary whitespace-nowrap !px-4 !py-2 text-sm">
+          <button onClick={exportPrint} className="btn btn-primary whitespace-nowrap">
             Print / PDF
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="portal-surface p-5">
+      <div className="card p-4">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
-              className="portal-input pl-10"
+              className="form-control pl-10"
               placeholder="Search by name, email, or Ref. ID..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
           </div>
           <select
-            className="portal-input md:w-48"
+            className="form-control md:w-48"
             value={academicYear}
             onChange={e => { setAcademicYear(e.target.value); setPage(1) }}
           >
@@ -258,21 +265,21 @@ export default function TopExamScores() {
       </div>
 
       {/* Table */}
-      <div className="portal-surface overflow-hidden p-0">
+      <div className="card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">Rank</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">SHS Attended</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">GWA</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-slate-600">
+                <th className="text-center">Rank</th>
+                <th>Name</th>
+                <th>SHS Attended</th>
+                <th className="text-center">GWA</th>
+                <th className="text-center">
                   General Score <span className="text-brand-primary">&#8595;</span>
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">AY</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Date Updated</th>
+                <th>Status</th>
+                <th>AY</th>
+                <th>Date Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -301,38 +308,37 @@ export default function TopExamScores() {
                   const denseRank = pageOffset + pageRanks[idx]
                   const statusInfo = STATUS_LABELS[app.status] || { label: app.status, color: 'text-slate-600 bg-slate-50 border-slate-200' }
                   return (
-                    <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-                      <td className="px-4 py-3 text-center">
-                        {denseRank <= 3 ? (
-                          <span className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${denseRank === 1 ? 'bg-yellow-400 text-yellow-900' : denseRank === 2 ? 'bg-slate-300 text-slate-700' : 'bg-orange-300 text-orange-900'}`}>
-                            {denseRank}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-500">{denseRank}</span>
-                        )}
+                    <tr key={app.id} className={`animate-slide-up ${MEDAL[denseRank]?.row || ''}`} style={{ animationDelay: `${Math.min(idx, 12) * 40}ms` }}>
+                      <td className="text-center">
+                        <span
+                          className={`inline-flex h-9 w-9 items-center justify-center rounded-full border-2 font-bold tabular-nums ${MEDAL[denseRank]?.badge || 'border-transparent text-slate-500'}`}
+                          aria-label={`Rank ${denseRank}`}
+                        >
+                          {denseRank}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <p className="font-medium text-brand-primary">{toDisplayName(app)}</p>
                         <p className="text-xs text-slate-500">{app.applicant?.email}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-700">{app.school || '-'}</td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="text-sm text-slate-700">{app.school || '-'}</td>
+                      <td className="text-center">
                         <span className={`tabular-nums text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500'}`}>
                           {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="text-center">
                         <span className={`tabular-nums text-sm font-bold ${score !== null ? 'text-brand-primary' : 'text-slate-500'}`}>
                           {score !== null ? score.toFixed(2) : '-'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span className={`badge text-xs ${statusInfo.color}`}>
                           {statusInfo.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{app.academicYear || '-'}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{formatDate(app.updatedAt)}</td>
+                      <td className="text-sm text-slate-500">{app.academicYear || '-'}</td>
+                      <td className="text-sm text-slate-500">{formatDate(app.updatedAt)}</td>
                     </tr>
                   )
                 })
@@ -345,8 +351,8 @@ export default function TopExamScores() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
             <p className="text-xs text-slate-500">Page {page} of {pagination.pages} • {pagination.total} records</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
-              <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn min-h-9 px-3 text-sm">Prev</button>
+              <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)} className="btn min-h-9 px-3 text-sm">Next</button>
             </div>
           </div>
         )}

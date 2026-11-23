@@ -203,33 +203,33 @@ export default function Masterlist() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="portal-page-title">Masterlist of Accepted Scholars</h1>
+          <h1 className="portal-page-title">Masterlist of accepted scholars</h1>
           <p className="portal-page-subtitle">{pagination.total} accepted scholar{pagination.total !== 1 ? 's' : ''}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={exportCSV} className="portal-button-secondary whitespace-nowrap !px-4 !py-2 text-sm">
+          <button onClick={exportCSV} className="btn whitespace-nowrap">
             Export CSV
           </button>
-          <button onClick={exportPrint} className="portal-button-primary whitespace-nowrap !px-4 !py-2 text-sm">
+          <button onClick={exportPrint} className="btn btn-primary whitespace-nowrap">
             Print / PDF
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="portal-surface p-5">
+      <div className="card p-4">
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
-              className="portal-input pl-10"
+              className="form-control pl-10"
               placeholder="Search by name, email, or Ref. ID..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
           </div>
           <select
-            className="portal-input md:w-48"
+            className="form-control md:w-48"
             value={academicYear}
             onChange={e => { setAcademicYear(e.target.value); setPage(1) }}
           >
@@ -237,7 +237,7 @@ export default function Masterlist() {
             {academicYearOptions.map(y => <option key={y} value={y}>AY {y}</option>)}
           </select>
           <select
-            className="portal-input md:w-44"
+            className="form-control md:w-44"
             value={yearLevel}
             onChange={e => { setYearLevel(e.target.value); setPage(1) }}
           >
@@ -251,20 +251,20 @@ export default function Masterlist() {
       </div>
 
       {/* Table */}
-      <div className="portal-surface overflow-hidden p-0">
+      <div className="card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
+          <table className="table">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">#</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Name</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Contact</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">SHS Attended</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">GWA</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Year Level</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">1st College Preference</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">AY</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-600">Date Accepted</th>
+                <th>#</th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>SHS Attended</th>
+                <th>GWA</th>
+                <th>Year Level</th>
+                <th>1st College Preference</th>
+                <th>AY</th>
+                <th>Date Accepted</th>
               </tr>
             </thead>
             <tbody>
@@ -288,25 +288,25 @@ export default function Masterlist() {
                 </tr>
               ) : (
                 apps.map((app, idx) => (
-                  <tr key={app.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
-                    <td className="px-4 py-3 text-xs text-slate-500">{(page - 1) * 50 + idx + 1}</td>
-                    <td className="px-4 py-3">
+                  <tr key={app.id}>
+                    <td className="text-sm text-slate-500">{(page - 1) * 50 + idx + 1}</td>
+                    <td>
                       <p className="font-medium text-brand-primary">{toDisplayName(app)}</p>
                       <p className="text-xs text-slate-500">{app.applicant?.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{app.contact || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-700">{app.school || '-'}</td>
-                    <td className="px-4 py-3">
+                    <td className="text-sm text-slate-600">{app.contact || '-'}</td>
+                    <td className="text-sm text-slate-700">{app.school || '-'}</td>
+                    <td>
                       <span className={`tabular-nums text-sm font-bold ${app.generalAverage && parseFloat(app.generalAverage) >= 83 ? 'text-green-600' : app.generalAverage ? 'text-red-500' : 'text-slate-500'}`}>
                         {app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-700">{app.yearLevel || '-'}</td>
-                    <td className="px-4 py-3 max-w-48">
+                    <td className="text-sm text-slate-700">{app.yearLevel || '-'}</td>
+                    <td className="max-w-48">
                       <p className="truncate text-xs text-slate-700">{firstPref(app)}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{app.academicYear || '-'}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{formatDate(app.updatedAt)}</td>
+                    <td className="text-sm text-slate-500">{app.academicYear || '-'}</td>
+                    <td className="text-sm text-slate-500">{formatDate(app.updatedAt)}</td>
                   </tr>
                 ))
               )}
@@ -318,8 +318,8 @@ export default function Masterlist() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
             <p className="text-xs text-slate-500">Page {page} of {pagination.pages} • {pagination.total} scholars</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
-              <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn min-h-9 px-3 text-sm">Prev</button>
+              <button disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)} className="btn min-h-9 px-3 text-sm">Next</button>
             </div>
           </div>
         )}

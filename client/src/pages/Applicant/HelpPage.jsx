@@ -1,46 +1,21 @@
 import { useState } from 'react'
 import { InfoIcon } from '../../components/ui/PortalIcons'
+import { FAQ_ITEMS } from '../../utils/faq'
 
-const FAQ_ITEMS = [
-  {
-    q: 'Who can apply for this scholarship?',
-    a: 'Applicants must be eligible based on the published residency, academic, and documentation requirements shown on the portal and announcements.',
-  },
-  {
-    q: 'What documents do I need before submitting?',
-    a: 'Prepare your residency certification, grades, school certifications, CAT result, photo, and the required affidavit before starting the application form.',
-  },
-  {
-    q: 'Why is my application marked Incomplete?',
-    a: 'An admin found missing or unclear details. Check your Status page for remarks, update the flagged information, and resubmit.',
-  },
-  {
-    q: 'How do I know my current application stage?',
-    a: 'Open the Status page in your applicant portal. It shows your current stage, remarks, activity logs, and next required action.',
-  },
-  {
-    q: 'What happens after I am approved?',
-    a: 'Upload your Certificate of Registration (COR) on the COR page. You become an accepted scholar once the office approves it, and you also need to bring the original COR to the office in person.',
-  },
-  {
-    q: 'Can I edit my contact information?',
-    a: 'For contact updates, please coordinate with the scholarship office so they can update your active application record.',
-  },
-]
 
 export default function HelpPage() {
   const [active, setActive] = useState(0)
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="w-full">
       <div className="mb-6">
         <h1 className="portal-page-title">FAQ and Help</h1>
         <p className="portal-page-subtitle">Answers to common questions to help you finish requirements faster.</p>
       </div>
 
-      <div className="portal-surface p-6">
-        <div className="mb-5 flex items-start gap-3 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md border border-blue-200 bg-white text-blue-700">
+      <div className="card p-6">
+        <div className="mb-5 flex items-start gap-3 rounded-control border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-control border border-blue-200 bg-white text-blue-700">
             <InfoIcon className="h-4 w-4" />
           </div>
           <div>
@@ -51,7 +26,7 @@ export default function HelpPage() {
 
         <div className="flex flex-col gap-3">
           {FAQ_ITEMS.map((item, index) => (
-            <div key={item.q} className="overflow-hidden rounded-md border border-slate-200 bg-white">
+            <div key={item.q} className="overflow-hidden rounded-control border border-slate-200 bg-white">
               <button
                 type="button"
                 onClick={() => setActive(active === index ? -1 : index)}
@@ -72,7 +47,7 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+        <div className="mt-6 rounded-control border border-brand-divider bg-brand-bg p-4 text-sm text-slate-600">
           <p className="font-semibold text-brand-primary">Need more help?</p>
           <p className="mt-1 leading-6">
             Visit the Scholarship Office at City Hall, Vigan City. Bring your reference ID (shown on your Dashboard) so staff can find your application quickly.

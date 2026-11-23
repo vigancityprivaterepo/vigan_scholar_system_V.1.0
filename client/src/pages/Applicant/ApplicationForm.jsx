@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
 import { applicationService } from '../../services/applicationService'
 import api from '../../services/api'
-import { UploadIcon, DocumentIcon, XIcon, ArrowRightIcon, ChevronDownIcon } from '../../components/ui/PortalIcons'
+import { UploadIcon, DocumentIcon, XIcon, ArrowRightIcon, ChevronDownIcon, PhotoIcon } from '../../components/ui/PortalIcons'
+import { useAuthStore } from '../../store/authStore'
+import { readDraft, writeDraft, clearDraft } from '../../utils/applicationDraft'
 
 const STEPS = ['Personal Info', 'Family Info', 'Academic', 'Documents', 'Review']
 
@@ -84,7 +85,6 @@ const BLANK_PREFS = [
   { name: '', location: '', course: '', accepted: '' },
 ]
 
-const SAVED_KEY = 'scholarship_form_draft_v2'
 
 const roundToTwoDecimals = (value) => {
   const parsed = Number(value)
@@ -112,10 +112,16 @@ const INITIAL_FORM = {
 
 export default function ApplicationForm() {
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
+  const userId = useAuthStore((state) => state.user?.id)
+  // Draft saved on this device for this account (typed answers only, never files).
+  const [initialDraft] = useState(() => readDraft(userId))
+  const [step, setStep] = useState(() => Math.min(Math.max(Number(initialDraft?.step) || 0, 0), STEPS.length - 1))
+  const [saveState, setSaveState] = useState('idle')
+  const [consent, setConsent] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const firstSave = useRef(true)
   const [loading, setLoading] = useState(false)
   const [docSlots, setDocSlots] = useState(Array(REQUIRED_DOCS.length).fill(null))
-  const [docSubStep, setDocSubStep] = useState(0)
   const [serverSlots, setServerSlots] = useState(Array(REQUIRED_DOCS.length).fill(null))
   const [existingApplication, setExistingApplication] = useState(null)
   const [checkingApplication, setCheckingApplication] = useState(true)
@@ -134,14 +140,7 @@ export default function ApplicationForm() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-  const [form, setForm] = useState(() => {
-    try {
-      const saved = localStorage.getItem(SAVED_KEY)
-      return saved ? { ...INITIAL_FORM, ...JSON.parse(saved) } : INITIAL_FORM
-    } catch {
-      return INITIAL_FORM
-    }
-  })
+  const [form, setForm] = useState(() => (initialDraft?.form ? { ...INITIAL_FORM, ...initialDraft.form } : INITIAL_FORM))
   const [errors, setErrors] = useState({})
 
   // Auto-calculate age from birthdate
@@ -235,28 +234,42 @@ export default function ApplicationForm() {
     return () => clearInterval(timer)
   }, [])
 
+  // Autosave: "Saving…" while typing, "Saved" 800ms after the last change.
   useEffect(() => {
-    localStorage.setItem(SAVED_KEY, JSON.stringify(form))
-  }, [form])
+    if (firstSave.current) {
+      firstSave.current = false
+      return undefined
+    }
+    if (submitted) return undefined
+    setSaveState('saving')
+    const timer = setTimeout(() => {
+      writeDraft(userId, { form, step })
+      setSaveState('saved')
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [form, step, userId, submitted])
+
+  const saveAndExit = () => {
+    writeDraft(userId, { form, step })
+    toast.success('Saved on this device. Pick up where you left off from your dashboard.')
+    navigate('/applicant/dashboard')
+  }
+
+  // Inline check for the mobile number as soon as the field loses focus.
+  const checkContact = () => {
+    const value = form.contact.trim().replace(/\s/g, '')
+    setErrors((current) => {
+      const next = { ...current }
+      if (value && !/^(09|\+639)\d{9}$/.test(value)) next.contact = 'Use 09 followed by 9 digits, e.g. 0917 123 4567'
+      else delete next.contact
+      return next
+    })
+  }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const err = (k) => errors[k] ? <p className="mt-1 text-xs text-red-500">{errors[k]}</p> : null
+  const err = (k) => errors[k] ? <p className="field-error animate-fade-in">{errors[k]}</p> : null
 
   const isSlotFilled = (i) => docSlots[i] !== null || serverSlots[i] !== null
-
-  const nextDocSlot = () => {
-    if (!isSlotFilled(docSubStep)) {
-      setErrors(e => ({ ...e, files: 'Please upload this document before continuing.' }))
-      return
-    }
-    setErrors(e => { const n = { ...e }; delete n.files; return n })
-    if (docSubStep < REQUIRED_DOCS.length - 1) setDocSubStep(s => s + 1)
-  }
-
-  const prevDocSlot = () => {
-    setErrors(e => { const n = { ...e }; delete n.files; return n })
-    if (docSubStep > 0) setDocSubStep(s => s - 1)
-  }
 
   const setPref = (index, field, value) => {
     setForm(f => {
@@ -310,29 +323,22 @@ export default function ApplicationForm() {
     }
   }
 
-  const onDrop = useCallback(async (acceptedFiles) => {
-    const [picked] = acceptedFiles
+  const setSlotFile = async (index, picked) => {
     if (!picked) return
     if (picked.size > 5 * 1024 * 1024) { toast.error('File exceeds 5MB limit'); return }
-    setDocSlots(prev => { const n = [...prev]; n[docSubStep] = picked; return n })
+    setDocSlots(prev => { const n = [...prev]; n[index] = picked; return n })
+    setErrors(current => { const next = { ...current }; delete next.files; return next })
     const result = await analyzeImageQuality(picked)
     if (result) {
-      setQualityWarnings(prev => [{ ...result, slotIndex: docSubStep }, ...prev].slice(0, 12))
+      setQualityWarnings(prev => [{ ...result, slotIndex: index }, ...prev.filter(w => w.slotIndex !== index)].slice(0, 12))
       toast.error('Uploaded image may be blurry or low-resolution.')
     }
-  }, [docSubStep])
+  }
 
   const deadlineDate = settings.applicationDeadline ? new Date(settings.applicationDeadline) : null
   const hasPassedDeadline = deadlineDate ? countdownNow > deadlineDate.getTime() : false
   const submissionsBlocked = !settings.applicationOpen || hasPassedDeadline
   const canEditForm = !submissionsBlocked
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'application/pdf': ['.pdf'], 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
-    multiple: false,
-    disabled: !canEditForm,
-  })
 
   const formatCountdown = () => {
     if (!deadlineDate) return null
@@ -388,9 +394,8 @@ export default function ApplicationForm() {
     if (step === 3) {
       const allFilled = REQUIRED_DOCS.every((_, i) => isSlotFilled(i))
       if (!allFilled) {
-        const firstMissing = REQUIRED_DOCS.findIndex((_, i) => !isSlotFilled(i))
-        setDocSubStep(firstMissing)
-        e.files = `Document ${firstMissing + 1} of ${REQUIRED_DOCS.length} is missing. Please upload it before proceeding.`
+        const missing = REQUIRED_DOCS.filter((_, i) => !isSlotFilled(i)).length
+        e.files = `${missing} ${missing === 1 ? 'document is' : 'documents are'} still missing. Add ${missing === 1 ? 'it' : 'them'} before continuing.`
       }
     }
 
@@ -451,8 +456,9 @@ export default function ApplicationForm() {
         await applicationService.submit(fd)
         toast.success('Application submitted successfully!')
       }
-      localStorage.removeItem(SAVED_KEY)
-      navigate('/applicant/status')
+      clearDraft(userId)
+      setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Submission failed')
     } finally {
@@ -460,12 +466,12 @@ export default function ApplicationForm() {
     }
   }
 
-  const inputClass = (k) => `portal-input ${errors[k] ? '!border-red-400' : ''}`
+  const inputClass = (k) => `form-control min-h-[52px] rounded-button px-4 text-[17px] ${errors[k] ? '!border-red-500' : ''}`
 
   if (checkingApplication) {
     return (
-      <div className="mx-auto max-w-3xl">
-        <div className="portal-surface p-6">
+      <div className="w-full">
+        <div className="card p-5 sm:p-6">
           <div className="h-6 w-48 animate-pulse rounded bg-slate-200" />
           <div className="mt-6 space-y-4">
             {[1, 2, 3].map(item => <div key={item} className="h-12 animate-pulse rounded bg-slate-100" />)}
@@ -475,8 +481,36 @@ export default function ApplicationForm() {
     )
   }
 
+  if (submitted) {
+    return (
+      <div className="mx-auto flex w-full max-w-xl animate-pop-in flex-col items-center gap-4 rounded-[20px] bg-white p-8 text-center shadow-card">
+        <span className="relative flex h-20 w-20 items-center justify-center">
+          <span className="absolute inset-0 animate-pulse-ring rounded-full bg-emerald-300" aria-hidden="true" />
+          <span className="relative flex h-20 w-20 items-center justify-center rounded-full bg-brand-teal text-white">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m5 12.5 4.5 4.5L19 7.5" strokeDasharray="24" strokeDashoffset="24" style={{ animation: 'drawCheck 480ms var(--ease-out) 200ms forwards' }} />
+            </svg>
+          </span>
+        </span>
+        <h1 className="font-display text-[28px] font-semibold text-brand-primary">
+          {existingApplication?.status === 'INCOMPLETE' ? 'Application resubmitted' : 'Application submitted'}
+        </h1>
+        <p className="text-base text-slate-600">The Scholarship Office will check your documents. You will get an update here and by email.</p>
+        <ol className="w-full text-left text-[15px] text-slate-700">
+          {['Document review', 'Eligibility check', 'Exam and interview', 'Result'].map((label, i) => (
+            <li key={label} className="flex animate-slide-up items-center gap-3 border-t border-slate-100 py-2.5" style={{ animationDelay: `${300 + i * 60}ms` }}>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[13px] font-bold text-emerald-700">{i + 1}</span>
+              {label}
+            </li>
+          ))}
+        </ol>
+        <button type="button" onClick={() => navigate('/applicant/status')} className="btn-cta">Track my application</button>
+      </div>
+    )
+  }
+
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full">
       <div className="mb-8">
         <h1 className="portal-page-title">
           {existingApplication?.status === 'INCOMPLETE' ? 'Resubmit your application' : 'Submit your application'}
@@ -510,32 +544,48 @@ export default function ApplicationForm() {
         </div>
       )}
 
-      {/* Step Indicator */}
-      <div className="portal-surface mb-6 p-5">
-        <div className="flex items-center gap-0">
+      {/* Step header */}
+      <div className="card mb-6 flex flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          {canEditForm && (
+            <button type="button" onClick={saveAndExit} className="press -ml-1 min-h-11 rounded-button px-1 text-[15px] font-semibold text-brand-teal hover:text-brand-dark">
+              ← Save &amp; exit
+            </button>
+          )}
+          <span className="flex-1" />
+          {canEditForm && (
+            <span
+              aria-live="polite"
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors duration-med ${
+                saveState === 'saving' ? 'bg-amber-100 text-amber-800' : saveState === 'saved' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              <span key={saveState} className="h-2 w-2 animate-pop-in rounded-full bg-current" aria-hidden="true" />
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Saves as you type'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-[22px] font-semibold text-brand-primary">{STEPS[step]}</h2>
+          <span className="text-sm tabular-nums text-slate-500">Step {step + 1} of {STEPS.length}</span>
+        </div>
+        <div className="grid grid-cols-5 gap-1" aria-hidden="true">
           {STEPS.map((s, i) => (
-            <React.Fragment key={s}>
-              <div className={`flex items-center gap-2 ${i <= step ? 'text-brand-primary' : 'text-slate-500'}`}>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-all ${
-                  i < step ? 'border-brand-teal bg-brand-teal text-white' :
-                  i === step ? 'border-brand-primary bg-brand-primary text-white' :
-                  'border-slate-300 bg-white text-slate-500'
-                }`}>
-                  {i < step ? '✓' : i + 1}
-                </div>
-                <span className={`hidden text-sm font-medium sm:block ${i === step ? 'text-brand-primary' : 'text-slate-500'}`}>{s}</span>
-              </div>
-              {i < STEPS.length - 1 && <div className={`mx-2 h-0.5 flex-1 ${i < step ? 'bg-brand-teal' : 'bg-slate-200'}`} />}
-            </React.Fragment>
+            <span key={s} className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+              <span
+                className="block h-full origin-left bg-brand-teal transition-transform duration-slow ease-spring"
+                style={{ transform: `scaleX(${i <= step ? 1 : 0})`, transitionDelay: `${i * 40}ms` }}
+              />
+            </span>
           ))}
         </div>
       </div>
 
-      <div className="portal-surface p-6">
+      <div className="card p-5 sm:p-6">
 
         {/* ── Step 0: Personal Info ── */}
         {step === 0 && (
-          <div className="flex flex-col gap-4">
+          <div className="animate-slide-up flex flex-col gap-4">
             <h2 className="text-xl font-semibold text-brand-primary">Personal Information</h2>
 
             {/* Name row */}
@@ -552,7 +602,7 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label htmlFor="af-3" className="mb-1 block text-sm font-medium text-slate-700">Middle Name</label>
-                <input id="af-3" className="portal-input" value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Middle name" />
+                <input id="af-3" className="form-control min-h-[52px] rounded-button px-4 text-[17px]" value={form.middleName} onChange={e => set('middleName', e.target.value)} placeholder="Middle name" />
               </div>
             </div>
 
@@ -568,7 +618,7 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label htmlFor="af-5" className="mb-1 block text-sm font-medium text-slate-700">House No. / Street</label>
-                <input id="af-5" className="portal-input" value={form.streetNo} onChange={e => set('streetNo', e.target.value)} placeholder="e.g. 12 Burgos St." />
+                <input id="af-5" className="form-control min-h-[52px] rounded-button px-4 text-[17px]" value={form.streetNo} onChange={e => set('streetNo', e.target.value)} placeholder="e.g. 12 Burgos St." />
               </div>
             </div>
             <div className="portal-panel px-4 py-2 text-xs text-slate-500">
@@ -589,7 +639,7 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label htmlFor="af-8" className="mb-1 block text-sm font-medium text-slate-700">Age</label>
-                <input id="af-8" type="number" className="portal-input bg-slate-50" value={form.age} readOnly placeholder="Auto-calculated" />
+                <input id="af-8" type="number" className="form-control min-h-[52px] rounded-button px-4 text-[17px] bg-slate-50" value={form.age} readOnly placeholder="Auto-calculated" />
               </div>
             </div>
 
@@ -620,7 +670,7 @@ export default function ApplicationForm() {
             {/* Contact */}
             <div>
               <label htmlFor="af-10" className="mb-1 block text-sm font-medium text-slate-700">Contact No. <span className="text-red-500">*</span></label>
-              <input id="af-10" className={inputClass('contact')} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="09XX XXX XXXX" />
+              <input id="af-10" type="tel" inputMode="tel" autoComplete="tel" aria-invalid={errors.contact ? 'true' : undefined} className={inputClass('contact')} value={form.contact} onChange={e => set('contact', e.target.value)} onBlur={checkContact} placeholder="09XX XXX XXXX" />
               {err('contact')}
             </div>
           </div>
@@ -628,7 +678,7 @@ export default function ApplicationForm() {
 
         {/* ── Step 1: Family Info ── */}
         {step === 1 && (
-          <div className="flex flex-col gap-4">
+          <div className="animate-slide-up flex flex-col gap-4">
             <h2 className="text-xl font-semibold text-brand-primary">Family Information</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -639,7 +689,7 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label htmlFor="af-12" className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
-                <input id="af-12" className="portal-input" value={form.fatherOccupation} onChange={e => set('fatherOccupation', e.target.value)} placeholder="e.g. Farmer, OFW" />
+                <input id="af-12" className="form-control min-h-[52px] rounded-button px-4 text-[17px]" value={form.fatherOccupation} onChange={e => set('fatherOccupation', e.target.value)} placeholder="e.g. Farmer, OFW" />
               </div>
             </div>
 
@@ -651,7 +701,7 @@ export default function ApplicationForm() {
               </div>
               <div>
                 <label htmlFor="af-14" className="mb-1 block text-sm font-medium text-slate-700">Occupation</label>
-                <input id="af-14" className="portal-input" value={form.motherOccupation} onChange={e => set('motherOccupation', e.target.value)} placeholder="e.g. Housewife, Teacher" />
+                <input id="af-14" className="form-control min-h-[52px] rounded-button px-4 text-[17px]" value={form.motherOccupation} onChange={e => set('motherOccupation', e.target.value)} placeholder="e.g. Housewife, Teacher" />
               </div>
             </div>
 
@@ -691,7 +741,7 @@ export default function ApplicationForm() {
 
         {/* ── Step 2: Academic ── */}
         {step === 2 && (
-          <div className="flex flex-col gap-4">
+          <div className="animate-slide-up flex flex-col gap-4">
             <h2 className="text-xl font-semibold text-brand-primary">Academic Information</h2>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -738,7 +788,7 @@ export default function ApplicationForm() {
               </div>
               <div className="min-w-0">
                 <label htmlFor="af-18" className="mb-1 block text-sm font-medium text-slate-700">School Address</label>
-                <input id="af-18" className="portal-input" value={form.schoolAddress} onChange={e => set('schoolAddress', e.target.value)} placeholder="City / Municipality, Province" />
+                <input id="af-18" className="form-control min-h-[52px] rounded-button px-4 text-[17px]" value={form.schoolAddress} onChange={e => set('schoolAddress', e.target.value)} placeholder="City / Municipality, Province" />
               </div>
             </div>
 
@@ -785,19 +835,19 @@ export default function ApplicationForm() {
                     <p className="text-xs font-semibold text-slate-500">Choice {i + 1}</p>
                     <div>
                       <label htmlFor={`af-21-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Name of School</label>
-                      <input id={`af-21-${i}`} className="portal-input text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
+                      <input id={`af-21-${i}`} className="form-control min-h-[52px] rounded-button px-4 text-[17px] text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
                     </div>
                     <div>
                       <label htmlFor={`af-22-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Location</label>
-                      <input id={`af-22-${i}`} className="portal-input text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
+                      <input id={`af-22-${i}`} className="form-control min-h-[52px] rounded-button px-4 text-[17px] text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
                     </div>
                     <div>
                       <label htmlFor={`af-23-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Course of Study</label>
-                      <input id={`af-23-${i}`} className="portal-input text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
+                      <input id={`af-23-${i}`} className="form-control min-h-[52px] rounded-button px-4 text-[17px] text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
                     </div>
                     <div>
                       <label htmlFor={`af-24-${i}`} className="mb-1 block text-xs font-medium text-slate-500">Accepted (Y/N)</label>
-                      <select id={`af-24-${i}`} className="portal-input text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
+                      <select id={`af-24-${i}`} className="form-control min-h-[52px] rounded-button px-4 text-[17px] text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
                         <option value=""></option>
                         <option value="Y">Y</option>
                         <option value="N">N</option>
@@ -824,16 +874,16 @@ export default function ApplicationForm() {
                       <tr key={i} className="border-b border-slate-100 last:border-0">
                         <td className="px-3 py-2 text-slate-500">{i + 1}</td>
                         <td className="px-3 py-2">
-                          <input className="portal-input !py-1 text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
+                          <input className="form-control min-h-[52px] rounded-button px-4 text-[17px] !py-1 text-sm" value={pref.name} onChange={e => setPref(i, 'name', e.target.value)} placeholder="e.g. University of the Philippines" />
                         </td>
                         <td className="px-3 py-2">
-                          <input className="portal-input !py-1 text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
+                          <input className="form-control min-h-[52px] rounded-button px-4 text-[17px] !py-1 text-sm" value={pref.location} onChange={e => setPref(i, 'location', e.target.value)} placeholder="City, Province" />
                         </td>
                         <td className="px-3 py-2">
-                          <input className="portal-input !py-1 text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
+                          <input className="form-control min-h-[52px] rounded-button px-4 text-[17px] !py-1 text-sm" value={pref.course} onChange={e => setPref(i, 'course', e.target.value)} placeholder="e.g. BS Computer Science" />
                         </td>
                         <td className="px-3 py-2">
-                          <select className="portal-input !py-1 text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
+                          <select className="form-control min-h-[52px] rounded-button px-4 text-[17px] !py-1 text-sm" value={pref.accepted} onChange={e => setPref(i, 'accepted', e.target.value)}>
                             <option value=""></option>
                             <option value="Y">Y</option>
                             <option value="N">N</option>
@@ -935,133 +985,94 @@ export default function ApplicationForm() {
           </div>
         )}
 
-        {/* ── Step 3: Documents (per-slot) ── */}
+        {/* ── Step 3: Documents ── */}
         {step === 3 && (
-          <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-semibold text-brand-primary">Upload Requirements</h2>
+          <div className="animate-slide-up flex flex-col gap-3">
+            <h2 className="text-xl font-semibold text-brand-primary">Upload requirements</h2>
+            <p className="rounded-[14px] bg-blue-50 px-3.5 py-3 text-sm leading-normal text-blue-900">
+              JPG, PNG or PDF, up to 5 MB each. Clear phone photos are fine. Make sure all four corners show.
+            </p>
 
-            {/* Progress dots + bar */}
-            <div>
-              <div className="flex items-center gap-1.5">
-                {REQUIRED_DOCS.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      if (i < docSubStep || isSlotFilled(i - 1) || i === 0) {
-                        setDocSubStep(i)
-                        setErrors(e => { const n = { ...e }; delete n.files; return n })
-                      }
-                    }}
-                    className={`h-2.5 w-2.5 rounded-full transition-all ${
-                      isSlotFilled(i)
-                        ? 'bg-brand-teal'
-                        : i === docSubStep
-                          ? 'bg-brand-primary ring-2 ring-brand-primary ring-offset-1'
-                          : 'bg-slate-300'
-                    }`}
-                    aria-label={`Document ${i + 1}`}
-                  />
-                ))}
-                <span className="ml-2 text-xs text-slate-500">
-                  Document {docSubStep + 1} of {REQUIRED_DOCS.length}
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            {REQUIRED_DOCS.map((label, i) => {
+              const fresh = docSlots[i]
+              const onServer = !fresh && serverSlots[i]
+              const filled = Boolean(fresh || onServer)
+              const warning = qualityWarnings.find(w => w.slotIndex === i)
+              const title = label.split(' (')[0]
+              return (
                 <div
-                  className="h-full rounded-full bg-brand-teal transition-all duration-300"
-                  style={{ width: `${(REQUIRED_DOCS.filter((_, i) => isSlotFilled(i)).length / REQUIRED_DOCS.length) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Current document card */}
-            <div className="portal-panel rounded-md p-4">
-              <p className=" text-base text-slate-700">{REQUIRED_DOCS[docSubStep]}</p>
-            </div>
-
-            {/* Dropzone — shown when slot is empty or user wants to replace */}
-            {!isSlotFilled(docSubStep) || docSlots[docSubStep] === null ? (
-              <div {...getRootProps()} className={`rounded-md border-2 border-dashed p-8 text-center transition-all ${isDragActive ? 'border-brand-teal bg-teal-50' : 'border-slate-300 bg-slate-50 hover:border-brand-teal hover:bg-white'}`}>
-                <input {...getInputProps()} />
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-slate-300 bg-white text-brand-primary">
-                  <UploadIcon className="h-5 w-5" />
-                </div>
-                <p className="mt-4 font-medium text-brand-primary">
-                  {isDragActive ? 'Drop file here...' : 'Drag and drop, or click to browse'}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">PDF, JPG, PNG • Max 5MB</p>
-              </div>
-            ) : null}
-
-            {/* New file uploaded this session */}
-            {docSlots[docSubStep] && (
-              <div className="portal-panel flex items-center justify-between px-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <DocumentIcon className="h-4 w-4 text-brand-primary" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-slate-700">{docSlots[docSubStep].name}</p>
-                    <p className="text-xs text-slate-500">{(docSlots[docSubStep].size / 1024).toFixed(0)} KB</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDocSlots(prev => { const n = [...prev]; n[docSubStep] = null; return n })}
-                  className="text-red-500 hover:text-red-700"
+                  key={label}
+                  onDragOver={(e) => { if (canEditForm) e.preventDefault() }}
+                  onDrop={(e) => { e.preventDefault(); if (canEditForm) setSlotFile(i, e.dataTransfer.files?.[0]) }}
+                  className={`flex flex-col gap-2.5 rounded-2xl border-[1.5px] bg-white p-3.5 transition-colors duration-med ${filled ? 'border-emerald-300' : errors.files ? 'border-red-300' : 'border-slate-200'}`}
                 >
-                  <XIcon className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
-            {/* Server-prefilled file (INCOMPLETE reload) */}
-            {!docSlots[docSubStep] && serverSlots[docSubStep] && (
-              <div className="portal-panel flex items-center justify-between border-l-2 border-brand-teal px-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <DocumentIcon className="h-4 w-4 text-brand-teal" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm text-slate-700">{serverSlots[docSubStep].fileName}</p>
-                    <p className="text-xs text-brand-teal">Already submitted. Drop a new file above to replace it.</p>
+                  <div className="flex items-center gap-3">
+                    <span
+                      key={filled ? 'done' : 'empty'}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-button transition-colors duration-med ${filled ? 'animate-pop-in bg-brand-teal text-white' : 'bg-slate-100 text-slate-500'}`}
+                      aria-hidden="true"
+                    >
+                      {filled ? <span className="text-lg font-bold">✓</span> : <DocumentIcon className="h-5 w-5" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-semibold leading-snug text-brand-primary">{title}</p>
+                      <p className={`truncate text-sm ${filled ? 'text-emerald-700' : 'text-slate-500'}`}>
+                        {fresh ? `${fresh.name} · ${(fresh.size / 1024).toFixed(0)} KB` : onServer ? `Already submitted: ${onServer.fileName}` : label.includes('(') ? label.slice(label.indexOf('(') + 1, -1) : 'Not added yet'}
+                      </p>
+                    </div>
+                    {fresh && (
+                      <button
+                        type="button"
+                        onClick={() => setDocSlots(prev => { const n = [...prev]; n[i] = null; return n })}
+                        aria-label={`Remove ${title}`}
+                        className="press flex h-11 w-11 shrink-0 items-center justify-center rounded-button text-red-600 hover:bg-red-50"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
+                  {warning && (
+                    <p className="rounded-button border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                      {warning.warnings.join(', ')} ({warning.width}×{warning.height}). Consider retaking it.
+                    </p>
+                  )}
+                  {!fresh && canEditForm && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="btn min-h-11 cursor-pointer text-[15px]">
+                        <PhotoIcon className="h-5 w-5" /> {onServer ? 'Retake' : 'Take photo'}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          capture="environment"
+                          className="sr-only"
+                          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; setSlotFile(i, f) }}
+                        />
+                      </label>
+                      <label className="btn min-h-11 cursor-pointer text-[15px]">
+                        <UploadIcon className="h-5 w-5" /> {onServer ? 'Replace' : 'Choose file'}
+                        <input
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png"
+                          className="sr-only"
+                          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; setSlotFile(i, f) }}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              )
+            })}
 
-            {/* Quality warning for this slot only */}
-            {qualityWarnings.filter(w => w.slotIndex === docSubStep).map((w, idx) => (
-              <div key={idx} className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                {w.fileName}: {w.warnings.join(', ')} ({w.width}×{w.height})
-              </div>
-            ))}
-
+            <p className="text-sm font-semibold text-slate-600" aria-live="polite">
+              {REQUIRED_DOCS.filter((_, i) => isSlotFilled(i)).length} of {REQUIRED_DOCS.length} documents added
+            </p>
             {err('files')}
-
-            {/* Sub-step navigation */}
-            <div className="flex justify-between border-t border-slate-200 pt-4">
-              <button
-                type="button"
-                onClick={prevDocSlot}
-                disabled={docSubStep === 0}
-                className="portal-button-secondary disabled:opacity-40"
-              >
-                Previous document
-              </button>
-              <button
-                type="button"
-                onClick={nextDocSlot}
-                disabled={docSubStep === REQUIRED_DOCS.length - 1}
-                className="portal-button-primary disabled:opacity-40"
-              >
-                Next document
-                <ArrowRightIcon className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         )}
 
         {/* ── Step 4: Review ── */}
         {step === 4 && (
-          <div className="flex flex-col gap-4">
+          <div className="animate-slide-up flex flex-col gap-4">
             <h2 className="text-xl font-semibold text-brand-primary">Review and Submit</h2>
             <div className="portal-panel divide-y divide-slate-100 p-4">
 
@@ -1135,6 +1146,10 @@ export default function ApplicationForm() {
             <div className="portal-panel p-4 text-base text-slate-600">
               <p className="font-semibold text-brand-primary">Data Privacy Consent</p>
               <p className="mt-1">By submitting this application, you grant consent to the City Government of Vigan to collect, store, process and use the personal and sensitive information provided herein in accordance with the Data Privacy Act of 2012. You also acknowledge that submission of this form does not guarantee the granting or approval of the benefit being applied for.</p>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 rounded-button border border-brand-line bg-white p-3">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-700" />
+                <span className="text-[15px] font-semibold text-brand-primary">I have read and agree to the data privacy consent above.</span>
+              </label>
             </div>
           </div>
         )}
@@ -1147,7 +1162,7 @@ export default function ApplicationForm() {
               <ArrowRightIcon className="h-4 w-4" />
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={loading || !canEditForm} className="portal-button-primary disabled:opacity-40">
+            <button onClick={handleSubmit} disabled={loading || !canEditForm || !consent} title={!consent ? 'Tick the consent box first' : undefined} className="portal-button-primary disabled:opacity-40">
               {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />}
               {loading
                 ? (existingApplication?.status === 'INCOMPLETE' ? 'Resubmitting...' : 'Submitting...')

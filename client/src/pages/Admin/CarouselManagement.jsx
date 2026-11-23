@@ -72,7 +72,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
         <label className="mb-1.5 block text-xs font-semibold text-slate-600">Slide Label / Title</label>
         <input
           type="text"
-          className="portal-input"
+          className="form-control"
           placeholder="e.g. Scholar Recognition Day"
           value={form.label}
           onChange={e => setField('label', e.target.value)}
@@ -83,7 +83,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
       <div>
         <label className="mb-1.5 block text-xs font-semibold text-slate-600">Caption / Description</label>
         <textarea
-          className="portal-input min-h-[80px] resize-y"
+          className="form-control min-h-[80px] resize-y"
           placeholder="Optional short description shown below the title"
           value={form.caption}
           onChange={e => setField('caption', e.target.value)}
@@ -97,7 +97,7 @@ function SlideForm({ initial, onSave, onCancel, saving }) {
           <input
             type="number"
             min="0"
-            className="portal-input"
+            className="form-control"
             value={form.sortOrder}
             onChange={e => setField('sortOrder', e.target.value)}
           />

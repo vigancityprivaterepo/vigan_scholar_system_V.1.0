@@ -19,6 +19,9 @@ import NotificationsPage from './pages/Applicant/Notifications'
 import CORSubmission from './pages/Applicant/CORSubmission'
 import HelpPage from './pages/Applicant/HelpPage'
 import RenewalForm from './pages/Applicant/RenewalForm'
+import MorePage from './pages/Applicant/MorePage'
+import ProfilePage from './pages/Applicant/ProfilePage'
+import EligibilityChecker from './pages/Applicant/EligibilityChecker'
 
 // Admin pages
 import AdminLayout from './components/layout/AdminLayout'
@@ -62,7 +65,9 @@ export default function App() {
         position="top-right"
         toastOptions={{
           duration: 4000,
-          style: { fontFamily: 'DM Sans, sans-serif', borderRadius: '12px' },
+          style: { fontFamily: 'Source Sans 3, sans-serif', borderRadius: '14px', background: '#0c2340', color: '#fff' },
+          success: { iconTheme: { primary: '#6ee7b7', secondary: '#0c2340' } },
+          error: { iconTheme: { primary: '#fca5a5', secondary: '#0c2340' } },
         }}
       />
       <Routes>
@@ -86,6 +91,9 @@ export default function App() {
             <Route path="/applicant/notifications" element={<NotificationsPage />} />
             <Route path="/applicant/cor" element={<CORSubmission />} />
             <Route path="/applicant/help" element={<HelpPage />} />
+            <Route path="/applicant/more" element={<MorePage />} />
+            <Route path="/applicant/profile" element={<ProfilePage />} />
+            <Route path="/applicant/eligibility" element={<EligibilityChecker />} />
             <Route path="/applicant/renewal" element={<RenewalForm />} />
           </Route>
         </Route>

@@ -95,6 +95,14 @@ export default function BulkEmail() {
   const [jobData, setJobData] = useState({ jobs: [], pagination: { page: 1, pages: 1, total: 0 } })
   const [jobLoading, setJobLoading] = useState(false)
   const [activeSection, setActiveSection] = useState('audience')
+  // Direction of the last step change, so panels slide in from the side you are moving toward.
+  const [stepDirection, setStepDirection] = useState('forward')
+  const [highlightNewest, setHighlightNewest] = useState(false)
+  const goTo = (section) => {
+    const order = ['audience', 'compose', 'review', 'history']
+    setStepDirection(order.indexOf(section) >= order.indexOf(activeSection) ? 'forward' : 'back')
+    setActiveSection(section)
+  }
 
   useEffect(() => {
     try {
@@ -355,7 +363,12 @@ export default function BulkEmail() {
       const sent = response.summary?.sent || 0
       const skipped = response.summary?.skipped || 0
 
-      if (sent > 0) toast.success(`Email sent to ${sent} applicant(s).`)
+      if (sent > 0) {
+        toast.success(`Email sent to ${sent} applicant(s).`)
+        setHighlightNewest(true)
+        setHistoryPage(1)
+        goTo('history')
+      }
       if (skipped > 0) {
         const preview = response.skipped?.slice(0, 2).map((item) => item.reason).join(' | ')
         toast.error(`Skipped ${skipped} applicant(s). ${preview || ''}`.trim())
@@ -485,51 +498,88 @@ export default function BulkEmail() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="portal-page-title">Bulk Email Applicants</h1>
+          <h1 className="portal-page-title">Bulk email</h1>
           <p className="portal-page-subtitle">Send one message to selected applicants or a filtered group by status/search.</p>
         </div>
       </div>
 
-      <div className="portal-surface p-3">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative inline-grid grid-cols-2 rounded-button bg-white p-1 ring-1 ring-brand-line" role="tablist" aria-label="Bulk email">
+          <span
+            className="pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-control bg-brand-primary transition-transform duration-slow ease-spring"
+            style={{ transform: activeSection === 'history' ? 'translateX(100%)' : 'translateX(0)' }}
+            aria-hidden="true"
+          />
           {[
-            { id: 'audience', label: '1. Audience' },
-            { id: 'compose', label: '2. Compose' },
-            { id: 'review', label: '3. Review & Send' },
-            { id: 'history', label: '4. History' },
-          ].map((section) => (
+            { id: 'compose', label: 'Compose', active: activeSection !== 'history', go: () => goTo('audience') },
+            { id: 'history', label: 'History', active: activeSection === 'history', go: () => goTo('history') },
+          ].map((tab) => (
             <button
-              key={section.id}
+              key={tab.id}
               type="button"
-              onClick={() => setActiveSection(section.id)}
-              className={clsx(
-                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                activeSection === section.id
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              )}
+              role="tab"
+              aria-selected={tab.active}
+              onClick={tab.go}
+              className={clsx('relative min-h-10 rounded-control px-5 text-[15px] font-semibold transition-colors duration-fast', tab.active ? 'text-white' : 'text-slate-600 hover:text-brand-primary')}
             >
-              {section.label}
+              {tab.label}
             </button>
           ))}
         </div>
       </div>
 
-      <div className={clsx('portal-surface p-5', activeSection !== 'audience' && 'hidden')}>
+      {activeSection !== 'history' && (
+        <ol className="card flex items-center gap-2 p-4" aria-label="Steps">
+          {[
+            { id: 'audience', label: 'Audience' },
+            { id: 'compose', label: 'Compose' },
+            { id: 'review', label: 'Review & send' },
+          ].map((step, i, all) => {
+            const current = all.findIndex((item) => item.id === activeSection)
+            const done = i < current
+            const isCurrent = i === current
+            return (
+              <li key={step.id} className="flex flex-1 items-center gap-2 last:flex-none">
+                <button
+                  type="button"
+                  onClick={() => goTo(step.id)}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className="press flex items-center gap-2"
+                >
+                  <span className={clsx(
+                    'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-[background-color,border-color,transform] duration-med ease-spring',
+                    done ? 'border-brand-teal bg-brand-teal text-white' : isCurrent ? 'scale-110 border-brand-primary bg-brand-primary text-white' : 'border-slate-300 bg-white text-slate-500'
+                  )}>
+                    {done ? '✓' : i + 1}
+                  </span>
+                  <span className={clsx('hidden text-[15px] font-semibold sm:inline', isCurrent ? 'text-brand-primary' : 'text-slate-500')}>{step.label}</span>
+                </button>
+                {i < all.length - 1 && (
+                  <span className="h-0.5 flex-1 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
+                    <span className={clsx('block h-full origin-left bg-brand-teal transition-transform duration-slow ease-spring', done ? 'scale-x-100' : 'scale-x-0')} />
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      )}
+
+      <div className={clsx('card p-5', activeSection !== 'audience' ? 'hidden' : stepDirection === 'forward' ? 'animate-from-right' : 'animate-from-left')}>
         <div className="flex flex-col gap-4 md:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
-              className="portal-input pl-10"
+              className="form-control pl-10"
               placeholder="Search by name, email..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
             />
           </div>
-          <button onClick={fetchData} className="portal-button-primary whitespace-nowrap">Search</button>
+          <button onClick={fetchData} className="btn btn-primary whitespace-nowrap">Search</button>
         </div>
 
         <div className="mt-4 flex items-center gap-3">
@@ -537,7 +587,7 @@ export default function BulkEmail() {
           <select
             value={statusFilter}
             onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-            className="portal-input w-auto"
+            className="form-control w-auto"
           >
             <option value="">All Statuses</option>
             {ALL_STATUSES.map(s => (
@@ -550,7 +600,7 @@ export default function BulkEmail() {
           <label className="block md:col-span-2">
             <span className="mb-1 block text-xs font-medium text-slate-600">Academic Year</span>
             <select
-              className="portal-input"
+              className="form-control"
               value={academicYear}
               onChange={(e) => { setAcademicYear(e.target.value); setPage(1) }}
             >
@@ -564,7 +614,7 @@ export default function BulkEmail() {
             <span className="mb-1 block text-xs font-medium text-slate-600">Submitted From</span>
             <input
               type="date"
-              className="portal-input"
+              className="form-control"
               value={submittedFrom}
               max={submittedTo || undefined}
               onChange={(e) => { setSubmittedFrom(e.target.value); setAcademicYear(''); setPage(1) }}
@@ -574,7 +624,7 @@ export default function BulkEmail() {
             <span className="mb-1 block text-xs font-medium text-slate-600">Submitted To</span>
             <input
               type="date"
-              className="portal-input"
+              className="form-control"
               value={submittedTo}
               min={submittedFrom || undefined}
               onChange={(e) => { setSubmittedTo(e.target.value); setAcademicYear(''); setPage(1) }}
@@ -584,17 +634,17 @@ export default function BulkEmail() {
         <p className="mt-2 text-xs text-slate-500">Default audience uses the current academic year. Switch AY or customize date range when emailing prior batches.</p>
         <div className="mt-4 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
           <input
-            className="portal-input"
+            className="form-control"
             placeholder="Saved audience name (e.g., Accepted AY 2026-2027)"
             value={audienceViewName}
             onChange={(e) => setAudienceViewName(e.target.value)}
           />
-          <button type="button" onClick={saveAudienceView} className="portal-button-secondary whitespace-nowrap">
+          <button type="button" onClick={saveAudienceView} className="btn whitespace-nowrap">
             Save Audience
           </button>
           <div className="flex gap-2">
             <select
-              className="portal-input min-w-[180px]"
+              className="form-control min-w-[180px]"
               value={selectedAudienceViewId}
               onChange={(e) => applyAudienceView(e.target.value)}
             >
@@ -603,24 +653,24 @@ export default function BulkEmail() {
                 <option key={view.id} value={view.id}>{view.name}</option>
               ))}
             </select>
-            <button type="button" onClick={deleteAudienceView} className="portal-button-secondary whitespace-nowrap">
+            <button type="button" onClick={deleteAudienceView} className="btn whitespace-nowrap">
               Delete
             </button>
           </div>
         </div>
 
         <div className="mt-4 flex justify-end">
-          <button type="button" className="portal-button-primary" onClick={() => setActiveSection('compose')}>
+          <button type="button" className="btn btn-primary" onClick={() => setActiveSection('compose')}>
             Next: Compose Email
           </button>
         </div>
       </div>
 
-      <div className={clsx('portal-surface border border-sky-200 bg-sky-50 p-5', !['compose', 'review'].includes(activeSection) && 'hidden')}>
+      <div key={activeSection} className={clsx('card border-brand-line bg-brand-bg p-5', !['compose', 'review'].includes(activeSection) ? 'hidden' : stepDirection === 'forward' ? 'animate-from-right' : 'animate-from-left')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-sky-900">Recipients</p>
-            <p className="mt-0.5 text-sm text-sky-900">
+            <p className="text-sm font-semibold text-emerald-900">Recipients</p>
+            <p className="mt-0.5 text-sm text-emerald-900">
               {emailScope === 'selected'
                 ? `${selectedIds.length} selected applicant(s)`
                 : `${filteredRecipientCount} applicant(s) in current filter`}
@@ -629,7 +679,7 @@ export default function BulkEmail() {
           <button
             type="button"
             onClick={() => setSelectedIds([])}
-            className="text-xs font-semibold text-sky-700 hover:text-sky-900"
+            className="text-sm font-semibold text-emerald-700 hover:text-emerald-900"
           >
             Clear Selection
           </button>
@@ -640,7 +690,7 @@ export default function BulkEmail() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <select
                 aria-label="Message template"
-                className="portal-input"
+                className="form-control"
                 value={selectedTemplate}
                 onChange={(e) => applyTemplate(e.target.value)}
               >
@@ -648,7 +698,7 @@ export default function BulkEmail() {
                   <option key={template.id} value={template.id}>{template.label}</option>
                 ))}
               </select>
-              <select aria-label="Who receives this email" className="portal-input" value={emailScope} onChange={(e) => setEmailScope(e.target.value)}>
+              <select aria-label="Who receives this email" className="form-control" value={emailScope} onChange={(e) => setEmailScope(e.target.value)}>
                 <option value="selected">Recipients: Selected applications</option>
                 <option value="filtered">Recipients: Current status/search filter</option>
               </select>
@@ -656,7 +706,7 @@ export default function BulkEmail() {
                 <span className="mb-1 block text-xs font-medium text-slate-600">Subject</span>
                 <input
                   type="text"
-                  className="portal-input"
+                  className="form-control"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                 />
@@ -664,7 +714,7 @@ export default function BulkEmail() {
               <label className="block md:col-span-2">
                 <span className="mb-1 block text-xs font-medium text-slate-600">Greeting (optional)</span>
                 <textarea
-                  className="portal-input"
+                  className="form-control"
                   rows={2}
                   value={emailGreeting}
                   onChange={(e) => setEmailGreeting(e.target.value)}
@@ -673,7 +723,7 @@ export default function BulkEmail() {
               <label className="block md:col-span-2">
                 <span className="mb-1 block text-xs font-medium text-slate-600">Message</span>
                 <textarea
-                  className="portal-input"
+                  className="form-control"
                   rows={5}
                   value={emailMessage}
                   onChange={(e) => setEmailMessage(e.target.value)}
@@ -681,10 +731,10 @@ export default function BulkEmail() {
               </label>
             </div>
             <div className="mt-3 flex justify-between">
-              <button type="button" className="portal-button-secondary" onClick={() => setActiveSection('audience')}>
+              <button type="button" className="btn" onClick={() => setActiveSection('audience')}>
                 Back: Audience
               </button>
-              <button type="button" className="portal-button-primary" onClick={() => setActiveSection('review')}>
+              <button type="button" className="btn btn-primary" onClick={() => setActiveSection('review')}>
                 Next: Review & Send
               </button>
             </div>
@@ -698,7 +748,7 @@ export default function BulkEmail() {
                 type="button"
                 onClick={runPreviewRecipients}
                 disabled={previewLoading}
-                className="portal-button-secondary"
+                className="btn"
               >
                 {previewLoading ? 'Loading Preview...' : 'Preview Recipients'}
               </button>
@@ -706,7 +756,7 @@ export default function BulkEmail() {
                 type="button"
                 onClick={runSendTest}
                 disabled={testLoading}
-                className="portal-button-secondary"
+                className="btn"
               >
                 {testLoading ? 'Sending Test...' : 'Send Test Email to Me'}
               </button>
@@ -714,7 +764,7 @@ export default function BulkEmail() {
                 type="button"
                 onClick={runBulkEmail}
                 disabled={emailLoading}
-                className="portal-button-primary"
+                className="btn btn-primary"
               >
                 {emailLoading ? 'Sending...' : 'Send Bulk Email'}
               </button>
@@ -723,7 +773,7 @@ export default function BulkEmail() {
               <input
                 type="datetime-local"
                 aria-label="Send at"
-                className="portal-input"
+                className="form-control"
                 value={scheduleRunAt}
                 onChange={(e) => setScheduleRunAt(e.target.value)}
               />
@@ -731,7 +781,7 @@ export default function BulkEmail() {
                 type="button"
                 onClick={runScheduleBulkEmail}
                 disabled={scheduleLoading}
-                className="portal-button-secondary whitespace-nowrap"
+                className="btn whitespace-nowrap"
               >
                 {scheduleLoading ? 'Scheduling...' : 'Schedule Send'}
               </button>
@@ -772,19 +822,23 @@ export default function BulkEmail() {
               )}
             </div>
             <div className="mt-3 flex justify-between">
-              <button type="button" className="portal-button-secondary" onClick={() => setActiveSection('compose')}>
+              <button type="button" className="btn" onClick={() => setActiveSection('compose')}>
                 Back: Compose
               </button>
-              <button type="button" className="portal-button-secondary" onClick={() => setActiveSection('history')}>
+              <button type="button" className="btn" onClick={() => setActiveSection('history')}>
                 Go to History
               </button>
             </div>
           </>
         )}
-        <p className="mt-2 text-xs text-slate-600">All bulk emails use the official branded email template with the Vigan logo.</p>
+        <p className="mt-2 text-sm text-slate-600">All bulk emails use the official branded email template with the Vigan logo.</p>
+        <div className="mt-4 flex justify-between gap-2 border-t border-brand-line pt-4">
+          <button type="button" onClick={() => goTo(activeSection === 'review' ? 'compose' : 'audience')} className="btn">Back</button>
+          {activeSection === 'compose' && <button type="button" onClick={() => goTo('review')} className="btn btn-primary">Next: review</button>}
+        </div>
       </div>
 
-      <div className={clsx('portal-surface overflow-hidden p-0', activeSection !== 'audience' && 'hidden')}>
+      <div className={clsx('card', activeSection !== 'audience' ? 'hidden' : stepDirection === 'forward' ? 'animate-from-right' : 'animate-from-left')}>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full">
             <thead className="border-b border-slate-200 bg-slate-50">
@@ -846,38 +900,44 @@ export default function BulkEmail() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3">
             <p className="text-xs text-slate-500">Page {page} of {data.pagination.pages} - {data.pagination.total} results</p>
             <div className="flex gap-2">
-              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Prev</button>
-              <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40">Next</button>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn min-h-9 px-3 text-sm">Prev</button>
+              <button disabled={page >= data.pagination.pages} onClick={() => setPage(p => p + 1)} className="btn min-h-9 px-3 text-sm">Next</button>
             </div>
           </div>
         )}
       </div>
 
-      <div className={clsx('portal-surface p-5', activeSection !== 'history' && 'hidden')}>
+      {activeSection === 'audience' && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => goTo('compose')} className="btn btn-primary">Next: compose</button>
+        </div>
+      )}
+
+      <div className={clsx('card p-5', activeSection !== 'history' ? 'hidden' : 'animate-from-right')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="portal-page-title text-xl">Bulk Email History</h2>
+            <h2 className="font-display text-2xl font-semibold text-brand-primary">Sent emails</h2>
             <p className="portal-page-subtitle">{historyData.pagination?.total || 0} log entries</p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
-            className="portal-input md:col-span-2"
+            className="form-control md:col-span-2"
             placeholder="Search by subject, sender, recipient..."
             value={historySearch}
             onChange={(e) => { setHistorySearch(e.target.value); setHistoryPage(1) }}
           />
           <input
             type="date"
-            className="portal-input"
+            className="form-control"
             value={historyFrom}
             max={historyTo || undefined}
             onChange={(e) => { setHistoryFrom(e.target.value); setHistoryPage(1) }}
           />
           <input
             type="date"
-            className="portal-input"
+            className="form-control"
             value={historyTo}
             min={historyFrom || undefined}
             onChange={(e) => { setHistoryTo(e.target.value); setHistoryPage(1) }}
@@ -885,11 +945,11 @@ export default function BulkEmail() {
         </div>
 
         <div className="mt-3 flex gap-2">
-          <button onClick={fetchHistory} className="portal-button-secondary">Refresh History</button>
-          <button onClick={runExportHistoryCSV} disabled={historyExporting} className="portal-button-secondary">
+          <button onClick={fetchHistory} className="btn">Refresh History</button>
+          <button onClick={runExportHistoryCSV} disabled={historyExporting} className="btn">
             {historyExporting ? 'Exporting...' : 'Export CSV'}
           </button>
-          <button onClick={runExportHistoryPDF} className="portal-button-secondary">Export PDF</button>
+          <button onClick={runExportHistoryPDF} className="btn">Export PDF</button>
         </div>
 
         <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
@@ -948,8 +1008,8 @@ export default function BulkEmail() {
                   </tr>
                 ))
               ) : historyData.logs?.length ? (
-                historyData.logs.map((log) => (
-                  <tr key={log.id} className="border-b border-slate-100">
+                historyData.logs.map((log, index) => (
+                  <tr key={log.id} className={clsx('border-b border-slate-100', highlightNewest && index === 0 && historyPage === 1 && 'animate-pop-in bg-emerald-50')}>
                     <td className="px-3 py-2 text-xs text-slate-600">{formatDate(log.createdAt)}</td>
                     <td className="px-3 py-2 text-xs text-slate-700">
                       <p className="font-medium">{log.performedBy?.fullName || '-'}</p>
@@ -981,14 +1041,14 @@ export default function BulkEmail() {
               <button
                 disabled={historyPage === 1}
                 onClick={() => setHistoryPage((p) => p - 1)}
-                className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40"
+                className="btn min-h-9 px-3 text-sm"
               >
                 Prev
               </button>
               <button
                 disabled={historyPage >= historyData.pagination.pages}
                 onClick={() => setHistoryPage((p) => p + 1)}
-                className="portal-button-secondary !px-3 !py-1.5 text-sm disabled:opacity-40"
+                className="btn min-h-9 px-3 text-sm"
               >
                 Next
               </button>

@@ -27,9 +27,13 @@ export default function Stepper({ currentStatus }) {
           return (
             <React.Fragment key={step.key}>
               <div className="flex flex-col items-center gap-2">
+                <div className="relative">
+                {isCurrent && !isFailed && (
+                  <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-primary" aria-hidden="true" />
+                )}
                 <div
                   className={clsx(
-                    'flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300',
+                    'relative flex h-10 w-10 animate-pop-in items-center justify-center rounded-full border-2 text-sm font-bold transition-colors duration-med',
                     isDone ? 'border-brand-teal bg-brand-teal text-white' :
                     isFailed ? 'border-red-500 bg-red-500 text-white' :
                     isCurrent ? 'border-brand-primary bg-brand-primary text-white' :
@@ -37,6 +41,7 @@ export default function Stepper({ currentStatus }) {
                   )}
                 >
                   {isDone ? '✓' : isFailed ? '×' : i + 1}
+                </div>
                 </div>
                 <span
                   className={clsx(
@@ -51,12 +56,11 @@ export default function Stepper({ currentStatus }) {
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div
-                  className={clsx(
-                    'mx-1 h-0.5 w-12 transition-all duration-500 md:w-20',
-                    isDone ? 'bg-brand-teal' : 'bg-slate-200'
+                <div className="mx-1 h-0.5 w-12 overflow-hidden rounded-full bg-slate-200 md:w-20">
+                  {isDone && (
+                    <div className="h-full origin-left animate-grow-x bg-brand-teal" style={{ animationDelay: `${i * 120}ms` }} />
                   )}
-                />
+                </div>
               )}
             </React.Fragment>
           )

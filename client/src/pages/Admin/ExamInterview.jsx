@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, CalendarIcon, SearchIcon } from '../../components/ui/PortalIcons'
+import { SearchIcon } from '../../components/ui/PortalIcons'
+import { CollapseOut, EmptyQueue } from '../../components/ui/Motion'
+import { useUndoableActions } from '../../hooks/useUndoableActions'
 
 const PAGE_SIZE = 20
 
@@ -15,7 +17,7 @@ export default function ExamInterview() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [scoreForm, setScoreForm] = useState({})
-  const [acting, setActing] = useState({})
+  const { schedule, isHidden } = useUndoableActions()
 
   // Bulk scheduling state
   const [selected, setSelected] = useState(new Set())
@@ -23,7 +25,6 @@ export default function ExamInterview() {
   const [bulkActing, setBulkActing] = useState(false)
 
   const fetchData = useCallback(() => {
-    setLoading(true)
     const params = { status: 'EXAM_INTERVIEW', limit: PAGE_SIZE, page }
     if (search.trim()) params.search = search.trim()
     adminService.listApplications(params)
@@ -36,7 +37,10 @@ export default function ExamInterview() {
       .finally(() => setLoading(false))
   }, [page, search])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    setLoading(true)
+    fetchData()
+  }, [fetchData])
 
 
   useEffect(() => {
@@ -54,7 +58,7 @@ export default function ExamInterview() {
   }
 
   const toggleSelectAll = () => {
-    setSelected(prev => prev.size === apps.length ? new Set() : new Set(apps.map(a => a.id)))
+    setSelected(prev => (prev.size === visibleApps.length ? new Set() : new Set(visibleApps.map(a => a.id))))
   }
 
   const bulkSchedule = async () => {
@@ -81,37 +85,43 @@ export default function ExamInterview() {
     }
   }
 
-  const markResult = async (id, passed) => {
-    const form = scoreForm[id] || {}
-    setActing(a => ({ ...a, [`result_${id}`]: true }))
-    try {
-      await adminService.updateStatus(id, {
+  const markResult = (app, passed) => {
+    const form = scoreForm[app.id] || {}
+    const name = app.applicant?.fullName || 'Applicant'
+    schedule({
+      id: app.id,
+      message: passed ? `${name} passed · approved` : `${name} marked as failed`,
+      commit: () => adminService.updateStatus(app.id, {
         status: passed ? 'APPROVED' : 'FAILED_EXAM',
         examScore: form.examScore ? parseFloat(form.examScore) : undefined,
         rejectionReason: !passed ? (form.notes || 'Did not pass the exam/interview.') : undefined,
         interviewNotes: form.notes || undefined,
-      })
-      toast.success(passed ? 'Marked as passed and approved.' : 'Marked as failed.')
-      fetchData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed')
-    } finally {
-      setActing(a => ({ ...a, [`result_${id}`]: false }))
-    }
+      }),
+      onDone: fetchData,
+    })
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.delete(app.id)
+      return next
+    })
   }
 
+  const visibleApps = apps.filter(a => !isHidden(a.id))
+  const allSelected = selected.size > 0 && selected.size === visibleApps.length
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="portal-page-title">Exam / Interview</h1>
-        <p className="portal-page-subtitle">{pagination.total} applicants at this stage</p>
+        <h1 className="portal-page-title">Exam / interview</h1>
+        <p className="portal-page-subtitle">{Math.max(0, pagination.total - (apps.length - visibleApps.length))} applicants at this stage</p>
       </div>
 
-      <div className="portal-surface p-4">
+      <div className="card p-4">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <input
-            className="portal-input pl-10"
+            aria-label="Search applicants"
+            className="form-control pl-10"
             placeholder="Search by name, email, or Ref. ID..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
@@ -121,48 +131,42 @@ export default function ExamInterview() {
 
       {loading ? (
         <div className="flex flex-col gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="card h-36 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-36 rounded-card" />)}
         </div>
-      ) : apps.length === 0 && page === 1 ? (
-        <div className="portal-empty">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-brand-primary">
-            <CalendarIcon className="h-6 w-6" />
-          </div>
-          <p className="mt-4 font-display text-xl font-bold text-brand-primary">No applicants at this stage</p>
-          <p className="mt-1 text-sm text-slate-500">Applicants appear here once they are qualified on the Eligibility page.</p>
-        </div>
+      ) : apps.length === 0 || (visibleApps.length === 0 && pagination.pages <= 1) ? (
+        <EmptyQueue title="No applicants at this stage">Applicants appear here once they are qualified on the Eligibility page.</EmptyQueue>
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
 
           {/* ── Bulk Schedule Panel ── */}
-          <div className="portal-surface p-5">
-            <div className="mb-4 flex items-center gap-2 text-brand-primary">
-              <h2 className="text-sm font-semibold">Schedule selected applicants</h2>
+          <section className="card flex flex-col gap-3 p-5">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-[17px] font-semibold text-brand-primary">Schedule selected applicants</h2>
               {selected.size > 0 && (
-                <span className="ml-auto rounded-full bg-brand-primary px-2 py-0.5 text-xs font-bold text-white">
+                <span key={selected.size} className="animate-pop-in rounded-full bg-brand-teal px-2.5 py-0.5 text-[13px] font-bold text-white">
                   {selected.size} selected
                 </span>
               )}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-2.5 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
               <input
                 type="datetime-local"
                 aria-label="Date and time"
-                className="portal-input text-sm"
+                className="form-control"
                 value={bulkForm.scheduledAt}
                 onChange={e => setBulkForm(f => ({ ...f, scheduledAt: e.target.value }))}
               />
               <input
                 aria-label="Location"
-                className="portal-input text-sm"
+                className="form-control"
                 placeholder="Location (optional)"
                 value={bulkForm.location}
                 onChange={e => setBulkForm(f => ({ ...f, location: e.target.value }))}
               />
               <select
                 aria-label="Assessment type"
-                className="portal-input text-sm"
+                className="form-control"
                 value={bulkForm.type}
                 onChange={e => setBulkForm(f => ({ ...f, type: e.target.value }))}
               >
@@ -172,7 +176,7 @@ export default function ExamInterview() {
               </select>
               <select
                 aria-label="Examiner"
-                className="portal-input text-sm"
+                className="form-control"
                 value={bulkForm.examinerId}
                 onChange={e => setBulkForm(f => ({ ...f, examinerId: e.target.value }))}
               >
@@ -186,102 +190,92 @@ export default function ExamInterview() {
               <button
                 onClick={bulkSchedule}
                 disabled={bulkActing || selected.size === 0}
-                className="portal-button-primary text-xs disabled:opacity-50"
+                className="btn btn-primary"
               >
                 {bulkActing ? 'Scheduling…' : `Schedule ${selected.size > 0 ? `(${selected.size})` : 'Selected'}`}
               </button>
             </div>
 
-            <p className="mt-2 text-xs text-slate-500">
-              Check applicants below to include them in the bulk schedule. All selected applicants receive the same date, location, type, and assigned examiner.
+            <p className="text-sm text-slate-500">
+              Everyone selected gets the same date, place, type and examiner.
             </p>
-          </div>
+          </section>
 
           {/* ── Select-all bar ── */}
-          <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-2">
+          <div className="flex min-h-[52px] items-center gap-3 rounded-button border border-brand-line bg-emerald-50 px-4 py-2">
             <input
               type="checkbox"
               id="select-all"
-              className="h-4 w-4 cursor-pointer accent-brand-primary"
-              checked={selected.size === apps.length && apps.length > 0}
+              className="h-5 w-5 cursor-pointer accent-emerald-700"
+              checked={allSelected}
               onChange={toggleSelectAll}
             />
-            <label htmlFor="select-all" className="cursor-pointer text-xs font-medium text-slate-600">
-              {selected.size === apps.length && apps.length > 0 ? 'Deselect all on this page' : `Select all ${apps.length} on this page`}
+            <label htmlFor="select-all" className="cursor-pointer text-sm font-semibold text-emerald-800">
+              {allSelected ? 'Deselect all on this page' : `Select all ${visibleApps.length} on this page`}
             </label>
             {pagination.pages > 1 && (
-              <span className="ml-auto text-xs text-slate-500">Page {page} of {pagination.pages}</span>
+              <span className="ml-auto text-sm text-slate-500">Page {page} of {pagination.pages}</span>
             )}
           </div>
 
           {/* ── Applicant cards ── */}
-          {apps.map(app => {
+          {apps.map((app, index) => {
             const scf = scoreForm[app.id] || {}
             const isSelected = selected.has(app.id)
             return (
-              <div
-                key={app.id}
-                className={`portal-surface p-6 transition-all ${isSelected ? 'ring-2 ring-brand-primary' : ''}`}
-              >
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 cursor-pointer accent-brand-primary"
-                      checked={isSelected}
-                      onChange={() => toggleSelect(app.id)}
-                      aria-label={`Select ${app.applicant?.fullName || 'applicant'} for scheduling`}
-                    />
-                    <div>
-                      <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                      <p className="text-xs text-slate-500">{app.school} • GWA: <span className="tabular-nums font-bold">{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '-'}</span></p>
-                    </div>
-                  </div>
-                  <Link to={`/admin/applicants/${app.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
-                    View <ArrowRightIcon className="h-4 w-4" />
-                  </Link>
-                </div>
-                <div className="portal-panel p-4">
-                  <h3 className="mb-3 text-sm font-semibold text-brand-primary">Record result</h3>
-                  <div className="flex flex-col gap-2">
-                    {/* General Score Input */}
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-500">General Score</label>
+              <CollapseOut key={app.id} leaving={isHidden(app.id)}>
+                <div className="animate-slide-up p-0.5" style={{ animationDelay: `${index * 40}ms` }}>
+                  <div className={`card grid items-start gap-4 p-5 transition-[box-shadow,border-color] duration-med md:grid-cols-[44px_minmax(0,1fr)_minmax(300px,1fr)] ${isSelected ? 'border-emerald-500 shadow-[0_0_0_3px_#a7f3d0]' : ''}`}>
+                    <label className="flex h-11 w-11 cursor-pointer items-center justify-center">
                       <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        className="portal-input text-sm"
-                        placeholder="e.g. 87.50"
-                        value={scf.examScore || ''}
-                        onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, examScore: e.target.value } }))}
+                        type="checkbox"
+                        className="h-5 w-5 cursor-pointer accent-emerald-700"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(app.id)}
+                        aria-label={`Select ${app.applicant?.fullName || 'applicant'} for scheduling`}
                       />
+                    </label>
+                    <div className="flex min-w-0 flex-col gap-1 pt-1">
+                      <p className="text-[17px] font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                      <p className="text-sm text-slate-500">{app.school} · GWA <strong className="tabular-nums text-brand-primary">{app.generalAverage ? `${parseFloat(app.generalAverage).toFixed(2)}%` : '—'}</strong></p>
+                      <Link to={`/admin/applicants/${app.id}`} className="mt-1 self-start py-1 text-sm font-semibold text-brand-teal hover:text-brand-dark">
+                        Open full review →
+                      </Link>
                     </div>
-
-                    <textarea
-                      aria-label="Interview notes"
-                      className="portal-input text-sm"
-                      rows={2}
-                      placeholder="Interview notes (optional)"
-                      value={scf.notes || ''}
-                      onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, notes: e.target.value } }))}
-                    />
-                    <div className="flex gap-2">
-                      <button onClick={() => markResult(app.id, true)} disabled={acting[`result_${app.id}`]} className="portal-button-primary flex-1 text-xs">
-                        Pass
-                      </button>
-                      <button onClick={() => markResult(app.id, false)} disabled={acting[`result_${app.id}`]} className="portal-button-secondary flex-1 !border-red-300 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800">
-                        Fail
-                      </button>
+                    <div className="flex flex-col gap-2 rounded-[14px] border border-brand-divider bg-brand-bg p-3.5">
+                      <h3 className="text-sm font-semibold text-emerald-800">Record result</h3>
+                      <div className="grid grid-cols-[120px_1fr] gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          aria-label="General score"
+                          className="form-control tabular-nums"
+                          placeholder="Score"
+                          value={scf.examScore || ''}
+                          onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, examScore: e.target.value } }))}
+                        />
+                        <input
+                          aria-label="Interview notes"
+                          className="form-control"
+                          placeholder="Interview notes (optional)"
+                          value={scf.notes || ''}
+                          onChange={e => setScoreForm(f => ({ ...f, [app.id]: { ...scf, notes: e.target.value } }))}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => markResult(app, true)} className="btn btn-primary">Pass · approve</button>
+                        <button type="button" onClick={() => markResult(app, false)} className="btn btn-danger">Fail</button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </CollapseOut>
             )
           })}
 
-          <div className="portal-surface overflow-hidden">
+          <div className="card">
             <Pagination
               page={page}
               pages={pagination.pages}

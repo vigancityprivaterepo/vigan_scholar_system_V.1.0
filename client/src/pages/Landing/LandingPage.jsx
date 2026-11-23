@@ -413,9 +413,9 @@ function DeadlineBanner({ deadline }) {
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
-            <span className="text-sm font-bold">Application deadline is almost here!</span>
+            <span className="text-sm font-semibold">Application deadline is almost here!</span>
           </div>
-          <div className="flex items-baseline gap-1 tabular-nums text-sm font-bold">
+          <div className="flex items-baseline gap-1 tabular-nums text-sm font-semibold">
             {days > 0 && <><span>{days}d</span><span className="text-white/60">:</span></>}
             <span>{pad(hours)}h</span>
             <span className="text-white/60">:</span>
@@ -427,7 +427,7 @@ function DeadlineBanner({ deadline }) {
           <span className="text-xs text-red-100">Deadline: {deadlineLabel}</span>
           <a
             href="/register"
-            className="ml-auto shrink-0 rounded bg-white px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-50"
+            className="ml-auto shrink-0 rounded bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
           >
             Apply Now
           </a>
@@ -455,7 +455,7 @@ function DeadlineBanner({ deadline }) {
         </div>
         <a
           href="/register"
-          className="self-start rounded bg-white px-3 py-1.5 text-xs font-bold text-slate-800 transition hover:bg-slate-100 md:ml-auto md:shrink-0"
+          className="self-start rounded bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-100 md:ml-auto md:shrink-0"
         >
           Apply before the deadline →
         </a>
@@ -823,7 +823,7 @@ export default function LandingPage() {
     <section className="border-b border-slate-200 bg-white py-20 md:py-24">
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="max-w-3xl">
-          <h2 className="font-display text-3xl font-bold text-[#0c2340] md:text-4xl xl:text-5xl">
+          <h2 className="font-display text-3xl font-semibold text-[#0c2340] md:text-4xl xl:text-5xl">
             Accepted scholars public notice
           </h2>
           <p className="mt-4 text-lg text-slate-600">
@@ -884,7 +884,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex-1 text-center">
                     <p className="text-xs font-semibold text-slate-600">City Government of Vigan</p>
-                    <h3 className="mt-3 font-display text-2xl font-bold uppercase tracking-[0.04em] text-[#0c2340] sm:text-3xl md:text-4xl">
+                    <h3 className="mt-3 font-display text-2xl font-semibold uppercase tracking-[0.04em] text-[#0c2340] sm:text-3xl md:text-4xl">
                       Official Results Posting
                     </h3>
                     <p className="mt-3 text-xs text-slate-600 sm:text-sm">
@@ -1054,7 +1054,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 divide-x divide-y divide-white/10 lg:grid-cols-4">
               {statItems.map(({ value, label, sub }) => (
                 <div key={label} className="px-6 py-10 md:px-10 md:py-12">
-                  <p className="font-display text-4xl font-bold text-[#6ee7b7] md:text-5xl">{value}</p>
+                  <p className="font-display text-4xl font-semibold text-[#6ee7b7] md:text-5xl">{value}</p>
                   <p className="mt-2.5 text-sm font-semibold text-white">{label}</p>
                   <p className="mt-1 text-xs text-emerald-100/85">{sub}</p>
                 </div>
@@ -1090,7 +1090,7 @@ export default function LandingPage() {
                     </div>
                     <span className="text-sm font-semibold text-slate-500">Step {n}</span>
                   </div>
-                  <h3 className="mt-5 text-xl font-bold text-[#0c2340]">{title}</h3>
+                  <h3 className="mt-5 text-xl font-semibold text-[#0c2340]">{title}</h3>
                   <p className="mt-3 max-w-[60ch] text-base text-slate-600">{desc}</p>
                 </article>
               ))}
@@ -1119,7 +1119,7 @@ export default function LandingPage() {
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#10b981]/25 bg-[#10b981]/15 text-[#6ee7b7]">
                     <Icon />
                   </div>
-                  <h3 className="mt-6 font-display text-2xl font-bold text-white">{title}</h3>
+                  <h3 className="mt-6 font-display text-2xl font-semibold text-white">{title}</h3>
                   <p className="mt-3 max-w-[60ch] text-base text-emerald-50">{desc}</p>
                 </article>
               ))}
@@ -1149,7 +1149,7 @@ export default function LandingPage() {
                     aria-expanded={activeFaq === index}
                   >
                     <span>{faq.q}</span>
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-200 ${activeFaq === index ? 'border-[#10b981] bg-[#10b981] text-white' : 'border-slate-300 text-slate-500'}`}>
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-all duration-200 ${activeFaq === index ? 'border-[#10b981] bg-[#10b981] text-white' : 'border-slate-300 text-slate-500'}`}>
                       {activeFaq === index ? '−' : '+'}
                     </span>
                   </button>
@@ -1207,7 +1207,7 @@ export default function LandingPage() {
           <section className="bg-white py-16 border-t border-slate-100">
             <div className="mx-auto max-w-5xl px-4 md:px-8">
               <div className="mx-auto max-w-3xl text-center">
-                <h2 className="font-display text-3xl font-bold text-[#0c2340] md:text-4xl">
+                <h2 className="font-display text-3xl font-semibold text-[#0c2340] md:text-4xl">
                   Follow our official Facebook page
                 </h2>
                 <p className="mt-4 text-lg text-slate-600">
@@ -1223,7 +1223,7 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-600">Official Facebook Page</p>
-                      <h3 className="mt-1 font-display text-2xl font-bold text-[#0c2340]">
+                      <h3 className="mt-1 font-display text-2xl font-semibold text-[#0c2340]">
                         {siteSettings.facebookPageName || 'City Government of Vigan'}
                       </h3>
                       <p className="mt-2 max-w-[60ch] text-base text-slate-600">
@@ -1256,7 +1256,7 @@ export default function LandingPage() {
               <p className="text-xs font-semibold text-emerald-200">
                 Heritage City of Vigan
               </p>
-              <p className="mt-2 font-display text-2xl font-bold text-white">
+              <p className="mt-2 font-display text-2xl font-semibold text-white">
                 Vigan Scholarship Management System
               </p>
               <p className="mt-2 max-w-[60ch] text-base text-emerald-50">

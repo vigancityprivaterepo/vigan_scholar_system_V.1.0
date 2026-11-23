@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import { adminService } from '../../services/adminService'
 import Pagination from '../../components/shared/Pagination'
-import { ArrowRightIcon, CheckCircleIcon, SpinnerIcon } from '../../components/ui/PortalIcons'
+import { CollapseOut, EmptyQueue, RemarkField, useRequiredRemark } from '../../components/ui/Motion'
+import { useUndoableActions } from '../../hooks/useUndoableActions'
 
 const DEFAULT_GWA_THRESHOLD = 83
 const PAGE_SIZE = 20
@@ -14,12 +14,12 @@ export default function EligibilityScreening() {
   const [pagination, setPagination] = useState({ total: 0, pages: 1 })
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [acting, setActing] = useState({})
   const [remarks, setRemarks] = useState({})
   const [threshold, setThreshold] = useState(DEFAULT_GWA_THRESHOLD)
+  const { schedule, isHidden } = useUndoableActions()
+  const remark = useRequiredRemark()
 
   const fetchData = useCallback(() => {
-    setLoading(true)
     Promise.all([
       adminService.listApplications({ status: 'ELIGIBILITY_SCREENING', limit: PAGE_SIZE, page }),
       adminService.getSiteSettings(),
@@ -34,128 +34,118 @@ export default function EligibilityScreening() {
       .finally(() => setLoading(false))
   }, [page])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    setLoading(true)
+    fetchData()
+  }, [fetchData])
 
-  const act = async (id, status, extra = {}) => {
-    if (status === 'NOT_QUALIFIED' && !remarks[id]?.trim()) {
-      toast.error('Remarks are required when disqualifying.')
-      return
-    }
-    setActing(a => ({ ...a, [id]: status }))
-    try {
-      await adminService.updateStatus(id, { status, remarks: remarks[id], ...extra })
-      toast.success(`Marked as ${status.replace(/_/g, ' ')}`)
-      fetchData()
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Action failed')
-    } finally {
-      setActing(a => ({ ...a, [id]: false }))
-    }
+  const decide = (app, status) => {
+    const text = remarks[app.id] || ''
+    if (status === 'NOT_QUALIFIED' && !remark.require(app.id, text)) return
+    const name = app.applicant?.fullName || 'Applicant'
+    schedule({
+      id: app.id,
+      message: status === 'NOT_QUALIFIED' ? `${name} disqualified` : `${name} qualified for exam / interview`,
+      commit: () => adminService.updateStatus(app.id, {
+        status,
+        remarks: text,
+        ...(status === 'NOT_QUALIFIED' ? { rejectionReason: text } : {}),
+      }),
+      onDone: fetchData,
+    })
   }
 
+  // Cards waiting on Undo are already counted as done.
+  const waiting = Math.max(0, pagination.total - apps.filter((app) => isHidden(app.id)).length)
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div>
-        <h1 className="portal-page-title">Eligibility Screening</h1>
+        <h1 className="portal-page-title">Eligibility screening</h1>
         <p className="portal-page-subtitle">
-          Min. General Average: ≥ {threshold.toFixed(0)}% &bull; {pagination.total} pending
+          Minimum general average {threshold.toFixed(0)}% · <strong className="text-brand-primary">{waiting} waiting</strong>
         </p>
       </div>
 
       {loading ? (
         <div className="flex flex-col gap-4">
-          {[1, 2, 3].map(i => <div key={i} className="card h-24 animate-pulse bg-gray-100" />)}
+          {[1, 2, 3].map(i => <div key={i} className="skeleton h-32 rounded-card" />)}
         </div>
-      ) : apps.length === 0 && page === 1 ? (
-        <div className="portal-empty">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-slate-300 bg-slate-50 text-emerald-700">
-            <CheckCircleIcon className="h-6 w-6" />
-          </div>
-          <h2 className="mt-5 font-display text-xl font-bold text-brand-primary">All clear</h2>
-          <p className="mt-1 text-sm text-slate-500">No applications pending eligibility review.</p>
-        </div>
+      ) : apps.length === 0 || (apps.every((app) => isHidden(app.id)) && pagination.pages <= 1) ? (
+        <EmptyQueue title="All clear">Nothing left to screen. Qualified applicants are now in Exam / Interview.</EmptyQueue>
       ) : (
-        <div className="portal-surface overflow-hidden">
-          <div className="flex flex-col divide-y divide-slate-100">
-            {apps.map(app => {
-              // Use generalAverage (percentage) — falls back to gwa for legacy records
-              const avg = parseFloat(app.generalAverage ?? app.gwa)
-              const qualified = !isNaN(avg) && avg >= threshold
-              return (
-                <div key={app.id} className="p-5">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-3">
-                        <div className={clsx('mt-1.5 h-3 w-3 flex-shrink-0 rounded-full', qualified ? 'bg-green-500' : 'bg-red-500')} />
-                        <div>
-                          <p className="font-semibold text-brand-primary">{app.applicant?.fullName}</p>
-                          <p className="text-xs text-slate-500">{app.school} • {app.course} • Year {app.yearLevel}</p>
-                        </div>
+        <>
+          {apps.map((app, index) => {
+            // generalAverage is a percentage; gwa is the legacy field.
+            const avg = parseFloat(app.generalAverage ?? app.gwa)
+            const hasAvg = !isNaN(avg)
+            const qualified = hasAvg && avg >= threshold
+            const tone = !hasAvg ? 'text-slate-500' : qualified ? 'text-emerald-700' : 'text-red-700'
+            const bar = !hasAvg ? 'bg-slate-300' : qualified ? 'bg-emerald-700' : 'bg-red-600'
+            const files = app._count?.requirementFiles ?? app.requirementFiles?.length ?? 0
+            return (
+              <CollapseOut key={app.id} leaving={isHidden(app.id)}>
+                <div className="animate-slide-up" style={{ animationDelay: `${index * 40}ms` }}>
+                  <div className="card grid items-center gap-7 p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(160px,0.8fr)_minmax(280px,1fr)]">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-[17px] font-semibold text-brand-primary">{app.applicant?.fullName}</p>
+                      <p className="text-sm text-slate-500">{app.school} · {app.course} · Year {app.yearLevel}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <span className="badge bg-emerald-50 text-emerald-800">{files} {files === 1 ? 'document' : 'documents'} on file</span>
                       </div>
+                      <Link to={`/admin/applicants/${app.id}`} className="mt-1 self-start py-1 text-sm font-semibold text-brand-teal hover:text-brand-dark">
+                        Open full review →
+                      </Link>
                     </div>
 
-                    <div className="text-center">
-                      <p className={clsx('tabular-nums text-3xl font-bold', qualified ? 'text-green-600' : 'text-red-500')}>
-                        {isNaN(avg) ? '-' : `${avg.toFixed(1)}%`}
+                    <div className="flex flex-col gap-1.5">
+                      <p className={`font-display text-3xl font-bold leading-none tabular-nums ${tone}`}>{hasAvg ? `${avg.toFixed(1)}%` : '—'}</p>
+                      <div className="relative h-2 rounded bg-slate-100" aria-hidden="true">
+                        <div className={`h-full origin-left animate-grow-x rounded ${bar}`} style={{ width: `${hasAvg ? Math.min(100, Math.max(0, avg)) : 0}%` }} />
+                        <div className="absolute -top-1 h-4 w-0.5 bg-brand-primary" style={{ left: `${threshold}%` }} />
+                      </div>
+                      <p className={`text-[13px] font-semibold ${tone}`}>
+                        {!hasAvg ? 'No average on file' : qualified ? `Meets the ${threshold}% minimum` : `Below the ${threshold}% minimum`}
                       </p>
-                      <p className={clsx('text-xs font-medium', qualified ? 'text-green-600' : 'text-red-500')}>
-                        {isNaN(avg) ? 'No average on file' : qualified ? `Meets threshold (≥ ${threshold}%)` : `Below threshold (< ${threshold}%)`}
-                      </p>
                     </div>
 
-                    <div className="flex min-w-56 flex-col gap-2">
-                      <div>
-                        <label className="mb-1 block text-xs text-slate-500">
-                          Remarks
-                          <span className="ml-1 text-red-500" title="Required when disqualifying">*</span>
-                          <span className="ml-1 font-normal text-slate-500">(required to disqualify)</span>
-                        </label>
-                        <textarea
-                          className="portal-input text-xs"
-                          rows={2}
-                          placeholder="Enter remarks…"
-                          value={remarks[app.id] || ''}
-                          onChange={e => setRemarks(r => ({ ...r, [app.id]: e.target.value }))}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => act(app.id, 'EXAM_INTERVIEW')}
-                          disabled={Boolean(acting[app.id])}
-                          className="portal-button-primary flex-1 !px-3 !py-2 text-xs flex items-center justify-center gap-1.5"
-                        >
-                          {acting[app.id] === 'EXAM_INTERVIEW' && <SpinnerIcon className="h-3.5 w-3.5 text-current" />}
-                          {acting[app.id] === 'EXAM_INTERVIEW' ? 'Qualifying...' : 'Qualify'}
-                        </button>
-                        <button
-                          onClick={() => act(app.id, 'NOT_QUALIFIED', { rejectionReason: remarks[app.id] || 'Does not meet eligibility requirements.' })}
-                          disabled={Boolean(acting[app.id])}
-                          className="portal-button-secondary flex-1 !border-red-300 !px-3 !py-2 text-xs !text-red-700 hover:!border-red-500 hover:!text-red-800 flex items-center justify-center gap-1.5"
-                        >
-                          {acting[app.id] === 'NOT_QUALIFIED' && <SpinnerIcon className="h-3.5 w-3.5 text-red-700" />}
-                          {acting[app.id] === 'NOT_QUALIFIED' ? 'Disqualifying...' : 'Disqualify'}
-                        </button>
+                    <div className="flex flex-col gap-2">
+                      <RemarkField
+                        value={remarks[app.id] || ''}
+                        onChange={(e) => {
+                          setRemarks(r => ({ ...r, [app.id]: e.target.value }))
+                          remark.clear(app.id)
+                        }}
+                        placeholder="Remarks (required to disqualify)"
+                        aria-label={`Remarks for ${app.applicant?.fullName || 'applicant'}`}
+                        error={remark.errorFor(app.id)}
+                        shakeKey={remark.shakeKeyFor(app.id)}
+                        helper="Add a short reason so the applicant knows why."
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => decide(app, 'EXAM_INTERVIEW')} className="btn btn-primary">Qualify</button>
+                        <button type="button" onClick={() => decide(app, 'NOT_QUALIFIED')} className="btn btn-danger">Disqualify</button>
                       </div>
                     </div>
-
-                    <Link to={`/admin/applicants/${app.id}`} className="inline-flex flex-shrink-0 items-center gap-1 text-sm font-medium text-brand-primary hover:underline">
-                      Full Review <ArrowRightIcon className="h-4 w-4" />
-                    </Link>
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              </CollapseOut>
+            )
+          })}
 
-          <Pagination
-            page={page}
-            pages={pagination.pages}
-            total={pagination.total}
-            label="applicants"
-            onPrev={() => setPage(p => p - 1)}
-            onNext={() => setPage(p => p + 1)}
-          />
-        </div>
+          {pagination.pages > 1 && (
+            <div className="card">
+              <Pagination
+                page={page}
+                pages={pagination.pages}
+                total={pagination.total}
+                label="applicants"
+                onPrev={() => setPage(p => p - 1)}
+                onNext={() => setPage(p => p + 1)}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   )

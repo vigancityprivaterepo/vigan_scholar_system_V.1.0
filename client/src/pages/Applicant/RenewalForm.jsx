@@ -52,14 +52,14 @@ function DropSlot({ slot, file, onDrop, onClear }) {
     <div className="flex flex-col gap-3">
       <div
         {...getRootProps()}
-        className={`flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+        className={`flex cursor-pointer flex-col items-center gap-3 rounded-button border-2 border-dashed p-8 text-center transition-colors ${
           isDragActive
             ? 'border-brand-teal bg-teal-50'
             : 'border-slate-300 bg-slate-50 hover:border-brand-teal hover:bg-teal-50/30'
         }`}
       >
         <input {...getInputProps()} />
-        <div className="flex h-12 w-12 items-center justify-center rounded-md border border-slate-300 bg-white text-brand-teal">
+        <div className="flex h-12 w-12 items-center justify-center rounded-control border border-slate-300 bg-white text-brand-teal">
           <UploadIcon className="h-6 w-6" />
         </div>
         <div>
@@ -71,7 +71,7 @@ function DropSlot({ slot, file, onDrop, onClear }) {
       </div>
 
       {file && (
-        <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3">
+        <div className="flex items-center gap-3 rounded-control border border-slate-200 bg-white px-4 py-3">
           <DocumentIcon className="h-5 w-5 shrink-0 text-brand-teal" />
           <span className="flex-1 truncate text-sm text-slate-700">{file.name}</span>
           <span className="shrink-0 text-xs text-slate-500">{(file.size / 1024).toFixed(0)} KB</span>
@@ -96,6 +96,7 @@ export default function RenewalForm() {
   const [subStep, setSubStep] = useState(0)  // 0=COR, 1=grades, 2=review
   const [files, setFiles] = useState([null, null])  // [corFile, gradesFile]
   const [submitting, setSubmitting] = useState(false)
+  const [declared, setDeclared] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function RenewalForm() {
   if (loading) {
     return (
       <div className="flex flex-col gap-4">
-        {[1, 2].map((i) => <div key={i} className="card h-24 animate-pulse bg-gray-100" />)}
+        {[1, 2].map((i) => <div key={i} className="skeleton h-24 rounded-card" />)}
       </div>
     )
   }
@@ -168,12 +169,12 @@ export default function RenewalForm() {
   if (existingRenewal) {
     const cfg = STATUS_CONFIG[existingRenewal.status] || STATUS_CONFIG.PENDING_REVIEW
     return (
-      <div className="mx-auto flex max-w-2xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <div>
           <h1 className="portal-page-title">Renewal Status</h1>
         </div>
 
-        <div className={`portal-surface border-l-4 p-6 ${cfg.border} ${cfg.bg}`}>
+        <div className={`card border-l-4 p-6 ${cfg.border} ${cfg.bg}`}>
           <div className="mb-3 flex items-center gap-3">
             {existingRenewal.status === 'APPROVED'
               ? <CheckCircleIcon className="h-6 w-6 text-emerald-600" />
@@ -194,14 +195,14 @@ export default function RenewalForm() {
             <p className="max-w-[65ch] text-base text-slate-700">Your scholarship renewal has been approved. Congratulations and continue your academic excellence!</p>
           )}
           {existingRenewal.adminRemarks && (
-            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700">
+            <div className="mt-3 rounded-control border border-slate-200 bg-white p-3 text-sm text-slate-700">
               <strong>Remarks:</strong> {existingRenewal.adminRemarks}
             </div>
           )}
         </div>
 
         <div className="flex gap-3">
-          <Link to="/applicant/status" className="portal-button-outline text-sm">Back to Status</Link>
+          <Link to="/applicant/status" className="btn btn-outline text-sm">Back to Status</Link>
         </div>
       </div>
     )
@@ -212,14 +213,14 @@ export default function RenewalForm() {
   const filled = [!!files[0], !!files[1]]
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <div>
-        <h1 className="portal-page-title">Submit Renewal Application</h1>
+        <h1 className="portal-page-title">Renew your scholarship</h1>
         <p className="portal-page-subtitle">Upload your COR and latest grades to renew your scholarship for the next academic period.</p>
       </div>
 
       {/* Progress dots */}
-      <div className="portal-surface p-4">
+      <div className="card p-4">
         <div className="flex items-center gap-2">
           {steps.map((label, i) => {
             const isCurrent = subStep === i
@@ -227,7 +228,7 @@ export default function RenewalForm() {
             return (
               <div key={i} className="flex flex-1 flex-col items-center gap-1">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-[background-color,border-color,transform] duration-med ease-spring ${isCurrent ? 'scale-110' : ''} ${
                     isDone
                       ? 'border-brand-teal bg-brand-teal text-white'
                       : isCurrent
@@ -247,7 +248,7 @@ export default function RenewalForm() {
         {/* Progress bar */}
         <div className="mt-3 h-1.5 w-full rounded-full bg-slate-200">
           <div
-            className="h-1.5 rounded-full bg-brand-teal transition-all"
+            className="h-1.5 rounded-full bg-brand-teal transition-[width] duration-slow ease-spring"
             style={{ width: `${Math.round(((filled.filter(Boolean).length) / 2) * 100)}%` }}
           />
         </div>
@@ -255,7 +256,7 @@ export default function RenewalForm() {
       </div>
 
       {/* Step content */}
-      <div className="portal-surface p-6">
+      <div key={subStep} className="card animate-from-right p-6">
         {subStep < 2 ? (
           <>
             <div className="mb-5">
@@ -280,14 +281,14 @@ export default function RenewalForm() {
                 type="button"
                 onClick={goPrev}
                 disabled={subStep === 0}
-                className="portal-button-outline flex items-center gap-2 text-sm disabled:opacity-40"
+                className="btn btn-outline flex items-center gap-2 text-sm disabled:opacity-40"
               >
                 <ChevronLeftIcon className="h-4 w-4" /> Previous
               </button>
               <button
                 type="button"
                 onClick={goNext}
-                className="portal-button-primary flex items-center gap-2 text-sm"
+                className="btn btn-primary flex items-center gap-2 text-sm"
               >
                 Next <ChevronRightIcon className="h-4 w-4" />
               </button>
@@ -304,7 +305,7 @@ export default function RenewalForm() {
 
             <div className="flex flex-col gap-3">
               {SLOTS.map((slot, i) => (
-                <div key={slot.key} className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                <div key={slot.key} className="flex items-center gap-3 rounded-control border border-brand-divider bg-brand-bg px-4 py-3">
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${files[i] ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                     {files[i] ? <CheckCircleIcon className="h-4 w-4" /> : <XIcon className="h-4 w-4" />}
                   </div>
@@ -327,6 +328,13 @@ export default function RenewalForm() {
               ))}
             </div>
 
+            <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-button border border-brand-line bg-brand-bg p-3">
+              <input type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-700" />
+              <span className="text-[15px] text-slate-700">
+                <span className="font-semibold text-brand-primary">I declare</span> that these documents are true copies and that I am still enrolled.
+              </span>
+            </label>
+
             {error && (
               <p className="mt-3 text-sm text-red-600">{error}</p>
             )}
@@ -335,17 +343,17 @@ export default function RenewalForm() {
               <button
                 type="button"
                 onClick={goPrev}
-                className="portal-button-outline flex items-center gap-2 text-sm"
+                className="btn btn-outline flex items-center gap-2 text-sm"
               >
                 <ChevronLeftIcon className="h-4 w-4" /> Back
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting || !files[0] || !files[1]}
-                className="portal-button-primary text-sm disabled:opacity-60"
+                disabled={submitting || !files[0] || !files[1] || !declared}
+                className="btn btn-primary min-h-12 px-5 text-base"
               >
-                {submitting ? 'Submitting...' : 'Submit Renewal'}
+                {submitting ? 'Submitting…' : !files[0] || !files[1] ? 'Add both documents first' : !declared ? 'Tick the declaration' : 'Submit renewal'}
               </button>
             </div>
           </>

@@ -5,6 +5,9 @@ import { adminService } from '../../services/adminService'
 import { fromNow } from '../../utils/formatDate'
 import { getAcademicYearOptions, getCurrentAcademicYear } from '../../utils/academicYear'
 import { escapeHtml } from '../../utils/escapeHtml'
+import { useAuthStore } from '../../store/authStore'
+import { ChevronRightIcon } from '../../components/ui/PortalIcons'
+import { CountUp } from '../../components/ui/Motion'
 
 // Work a staff member can act on, in the order an application moves through the office.
 const OPEN_WORK = [
@@ -194,9 +197,12 @@ export default function AdminDashboard() {
   }
 
   const showData = !loading && stats
+  const { user } = useAuthStore()
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {loadError && (
         <div className="card border-red-200 bg-red-50 text-red-700">
           <div className="card-body flex items-center justify-between gap-4">
@@ -214,8 +220,8 @@ export default function AdminDashboard() {
       <div className="page-header mb-0">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Work waiting on the office, and where this year's applications stand.</p>
+            <p className="text-[15px] text-slate-500">{greeting}, {user?.fullName?.split(' ')[0] || 'there'}</p>
+            <h1 className="page-title mt-0.5">Dashboard</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="sr-only" htmlFor="dashboard-ay">Academic year</label>
@@ -247,7 +253,7 @@ export default function AdminDashboard() {
         </div>
         {loading && !stats ? (
           <div className="grid gap-px bg-slate-100 sm:grid-cols-2 xl:grid-cols-3">
-            {OPEN_WORK.slice(0, 3).map((item) => <div key={item.key} className="h-20 animate-pulse bg-white" />)}
+            {OPEN_WORK.slice(0, 3).map((item) => <div key={item.key} className="h-20 skeleton rounded-none" />)}
           </div>
         ) : !stats ? (
           <p className="card-body text-sm text-slate-500">Open work is unavailable until the dashboard loads.</p>
@@ -256,15 +262,16 @@ export default function AdminDashboard() {
             Nothing is waiting. New applications, renewals and appeals will appear here as they come in.
           </p>
         ) : (
-          <ul className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-3">
-            {waiting.map((item) => (
-              <li key={item.key} className="bg-white">
-                <Link to={item.to} className="flex h-full items-center gap-4 px-5 py-4 transition-colors hover:bg-emerald-50/60 focus:outline-none focus-visible:bg-emerald-50">
-                  <span className="min-w-[3ch] text-3xl font-bold tabular-nums text-brand-primary">{item.count}</span>
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-slate-900">{item.label}</span>
+          <ul className="grid gap-px bg-brand-divider [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+            {waiting.map((item, index) => (
+              <li key={item.key} className="animate-slide-up bg-white" style={{ animationDelay: `${index * 50}ms` }}>
+                <Link to={item.to} className="flex h-full items-center gap-4 px-5 py-[18px] transition-colors duration-fast hover:bg-brand-bg focus:outline-none focus-visible:bg-brand-bg">
+                  <span className="min-w-[3ch] text-[32px] font-display font-bold tabular-nums text-brand-primary"><CountUp value={item.count} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-semibold text-brand-primary">{item.label}</span>
                     <span className="block text-sm text-slate-500">{item.hint}</span>
                   </span>
+                  <ChevronRightIcon className="h-[18px] w-[18px] shrink-0 text-slate-400" />
                 </Link>
               </li>
             ))}
@@ -283,7 +290,7 @@ export default function AdminDashboard() {
             {/* The total frames every bar below, so it sits at the top of this section */}
             <div className="text-right">
               <p className="text-3xl font-bold tabular-nums text-brand-primary">
-                {showData ? stats.total.toLocaleString('en-PH') : '—'}
+                {showData ? <CountUp value={stats.total} duration={900} /> : '—'}
               </p>
               <p className="text-xs text-slate-500">total applications</p>
             </div>
@@ -291,7 +298,7 @@ export default function AdminDashboard() {
           <div className="card-body">
             {loading ? (
               <div className="space-y-3">
-                {PIPELINE_ACTIVE.map(([status]) => <div key={status} className="h-6 animate-pulse rounded bg-slate-100" />)}
+                {PIPELINE_ACTIVE.map(([status]) => <div key={status} className="h-6 skeleton" />)}
               </div>
             ) : !stats ? (
               <p className="text-sm text-slate-500">Status counts are unavailable until the dashboard loads.</p>
@@ -299,7 +306,7 @@ export default function AdminDashboard() {
               <p className="text-sm text-slate-600">No applications for {yearLabel} yet. They will appear here once applicants submit.</p>
             ) : (
               <>
-                <PipelineList rows={activeRows} max={pipelineMax} barClass="bg-emerald-600" />
+                <PipelineList rows={activeRows} max={pipelineMax} barClass="bg-emerald-700" />
                 {endedRows.length > 0 && (
                   <>
                     <h3 className="mb-2 mt-6 text-sm font-semibold text-slate-700">Did not continue</h3>
@@ -312,6 +319,7 @@ export default function AdminDashboard() {
         </section>
 
         {/* REJECTION REASONS */}
+        <div className="flex flex-col gap-6">
         <section className="card" aria-labelledby="reasons-title">
           <div className="card-header">
             <div>
@@ -321,7 +329,7 @@ export default function AdminDashboard() {
           </div>
           <div className="card-body">
             {loading ? (
-              <div className="h-40 animate-pulse rounded bg-slate-100" />
+              <div className="h-40 skeleton" />
             ) : !stats?.rejectionReasons?.length ? (
               <p className="text-sm text-slate-500">No rejection reasons recorded for {yearLabel}.</p>
             ) : (
@@ -336,6 +344,48 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+          <section className="card" aria-labelledby="activity-title">
+            <div className="card-header">
+              <div>
+                <h2 id="activity-title" className="card-title">Recent activity</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Latest actions, all academic years</p>
+              </div>
+            </div>
+            {loading && !activity.length ? (
+              <div className="card-body space-y-3">
+                {[1, 2, 3].map((item) => <div key={item} className="h-6 skeleton" />)}
+              </div>
+            ) : activity.length === 0 ? (
+              <p className="card-body text-sm text-slate-500">
+                {stats ? 'No actions recorded yet. Reviews, status changes and uploads will be logged here.' : 'Activity is unavailable until the dashboard loads.'}
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {activity.map((log) => {
+                  const actor = log.performedBy?.fullName || 'System'
+                  const applicant = log.application?.applicant?.fullName
+                  return (
+                    <li key={log.id} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                      <p className="min-w-0 text-sm text-slate-700">
+                        <span className="font-medium text-slate-900">{actor}</span>
+                        {' · '}{log.action}
+                        {applicant && log.applicationId && (
+                          <>
+                            {' · '}
+                            <Link to={`/admin/applicants/${log.applicationId}`} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
+                              {applicant}
+                            </Link>
+                          </>
+                        )}
+                      </p>
+                      <time dateTime={log.createdAt} className="shrink-0 text-xs text-slate-500">{fromNow(log.createdAt)}</time>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
       </div>
 
       {/* BREAKDOWNS */}
@@ -356,7 +406,7 @@ export default function AdminDashboard() {
             </div>
             <div className="card-body">
               {loading ? (
-                <div className="h-60 animate-pulse rounded bg-slate-100" />
+                <div className="h-60 skeleton" />
               ) : card.data.length ? (
                 <div ref={card.ref}>
                   <ResponsiveContainer width="100%" height={Math.max(card.data.length * 38, 220)}>
@@ -376,48 +426,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* RECENT ACTIVITY */}
-      <section className="card" aria-labelledby="activity-title">
-        <div className="card-header">
-          <div>
-            <h2 id="activity-title" className="card-title">Recent activity</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Latest 10 actions, all academic years</p>
-          </div>
-        </div>
-        {loading && !activity.length ? (
-          <div className="card-body space-y-3">
-            {[1, 2, 3].map((item) => <div key={item} className="h-6 animate-pulse rounded bg-slate-100" />)}
-          </div>
-        ) : activity.length === 0 ? (
-          <p className="card-body text-sm text-slate-500">
-            {stats ? 'No actions recorded yet. Reviews, status changes and uploads will be logged here.' : 'Activity is unavailable until the dashboard loads.'}
-          </p>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {activity.map((log) => {
-              const actor = log.performedBy?.fullName || 'System'
-              const applicant = log.application?.applicant?.fullName
-              return (
-                <li key={log.id} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
-                  <p className="min-w-0 text-sm text-slate-700">
-                    <span className="font-medium text-slate-900">{actor}</span>
-                    {' · '}{log.action}
-                    {applicant && log.applicationId && (
-                      <>
-                        {' · '}
-                        <Link to={`/admin/applicants/${log.applicationId}`} className="font-medium text-emerald-700 underline-offset-2 hover:underline">
-                          {applicant}
-                        </Link>
-                      </>
-                    )}
-                  </p>
-                  <time dateTime={log.createdAt} className="shrink-0 text-xs text-slate-500">{fromNow(log.createdAt)}</time>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </section>
     </div>
   )
 }
@@ -425,17 +433,17 @@ export default function AdminDashboard() {
 function PipelineList({ rows, max, barClass }) {
   return (
     <ul className="space-y-1">
-      {rows.map((row) => (
+      {rows.map((row, index) => (
         <li key={row.status}>
           <Link
             to={`/admin/applicants?status=${row.status}`}
-            className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3.5rem] items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-100"
+            className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)_3.5rem] items-center gap-3 rounded px-2 py-1.5 transition-colors hover:bg-brand-bg focus:outline-none focus-visible:bg-brand-bg"
           >
             <span className={`truncate text-sm ${row.count ? 'text-slate-700' : 'text-slate-500'}`}>{row.label}</span>
-            <span className="h-2.5 rounded-sm bg-slate-100" aria-hidden="true">
-              <span className={`block h-full rounded-sm ${barClass}`} style={{ width: `${(row.count / max) * 100}%` }} />
+            <span className="h-2.5 rounded-full bg-slate-100" aria-hidden="true">
+              <span className={`block h-full origin-left animate-grow-x rounded-full ${barClass}`} style={{ width: `${(row.count / max) * 100}%`, animationDelay: `${index * 40}ms` }} />
             </span>
-            <span className={`text-right text-sm font-semibold tabular-nums ${row.count ? 'text-slate-900' : 'text-slate-500'}`}>{row.count}</span>
+            <span className={`text-right text-sm font-semibold tabular-nums ${row.count ? 'text-slate-900' : 'text-slate-500'}`}><CountUp value={row.count} /></span>
           </Link>
         </li>
       ))}
