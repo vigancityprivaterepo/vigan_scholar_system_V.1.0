@@ -6,7 +6,7 @@ import { useAppStore } from '../../store/appStore'
 import { applicationService } from '../../services/applicationService'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { APPLICANT_STEPS, APPLICANT_STEP_INDEX } from '../../utils/statusConfig'
-import { REQUIREMENT_CHECKLIST_ITEMS } from '../../utils/requirements'
+import { REQUIREMENT_SHORT_NAMES } from '../../utils/requirements'
 import { fromNow, formatDate, formatScheduleDateTime } from '../../utils/formatDate'
 import { readDraftMeta } from '../../utils/applicationDraft'
 import { CalendarIcon, CheckCircleIcon, InfoIcon, AlertTriangleIcon } from '../../components/ui/PortalIcons'
@@ -140,6 +140,9 @@ export default function ApplicantDashboard() {
   const [application, setApplication] = useState(null)
   const [loading, setLoading] = useState(true)
   const draft = readDraftMeta()
+  // Names are often stored in capitals; show "Mikael", not "MIKAEL".
+  const rawFirst = user?.fullName?.trim().split(/\s+/)[0] || ''
+  const firstName = rawFirst ? rawFirst.charAt(0).toUpperCase() + rawFirst.slice(1).toLowerCase() : 'applicant'
 
   useEffect(() => {
     applicationService.getMine()
@@ -162,7 +165,7 @@ export default function ApplicantDashboard() {
   return (
     <div className="flex flex-col gap-3.5">
       <div>
-        <p className="text-sm font-medium text-emerald-700">Hello, {user?.fullName?.split(' ')[0] || 'applicant'}</p>
+        <p className="text-sm font-medium text-emerald-700">Hello, {firstName}</p>
         <h1 className="portal-page-title">{!application && !loading ? 'Start your application' : 'Your scholarship'}</h1>
       </div>
 
@@ -181,17 +184,16 @@ export default function ApplicantDashboard() {
               <span className="text-xl text-brand-dark" aria-hidden="true">→</span>
             </Link>
           )}
-          <section className="flex shrink-0 animate-slide-up flex-col gap-3 rounded-[20px] bg-white px-5 py-[22px] shadow-card">
-            <h2 className="font-display text-2xl font-semibold leading-tight text-brand-primary">You haven't applied yet</h2>
-            <p className="text-base leading-normal text-slate-600">Five short steps: about you, family, school, documents, then review. Your progress saves on this device as you go.</p>
+          <section className="flex shrink-0 animate-slide-up flex-col gap-3 rounded-[20px] bg-white p-5 shadow-card">
+            <p className="text-[15px] text-slate-600">5 short steps. Your answers save as you go.</p>
             <Link to="/applicant/apply" className="btn-cta">{draft ? 'Continue my application' : 'Start my application'}</Link>
             <Link to="/applicant/eligibility" className="btn min-h-[50px] rounded-[14px] text-base">Check eligibility first · 1 min</Link>
           </section>
           <section className="shrink-0 animate-slide-up rounded-[20px] bg-white p-[18px] shadow-card" style={{ animationDelay: '60ms' }}>
             <h2 className="mb-1 text-[17px] font-semibold text-brand-primary">Have these ready</h2>
             <ul>
-              {REQUIREMENT_CHECKLIST_ITEMS.map((item, i) => (
-                <li key={item} className="flex items-start gap-3 border-b border-slate-100 py-2.5 text-[15px] leading-snug text-slate-800 last:border-b-0">
+              {REQUIREMENT_SHORT_NAMES.map((item, i) => (
+                <li key={item} className="flex items-center gap-3 border-b border-slate-100 py-2.5 text-[15px] text-slate-800 last:border-b-0">
                   <span className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md bg-emerald-100 text-[13px] font-bold text-emerald-700">{i + 1}</span>
                   {item}
                 </li>
